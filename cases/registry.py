@@ -180,7 +180,11 @@ CASES: List[CaseResult] = [
         residual_limitation=(
             "The entire case is open. StoreView does not contain arbitrary "
             "hostile Python sharing the process, interpreter, object graph, "
-            "memory, module namespace and OS identity."),
+            "memory, module namespace and OS identity. Case 06 built the "
+            "control and measured it working - for one stage. The tripwires "
+            "here did not fire and should not have: three stages of four still "
+            "share the runner's process, and this case closes when every stage "
+            "is isolated, not when the first one is."),
         containment="None automatic - there is no detection. The honest "
                     "posture is that a compromised agent process has read "
                     "every artifact in its run.",
@@ -530,6 +534,80 @@ CASES: List[CaseResult] = [
               "Attack C exists because 'resolve disagreement by taking the "
               "worse verdict' would let a compromised validator condemn every "
               "run; the two conclusions are compared, never reconciled.",
+    ),
+    CaseResult(
+        case_id="case-06",
+        title="What process separation actually buys",
+        compromise_level="Level 2: fully compromised agent process",
+        attack="The same hostile stage runs in the runner's process and in a "
+               "spawned interpreter, probing for the artifact store, the "
+               "RunSession, ungranted artifact content from an earlier run, "
+               "and the host filesystem",
+        baseline_result=UNDETECTED,
+        controlled_result=PREVENTED,
+        control="The stage executes in a separate interpreter reached only by "
+                "line-delimited JSON, with the parent acting as a trusted "
+                "resolver that answers one read request at a time against the "
+                "grant it issued; returned artifacts and events re-enter "
+                "through the existing write contract, hash registration and "
+                "attribution binding",
+        evidence=[
+            "5 memory paths reached in-process, 0 from the spawned interpreter",
+            "every isolated probe reports 'nothing found', not 'denied'",
+            "workflow completes with verdict ok and read log "
+            "['artifact.raw_input']",
+            "an edited child-side grant is still refused by the parent resolver",
+            "a forged trusted_runner event returns stamped 'schema_agent'",
+            "tests/adversarial/test_case_06_process_isolation.py",
+        ],
+        what_this_proves=(
+            "That process separation removes exactly one thing and removes it "
+            "completely: a stage in another interpreter has no path to the "
+            "runner's Python objects, because there are none there to find. "
+            "The probes report 'nothing found' rather than 'denied' - the "
+            "techniques still work, the room is empty. It also proves the "
+            "boundary can be crossed without giving up the enforcement point: "
+            "resolving reads one at a time keeps view.read_keys meaningful, "
+            "which an eager payload handoff would have made vacuous."),
+        what_this_does_not_prove=(
+            "It does not prove the isolated stage is contained. Its ambient "
+            "authority, its grant and its authorship are all unchanged and "
+            "measured so. It does not prove the system is isolated - three "
+            "stages of four still share the runner's process, so case 01 "
+            "stands. It says nothing about host compromise, resource "
+            "exhaustion or a determined sandbox escape, none of which were "
+            "tested."),
+        residual_limitation=(
+            "Ambient authority is untouched: same uid, same filesystem, same "
+            "network, no resource limits. The grant is untouched. Output "
+            "honesty is untouched. And three of four stages remain "
+            "in-process, which is the residual an 'isolation landed' headline "
+            "would hide."),
+        containment="Two failure modes kept apart: a ContractError raised in "
+                    "the child re-raises on the parent as a contract violation "
+                    "(Level 1, workflow halts); a crash, timeout or protocol "
+                    "violation raises IsolationError, reported as an isolated "
+                    "stage failure. Neither quarantines.",
+        recovery="Re-run the stage. The first case where recovery is genuinely "
+                 "cheap: the child holds no state and a fresh interpreter is "
+                 "clean by construction, so nothing must be restored from a "
+                 "place the adversary could also reach.",
+        status="closed",
+        directory="cases/06-process-isolation",
+        test_module="tests/adversarial/test_case_06_process_isolation.py",
+        blast_radius="For the isolated stage: its own grant, its own output, "
+                     "and whatever the uid reaches on the host - not the "
+                     "runner's memory and not other runs' artifacts, since the "
+                     "interpreter is new per invocation. For the system: "
+                     "unchanged.",
+        notes="Measuring this turned up a finding no case covers: an isolated "
+              "stage wrote a fabricated schema, the honest transform built the "
+              "cleaned output from it, and the poison laundered into a chain "
+              "that is internally consistent - every column of real data gone, "
+              "verdict ok, no review flag. Every check compares derived "
+              "artifacts to each other; nothing compares output back to the "
+              "source artifact. Pinned by a test, recorded rather than fixed, "
+              "and it is the recommended next case.",
     ),
 ]
 

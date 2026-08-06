@@ -31,6 +31,7 @@ from agent_network_demo.contracts import (
 from agent_network_demo.event_log import (
     AuditIntegrityError, Event, EventLog, RUNNER_IDENTITY,
 )
+from agent_network_demo.isolation import AgentSpec, IsolatedAgent, IsolationError
 from agent_network_demo.receipts import ReceiptLedger
 from agent_network_demo.verdict import derive_verdict, verdict_disagreement
 
@@ -111,8 +112,14 @@ class StepSnapshot:
 class RunSession:
     AGENT_NAMES = tuple(route.agent for route in WORKFLOW_ROUTES.values())
 
-    def __init__(self, data_dir: str = "data") -> None:
+    def __init__(self, data_dir: str = "data",
+                 isolate: Optional[Mapping[str, "AgentSpec"]] = None) -> None:
         self.data_dir = data_dir
+        # Case 06: stages named here run in a separate interpreter. The runner
+        # drives them through the same agent interface, so nothing else in
+        # step() knows the difference - which is the point: isolation must not
+        # become a second, less-tested execution path.
+        self._isolate: Dict[str, "AgentSpec"] = dict(isolate or {})
         self.run_id = ""
         self.store: Optional[ArtifactStore] = None
         self.log: Optional[EventLog] = None
@@ -159,6 +166,21 @@ class RunSession:
                 f"{actual[:8]}... - runner-owned routing data was modified "
                 "after the run started"
             )
+
+    def _apply_isolation(self) -> None:
+        """Replace the named stages with out-of-process proxies (case 06).
+
+        The identity comes from the route, never from the spec: a stage does
+        not get to name itself just because it runs elsewhere.
+        """
+        for index, stage in enumerate(self._stages):
+            spec = self._isolate.get(stage)
+            if spec is not None:
+                self._agents[index] = IsolatedAgent(
+                    spec, name=self._routes[stage].agent)
+
+    def isolated_stages(self) -> List[str]:
+        return sorted(self._isolate)
 
     def _append_runner_event(self, event: Event) -> Event:
         """Append under the runner's identity and keep the tally in step."""
@@ -246,6 +268,7 @@ class RunSession:
             # cannot edit it. See agent_network_demo/receipts.py.
             ValidationAgent(self._receipts.view()),
         ]
+        self._apply_isolation()
         self._current = 0
         self.done = False
         self.error = None
@@ -361,6 +384,15 @@ class RunSession:
             message = f"artifact integrity failure: {exc}"
             self.error = message
             self.quarantined = True
+            self._emit_error(identity, message)
+        except IsolationError as exc:
+            # The boundary broke, not the contract. A crashed or unresponsive
+            # isolated stage is an infrastructure failure and must not be
+            # reported as the agent violating its contract - the two need
+            # different operator responses.
+            status, contract_result = "error", "failed"
+            message = f"isolated stage failure: {exc}"
+            self.error = message
             self._emit_error(identity, message)
         except ContractError as exc:
             status, contract_result = "error", "failed"

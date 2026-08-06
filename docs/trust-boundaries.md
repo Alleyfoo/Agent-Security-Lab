@@ -154,7 +154,7 @@ demonstrates the attack failing *for that specific reason*.
 |---|---|---|
 | TB-1 path confinement | Enforced (interface) | — |
 | TB-2 grant issuance | Enforced; policy read-only + pinned per run (case 03) | Expected policy held outside the process |
-| TB-3 scoped read | **Interface only** | P5: process isolation |
+| TB-3 scoped read | **Interface only** in-process; a real boundary for an isolated stage, resolved per read (case 06) | Isolate the remaining three stages; ambient authority still unbounded |
 | TB-4 scoped write | Enforced + state-diff + integrity verification (case 02) | Hash held outside the store's reach — needs a different trust boundary |
 | TB-5 no self-authorization | Enforced (in-process) | P3: bind capabilities to workflow + audience |
 | TB-6 agent audit claims | **None** | P7: identity-bound events |

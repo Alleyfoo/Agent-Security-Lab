@@ -129,6 +129,12 @@ confinement, host isolation, capability security, correctness of permitted
 output, or resistance to OS compromise. Each of those is measured separately or
 not claimed.
 
+## Phase 5 cases
+
+| Case | Phase | Central claim |
+|---|---|---|
+| [`06-process-isolation`](06-process-isolation/README.md) ✅ | 5 | A stage in a separate interpreter cannot reach the runner's memory — and that is all it cannot do |
+
 ## Deferred — out of current scope
 
 Documented so they are not forgotten, and not to be started while the
@@ -136,7 +142,6 @@ confinement question is open.
 
 | Case | Phase | Question |
 |---|---|---|
-| `06-agent-process-compromise` | 5 | What process separation actually buys, measured rather than asserted |
 | `07-host-compromise` | 5 | Co-tenancy is not a trust zone |
 | `08-capability-replay` | 3 | A grant with no workflow, audience, expiry or use count is replayable |
 | `09-confused-deputy` | 4 | Holding authority is not proof that a request to use it is legitimate |

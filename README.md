@@ -53,6 +53,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [04a — forged runner-labelled audit event: the record](cases/04-forged-runner-event/README.md) | 🔴 Undetected | 🟢 Prevented |
 | [04b — forged runner-labelled audit event: the decision](cases/04-forged-runner-event/README.md) | 🟢 Prevented | 🟢 Prevented |
 | [05 — a conclusion the agent authors is not evidence](cases/05-false-verdict/README.md) | 🔴 Undetected | 🟡 Rejected before commitment |
+| [06 — what process separation actually buys](cases/06-process-isolation/README.md) | 🔴 Undetected | 🟢 Prevented — one stage, one attack class |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",

@@ -111,12 +111,33 @@ brokered artifact response, and a constrained output channel. The store lives
 in a different address space, so there is no object graph to walk. That is
 Phase 5, and case 01 is its motivation.
 
+## Status after case 06 — still open, and here is exactly why
+
+[Case 06](../06-process-isolation/README.md) built the control this case has
+pointed at since Phase 2, and measured it: a stage running in a spawned
+interpreter finds nothing by any of the three paths below, plus two more.
+
+**This case's tripwire tests did not fail, and that is correct.** They assert
+the attack succeeds against a stage in the runner's process, and case 06
+isolates one stage of four. Nothing about the schema stage moving out of the
+process changes what the transform stage reaches — case 06 part C measures the
+un-isolated stage still reaching every path, including the isolated stage's own
+output. Case 01 closes when every stage is isolated, not before, and the tests
+below hold that line.
+
+What case 06 did establish, for a stage that is isolated: the prediction in
+*What would actually work* was right, and the mechanism is not the one the
+prose implies. The paths are not blocked — they run and find nothing, because
+the interpreter contains no `ArtifactStore`. Isolation empties the room; it
+does not lock the door.
+
 ## Residual limitation
 
-The whole case is a residual limitation. Recorded for when it is closed:
-process isolation will bound this to *one stage's granted artifacts within one
-workflow*, and will not make it zero — a compromised process still legitimately
-holds whatever it was brokered.
+The whole case is a residual limitation. Confirmed by measurement rather than
+predicted, now that case 06 exists: process isolation bounds this to *one
+stage's granted artifacts within one workflow*, and does not make it zero — an
+isolated stage read exactly what it was granted, because isolation narrows a
+grant by nothing.
 
 ## Containment response
 

@@ -130,7 +130,9 @@ def render() -> str:
       "which is detected but not prevented (case 02); rewriting the private "
       "routing table before a run starts, which is not detected at all "
       "(case 03 residual); appending a log event under another agent's "
-      "identity, which the runner cannot tally (case 04a residual). |")
+      "identity, which the runner cannot tally (case 04a residual). None of "
+      "them from a stage running in a separate interpreter, and all of them "
+      "from the three stages that are not (case 06). |")
     w("| Which unauthorized writes can be detected? | New-key writes, via the "
       "runner's store diff. In-place mutation, via hash verification (case 02). "
       "Events forged under the runner's own identity, via the runner's tally "
@@ -203,6 +205,30 @@ def render() -> str:
       "`cases/README.md`: a separate process prevents direct inspection and "
       "modification of the runner's memory and object graph, and nothing more "
       "until each further claim is measured on its own.")
+    w("")
+    w("### Phase 5 so far")
+    w("")
+    w("Case 06 built that boundary for one stage and measured it. It holds, "
+      "and it holds by a mechanism worth stating precisely: the probes report "
+      "*nothing found*, not *access denied*. The reach-around techniques still "
+      "work — they run in an interpreter that contains no runner objects. "
+      "Isolation empties the room rather than locking the door, which is why "
+      "no better reach-around defeats it and equally why it protects nothing "
+      "already in the room.")
+    w("")
+    w("Three things the same measurement found, and they are the reason the "
+      "transition statement is a beginning rather than a conclusion:")
+    w("")
+    w("- The isolated stage's ambient authority, grant and authorship are all "
+      "unchanged. It read the repository filesystem and listed every run's "
+      "event log from inside the boundary.")
+    w("- Three stages of four still share the runner's process, so case 01's "
+      "finding stands unaltered. Its tripwires did not fire, and should not "
+      "have.")
+    w("- A poisoned upstream stage launders into a chain that passes every "
+      "check, because every check compares derived artifacts to each other "
+      "and none compares output back to the source artifact. That one is new, "
+      "belongs to no case yet, and is pinned by a test.")
     w("")
     return "\n".join(out) + "\n"
 

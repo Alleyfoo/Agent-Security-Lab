@@ -43,7 +43,14 @@ review.
 > stop the chain, but there is no quarantine *state* for an output that was
 > written and later becomes suspect. That arrives in Phase 8.
 
-## Level 2 — Fully compromised agent process — *open*
+## Level 2 — Fully compromised agent process — *open; measured for one stage*
+
+> [Case 06](../cases/06-process-isolation/README.md) built the boundary for a
+> single stage and measured what it buys: the runner's memory becomes
+> unreachable, and nothing else changes. The "denied" column below still does
+> not hold for the three stages that share the runner's process, and the
+> ambient-authority rows do not hold for any stage.
+
 
 Arbitrary code execution inside one agent.
 

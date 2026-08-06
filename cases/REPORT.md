@@ -9,14 +9,15 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | Case | Attack | Baseline | Controlled | Control | Remaining limitation |
 |---|---|---|---|---|---|
 | [case-00](00-receipt-handle/README.md)<br>Audited component edits its own evidence | A hostile ValidationAgent deletes failing receipts from the runner's record through the handle it was given | 🔴 Undetected | 🟢 Prevented | Runner-owned append-only ReceiptLedger; agents receive a read-only ReceiptView with no mutation surface | Closed by case 05. The validator still controls its own output artifact and may state a false conclusion; what changed is that the artifact is now a recommendation and the run's conclusion is derived by the runner from this same protected evidence. Case 00's tripwire test was written to fail when that happened, and was rewritten when it did. |
-| [case-01](01-ungranted-read/README.md)<br>Reading artifacts the grant excludes | Read artifact.cleaned_output from a stage granted only artifact.raw_input, via view._store, a sys._getframe() walk, and a gc.get_objects() scan | 🔴 Undetected | 🔴 Undetected | None at this phase. Control is process isolation (Phase 5). | The entire case is open. StoreView does not contain arbitrary hostile Python sharing the process, interpreter, object graph, memory, module namespace and OS identity. |
+| [case-01](01-ungranted-read/README.md)<br>Reading artifacts the grant excludes | Read artifact.cleaned_output from a stage granted only artifact.raw_input, via view._store, a sys._getframe() walk, and a gc.get_objects() scan | 🔴 Undetected | 🔴 Undetected | None at this phase. Control is process isolation (Phase 5). | The entire case is open. StoreView does not contain arbitrary hostile Python sharing the process, interpreter, object graph, memory, module namespace and OS identity. Case 06 built the control and measured it working - for one stage. The tripwires here did not fire and should not have: three stages of four still share the runner's process, and this case closes when every stage is isolated, not when the first one is. |
 | [case-02](02-artifact-mutation/README.md)<br>In-place mutation of a registered artifact | A hostile schema stage rewrites one cell of artifact.raw_input after doing its legitimate work - no new key, no row-count change, no column change | 🔴 Undetected | 🟠 Detected after occurrence | Trusted hash verification in two places: ArtifactStore.get() at the read boundary (C1) and ArtifactStore.verify_all() as a runner post-step sweep (C2), plus fail-closed quarantine | Same-process hostile code may still mutate memory. Hash verification detects divergence but does not create memory isolation or undo confidentiality loss. The hash lives in the same dict as the data it protects, so an attacker who updates both passes; and the sweep runs at step boundaries, so an attacker who restores the original bytes first is not caught. |
 | [case-03](03-mutable-route-table/README.md)<br>Altering runner-owned routing data | A hostile agent rebinds WORKFLOW_ROUTES entries to widen the next stage's grant, to delete the validation stage, and - persistently - to contaminate later runs in the same process | 🔴 Undetected | 🟢 Prevented | Read-only MappingProxyType over a private table (C1), a per-run private copy pinned at start_run (C2), and a route fingerprint verified before and after every step (C3), with fail-closed quarantine on mismatch | The reference value lives inside the adversary's reach. MappingProxyType is a view, not a freeze, so the private dict is still writable; pre-run tampering is pinned rather than caught; and an adversary updating both the routes and the fingerprint passes verification. Closing these needs the expected policy held outside the process - a different boundary, not a different check. |
 | [case-04a](04-forged-runner-event/README.md)<br>Forged runner-labelled audit event - the record | A hostile agent appends an event carrying the trusted runner's identity through the log handle it was given, and - separately - renames itself 'trusted_runner' so the runner writes the identity into the receipt ledger on its behalf | 🔴 Undetected | 🟢 Prevented | An author-bound EventLogView minted from the routing table, not from agent.name (C1+C2), plus a runner-owned tally of runner-labelled events verified after every step (C3), with fail-closed quarantine on mismatch | Attribution is bound; content is not, so an agent may still write receipt-shaped prose under its own honest identity. The tally covers the runner's label only, because the runner has no independent record of what an agent legitimately wrote, so Level 2 forgery under another agent's label is undetected. And the tally is an ordinary attribute on the session: an adversary who forges and increments it passes. |
 | [case-04b](04-forged-runner-event/README.md)<br>Forged runner-labelled audit event - the decision | The same forged events, measured against the authorization decision rather than the record: does a run under forged permission claims reach a different verdict? | 🟢 Prevented | 🟢 Prevented | None added by this case. Pre-existing baseline control B18: ValidationAgent derives all_writes_allowed from the runner-owned receipt ledger and never reads log events | The separation holds because one consumer happens to read the right source. Nothing structurally prevents a future reader - a UI panel, a report, an operator - from deriving an authorization conclusion from the log, and no type or interface marks the log as narrative rather than evidence. |
 | [case-05](05-false-verdict/README.md)<br>A conclusion the agent authors is not evidence | A hostile ValidationAgent writes a conclusion the evidence does not support: clean over a failed receipt, clean over a chain missing a row, clean on the basis of no checks at all, and - the symmetric direction - a false alarm on a healthy run | 🔴 Undetected | 🟡 Rejected before commitment | A deterministic derive_verdict() in verdict.py, called by the runner over its own ArtifactStore and ReceiptLedger at the terminal step (C1+C2); the agent's artifact becomes a recommendation, and any disagreement on the decision fields sets review_required and emits a verdict_disagreement event naming each differing field (C3) | The derivation trusts artifact metadata that agents wrote, so a transform that drops a row and decrements row_count passes both sides. Only the decision is compared - reasons and message are prose and are not bound. And the reference computation lives inside the adversary's reach: rewriting _derived_verdict or patching derive_verdict defeats it, though patching only one side still surfaces as disagreement with the other. |
+| [case-06](06-process-isolation/README.md)<br>What process separation actually buys | The same hostile stage runs in the runner's process and in a spawned interpreter, probing for the artifact store, the RunSession, ungranted artifact content from an earlier run, and the host filesystem | 🔴 Undetected | 🟢 Prevented | The stage executes in a separate interpreter reached only by line-delimited JSON, with the parent acting as a trusted resolver that answers one read request at a time against the grant it issued; returned artifacts and events re-enter through the existing write contract, hash registration and attribution binding | Ambient authority is untouched: same uid, same filesystem, same network, no resource limits. The grant is untouched. Output honesty is untouched. And three of four stages remain in-process, which is the residual an 'isolation landed' headline would hide. |
 
-**7 cases** — 6 with a control, 1 open by design. 5 moved to a better result class.
+**8 cases** — 7 with a control, 1 open by design. 6 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -72,7 +73,7 @@ Reproduce: `python cases/00-receipt-handle/attack.py` · Tests: `tests/adversari
 
 **What this does not prove.** Nothing about a Level 1 adversary, who is genuinely constrained by the view. It does not show the store is easy to reach in a hardened deployment, and it says nothing about whether process isolation will hold - that belongs to Phase 5 and must be measured there.
 
-**Residual limitation.** The entire case is open. StoreView does not contain arbitrary hostile Python sharing the process, interpreter, object graph, memory, module namespace and OS identity.
+**Residual limitation.** The entire case is open. StoreView does not contain arbitrary hostile Python sharing the process, interpreter, object graph, memory, module namespace and OS identity. Case 06 built the control and measured it working - for one stage. The tripwires here did not fire and should not have: three stages of four still share the runner's process, and this case closes when every stage is isolated, not when the first one is.
 
 **Containment.** None automatic - there is no detection. The honest posture is that a compromised agent process has read every artifact in its run.
 
@@ -245,6 +246,39 @@ Reproduce: `python cases/04-forged-runner-event/attack.py` · Tests: `tests/adve
 
 Reproduce: `python cases/05-false-verdict/attack.py` · Tests: `tests/adversarial/test_case_05_false_verdict.py`
 
+### ✅ case-06 — What process separation actually buys
+
+**Compromise level:** Level 2: fully compromised agent process  
+**Attack:** The same hostile stage runs in the runner's process and in a spawned interpreter, probing for the artifact store, the RunSession, ungranted artifact content from an earlier run, and the host filesystem  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟢 Prevented
+
+**Control.** The stage executes in a separate interpreter reached only by line-delimited JSON, with the parent acting as a trusted resolver that answers one read request at a time against the grant it issued; returned artifacts and events re-enter through the existing write contract, hash registration and attribution binding
+
+**Evidence**
+
+- 5 memory paths reached in-process, 0 from the spawned interpreter
+- every isolated probe reports 'nothing found', not 'denied'
+- workflow completes with verdict ok and read log ['artifact.raw_input']
+- an edited child-side grant is still refused by the parent resolver
+- a forged trusted_runner event returns stamped 'schema_agent'
+- tests/adversarial/test_case_06_process_isolation.py
+
+**What this proves.** That process separation removes exactly one thing and removes it completely: a stage in another interpreter has no path to the runner's Python objects, because there are none there to find. The probes report 'nothing found' rather than 'denied' - the techniques still work, the room is empty. It also proves the boundary can be crossed without giving up the enforcement point: resolving reads one at a time keeps view.read_keys meaningful, which an eager payload handoff would have made vacuous.
+
+**What this does not prove.** It does not prove the isolated stage is contained. Its ambient authority, its grant and its authorship are all unchanged and measured so. It does not prove the system is isolated - three stages of four still share the runner's process, so case 01 stands. It says nothing about host compromise, resource exhaustion or a determined sandbox escape, none of which were tested.
+
+**Residual limitation.** Ambient authority is untouched: same uid, same filesystem, same network, no resource limits. The grant is untouched. Output honesty is untouched. And three of four stages remain in-process, which is the residual an 'isolation landed' headline would hide.
+
+**Containment.** Two failure modes kept apart: a ContractError raised in the child re-raises on the parent as a contract violation (Level 1, workflow halts); a crash, timeout or protocol violation raises IsolationError, reported as an isolated stage failure. Neither quarantines.
+
+**Recovery.** Re-run the stage. The first case where recovery is genuinely cheap: the child holds no state and a fresh interpreter is clean by construction, so nothing must be restored from a place the adversary could also reach.
+
+**Blast radius.** For the isolated stage: its own grant, its own output, and whatever the uid reaches on the host - not the runner's memory and not other runs' artifacts, since the interpreter is new per invocation. For the system: unchanged.
+
+**Notes.** Measuring this turned up a finding no case covers: an isolated stage wrote a fabricated schema, the honest transform built the cleaned output from it, and the poison laundered into a chain that is internally consistent - every column of real data gone, verdict ok, no review flag. Every check compares derived artifacts to each other; nothing compares output back to the source artifact. Pinned by a test, recorded rather than fixed, and it is the recommended next case.
+
+Reproduce: `python cases/06-process-isolation/attack.py` · Tests: `tests/adversarial/test_case_06_process_isolation.py`
+
 ## Where the boundary stands
 
 The near-term milestone is a verified map of what a malicious agent can and cannot do inside the baseline process.
@@ -252,7 +286,7 @@ The near-term milestone is a verified map of what a malicious agent can and cann
 | Question | Answer so far |
 |---|---|
 | Which interface controls genuinely work? | Scoped reads/writes through `StoreView`, contract-to-action binding, the read-only receipt handle (case 00), the read-only routing table with per-run pinning (case 03), and the author-bound event-log handle (case 04). |
-| Which attacks remain possible through shared memory? | Ungranted reads by three independent paths (case 01); in-place mutation itself, which is detected but not prevented (case 02); rewriting the private routing table before a run starts, which is not detected at all (case 03 residual); appending a log event under another agent's identity, which the runner cannot tally (case 04a residual). |
+| Which attacks remain possible through shared memory? | Ungranted reads by three independent paths (case 01); in-place mutation itself, which is detected but not prevented (case 02); rewriting the private routing table before a run starts, which is not detected at all (case 03 residual); appending a log event under another agent's identity, which the runner cannot tally (case 04a residual). None of them from a stage running in a separate interpreter, and all of them from the three stages that are not (case 06). |
 | Which unauthorized writes can be detected? | New-key writes, via the runner's store diff. In-place mutation, via hash verification (case 02). Events forged under the runner's own identity, via the runner's tally (case 04a). |
 | Which unauthorized reads remain invisible? | All of them. Bypassed reads leave `view.read_keys` empty (case 01). |
 | Which runner-owned structures can agents affect? | None through the documented interface: the receipt ledger (case 00), the routing table (case 03) and the identity an event is attributed to (case 04) are all runner-assigned. All remain reachable by a Level 2 adversary via private attributes. |
@@ -287,4 +321,14 @@ The boundary map above is the gate to Phase 5. With every entry answered, the st
 The evidence for it is specific, not rhetorical: one case is wholly open with no in-process control available (case 01, three independent reach-around read paths that share no mechanism), and every closed case's residual is the same shape — the reference value sits inside the adversary's reach. Those are not four problems with four fixes. They are one problem, and it is the boundary.
 
 What Phase 5 must **not** claim on arrival is set out in `cases/README.md`: a separate process prevents direct inspection and modification of the runner's memory and object graph, and nothing more until each further claim is measured on its own.
+
+### Phase 5 so far
+
+Case 06 built that boundary for one stage and measured it. It holds, and it holds by a mechanism worth stating precisely: the probes report *nothing found*, not *access denied*. The reach-around techniques still work — they run in an interpreter that contains no runner objects. Isolation empties the room rather than locking the door, which is why no better reach-around defeats it and equally why it protects nothing already in the room.
+
+Three things the same measurement found, and they are the reason the transition statement is a beginning rather than a conclusion:
+
+- The isolated stage's ambient authority, grant and authorship are all unchanged. It read the repository filesystem and listed every run's event log from inside the boundary.
+- Three stages of four still share the runner's process, so case 01's finding stands unaltered. Its tripwires did not fire, and should not have.
+- A poisoned upstream stage launders into a chain that passes every check, because every check compares derived artifacts to each other and none compares output back to the source artifact. That one is new, belongs to no case yet, and is pinned by a test.
 
