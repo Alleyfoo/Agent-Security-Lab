@@ -26,6 +26,19 @@ one uninterrupted path from manipulated input to production authority.
 | [docs/baseline.md](docs/baseline.md) | The preserved baseline's controls (B1–B19) and verified limitations (L1–L8) |
 | [cases/README.md](cases/README.md) | Case contract, adversarial-test-first rule, acceptance criteria |
 
+## Cases so far
+
+| Case | Result |
+|---|---|
+| [00 — audited component edits its own evidence](cases/00-receipt-handle/README.md) | ✅ **Blocked.** A hostile validator could delete failing receipts through the handle it was given, flipping a run's verdict from `warn` to `ok`. The runner now owns an append-only ledger and agents get a read-only view, so the attack needs Level 2 rather than Level 1. |
+| [01 — reading artifacts the grant excludes](cases/01-ungranted-read/README.md) | ⚠️ **Open, by design.** Three unrelated reach-around paths all succeed and none appear in the read log. No in-process control exists; the obvious patch is demonstrated to close one path of three and is refused. Control is process isolation, Phase 5. |
+
+Each case ships an executable attack you can run yourself, e.g.:
+
+```bash
+python cases/01-ungranted-read/attack.py
+```
+
 The clean architectural baseline is preserved at tag
 `v0-baseline-inprocess` and mirrored in the reference repository
 [Agent-payload-demo](https://github.com/Alleyfoo/Agent-payload-demo). This

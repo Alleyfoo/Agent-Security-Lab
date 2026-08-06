@@ -63,12 +63,22 @@ every baseline claim.
 
 ### L1 — `StoreView` is an interface, not an isolation boundary
 
+> Documented as [case 01](../cases/01-ungranted-read/README.md). **Open** — no
+> control at Phase 2; control is process isolation, Phase 5.
+
 Same-process code holding a view reaches the full store through
 `view._store`. Verified: an ungranted read denied through `view.get()`
 succeeded through `view._store.get()`, returning all 20 rows.
 
+Case 01 escalates this to two further paths that never touch the view at all —
+walking `sys._getframe()` and scanning `gc.get_objects()` — establishing that
+the three paths share no mechanism. Removing the private attribute closes
+exactly one of them, which is why that patch is demonstrated and refused rather
+than shipped.
+
 **Consequence:** B4 constrains code that goes through the interface. It does
-not constrain code that can read the Python object graph.
+not constrain code that can read the Python object graph. A boundary enforced
+by the absence of a reference is not a boundary in a runtime with reflection.
 
 ### L2 — Bypassed reads are invisible
 
@@ -79,6 +89,16 @@ against the grant, so a bypassed read passes reconciliation by being absent.
 **Consequence:** the baseline detects *over-declared* reads, not *hidden*
 ones. This asymmetry does not apply to writes, which B7 catches via the store
 diff regardless of path.
+
+The transferable form of the lesson, from case 01:
+
+```text
+Writes  are checked against observed store state  -> bypass is caught
+Reads   are checked against a log the reader owns -> bypass is invisible
+```
+
+A control that reconciles against evidence the adversary produces is not a
+control.
 
 ### L3 — Artifact immutability is interface-level only
 

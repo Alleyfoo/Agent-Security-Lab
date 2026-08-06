@@ -73,7 +73,7 @@ Numbering is stable once created. Phase mapping per the project charter.
 | Case | Phase | Baseline finding | Central claim |
 |---|---|---|---|
 | [`00-receipt-handle`](00-receipt-handle/README.md) ✅ | 2 | L7 | The component being audited must not be able to edit the evidence it is audited against |
-| `01-ungranted-read` | 2 | L1, L2 | A scoped view constrains interface access but not same-process reach-around, and the bypass is invisible in the read log |
+| [`01-ungranted-read`](01-ungranted-read/README.md) ⚠️ | 2 | L1, L2 | A scoped view constrains interface access but not same-process reach-around, and the bypass is invisible in the read log |
 | `02-ungranted-write` | 2 | TB-4 | The outbound store diff catches bypassed writes because it compares observed state, not self-report |
 | `03-forged-routing` | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
 | `04-path-traversal` | 2 | TB-1 | `realpath` confinement holds; the check point and the use point must not diverge |
@@ -99,6 +99,29 @@ number in the charter's list:
 A case-00 residual limitation also needs its own slice eventually: **the
 validator's verdict is agent-authored and the runner does not cross-check it.**
 Separate security claim, so not folded into case 00.
+
+Legend: ✅ control implemented and attack blocked · ⚠️ open finding, control
+deferred to a later phase.
+
+## Cases without a control at their own phase
+
+Some findings have no in-process answer. Case 01 is the first: its control is
+process isolation in Phase 5, so it cannot satisfy acceptance criteria 4 and 5
+today.
+
+Such a case is still written in full — contract, executable attack, adversarial
+tests — but its tests assert the attack **succeeds**, and carry a `TRIPWIRE`
+message naming the phase that should break them. When the control lands the
+tests fail, and that failure is the instruction to rewrite the case.
+
+Two rules apply to these:
+
+* **Never relax a tripwire test to make a suite green.** Fix the case or fix
+  the control.
+* **Never ship a partial fix that closes one path of a class.** Case 01
+  documents a refused patch (`ClosureStoreView`) for exactly this reason. If a
+  patch would let the repository describe a boundary it does not have, it is
+  cosmetic security regardless of how much code it contains.
 
 ## Sequencing rule
 

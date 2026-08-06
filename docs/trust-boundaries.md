@@ -69,7 +69,7 @@ agent  ==>  StoreView.get()  ==>  ArtifactStore
 
 * **Enforced by:** [artifact_store.py:125](../agent_network_demo/artifact_store.py:125); non-probeable `has()` at :133.
 * **Holds against:** reading any key outside the grant *through the view*.
-* **Bypassable by:** `view._store.get()` — succeeds and is **not logged** (L1, L2). This is the single most important honest caveat in the repository.
+* **Bypassable by:** `view._store.get()`, a `sys._getframe()` walk, or a `gc.get_objects()` scan — all succeed and none are logged (L1, L2). This is the single most important honest caveat in the repository. See [case 01](../cases/01-ungranted-read/README.md), which also records why removing the private attribute is refused as a fix.
 
 ### TB-4 — Agent → Store (write)
 
@@ -125,6 +125,7 @@ Recording these explicitly, because each one is easy to mistake for a control.
 | Looks like a boundary | Actually |
 |---|---|
 | The leading underscore in `_store`, `_artifacts`, `_receipts` | A naming convention. CPython enforces nothing. |
+| Holding a reference in a closure instead of an attribute | Closes one reach-around path. The frame stack and the GC are unaffected — demonstrated and refused in case 01. |
 | `@dataclass(frozen=True)` on `Route` | Freezes an individual route object. The dict holding them is mutable, and rebinding the dict entry is unrestricted. |
 | `deepcopy` on artifact reads | Prevents *accidental* aliasing and protects external callers. Does not stop deliberate access to the original. |
 | "Append-only" `EventLog` | A property of the API surface. The file underneath is an ordinary writable file. |
