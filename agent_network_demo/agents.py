@@ -26,12 +26,18 @@ from agent_network_demo.contracts import (
     ContractError,
     HandoffEnvelope,
 )
-from agent_network_demo.event_log import Event, EventLog
+from agent_network_demo.event_log import Event, EventLog, EventLogView
 from agent_network_demo.receipts import ReceiptView
 
 # What ValidationAgent will accept as its evidence source: the runner's
 # read-only view, or any plain sequence of receipt dicts (tests).
 ReceiptSource = Union[ReceiptView, Sequence[Dict[str, Any]]]
+
+# What an agent is handed to record its work. On the runner's path it is
+# always an ``EventLogView`` bound to the identity the routing table assigned,
+# so the agent cannot choose the identity it writes under (case 04). The raw
+# log stays in the union only so tests can drive an agent directly.
+EventSink = Union[EventLogView, EventLog]
 
 # Canonical artifact keys — used everywhere (fixtures, README, tests).
 KEY_RAW_INPUT = "artifact.raw_input"
@@ -144,7 +150,7 @@ class _BaseAgent:
     """Common event bookkeeping; routing belongs exclusively to the runner."""
 
     name: str = "base"
-    def _emit(self, log: EventLog, action: str,
+    def _emit(self, log: EventSink, action: str,
               input_keys: List[str], output_keys: List[str],
               status: str = "ok", checks: Dict[str, Any] = None,
               message: str = "") -> Event:
@@ -186,7 +192,7 @@ class IntakeAgent(_BaseAgent):
         self.source_ref = source_ref
 
     def run(self, envelope: HandoffEnvelope, view: StoreView,
-            log: EventLog) -> AgentResult:
+            log: EventSink) -> AgentResult:
         # Load the payload the key file points at.
         rows = self._load_payload(self.source_ref)
         if not rows:
@@ -253,7 +259,7 @@ class SchemaAgent(_BaseAgent):
 
     name = "schema_agent"
     def run(self, envelope: HandoffEnvelope, view: StoreView,
-            log: EventLog) -> AgentResult:
+            log: EventSink) -> AgentResult:
         preview = view.get(KEY_RAW_INPUT)
         # Infer over the complete rows stored by Intake, not the UI preview.
         rows = preview["rows_data"]
@@ -289,7 +295,7 @@ class TransformAgent(_BaseAgent):
 
     name = "transform_agent"
     def run(self, envelope: HandoffEnvelope, view: StoreView,
-            log: EventLog) -> AgentResult:
+            log: EventSink) -> AgentResult:
         preview = view.get(KEY_RAW_INPUT)
         schema = view.get(KEY_SCHEMA)
         rows = preview["rows_data"]
@@ -368,7 +374,7 @@ class ValidationAgent(_BaseAgent):
         self.receipts = receipts if receipts is not None else []
 
     def run(self, envelope: HandoffEnvelope, view: StoreView,
-            log: EventLog) -> AgentResult:
+            log: EventSink) -> AgentResult:
         checks: Dict[str, Any] = {}
         reasons: List[str] = []
 

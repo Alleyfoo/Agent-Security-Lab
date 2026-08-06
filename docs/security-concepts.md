@@ -22,7 +22,7 @@ where the mapping is *partial*.
 | **Immutability / write-once** | `DuplicateKeyError` on differing content | **Partial.** Prevents rebinding, not in-place mutation (L3). |
 | **Taint tracking / information-flow control** | — | **Absent.** No labels, no propagation, no sink policy. Phase 6. |
 | **Tamper-evident log** | `EventLog` | **Not achieved.** Append-only by API only. No chaining, no sequence binding, no external anchor. Use "append-only by API" until Phase 7. |
-| **Non-repudiation** | — | **Absent.** No identities and no signatures, so no event can be attributed to anyone (L4). |
+| **Non-repudiation** | — | **Absent.** Attribution is now *assigned* by the runner rather than claimed by the agent (case 04), which stops a Level 1 forgery but proves nothing: no keys, no signatures, and same-process code can still write under any label. |
 | **Defence in depth** | Contract validation + view scoping + outbound store diff | **Genuine.** Three independent checks on the write path; the diff catches what the view misses. |
 | **Fail-closed / default-deny** | Closed action vocabulary; unknown key → deny | **Good on the request path**, fail-open on missing evidence (see ladder). |
 | **TOCTOU** | `confine_path` at `start_run` vs. `open()` at run time | **Latent.** Currently unreachable; would become real the moment `source_ref` is settable between the two points. |

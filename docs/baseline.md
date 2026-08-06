@@ -129,16 +129,33 @@ as the data it protects, so an adversary who updates both passes verification.
 
 ### L4 — The audit log accepts forged runner identity
 
-`EventLog.append` performs no authentication of `Event.agent`. Hostile
+> **PREVENTED** through the interface as of
+> [case 04](../cases/04-forged-runner-event/README.md). A Level 2 adversary
+> reaching the `EventLog` and forging under *another agent's* label remains
+> undetected. The tag exhibits the fully open form.
+
+`EventLog.append` performed no authentication of `Event.agent`. Hostile
 in-process code appended an event claiming `agent="trusted_runner"`,
 `action="step_receipt"`, `contract_result="passed"`.
 
+Case 04 found a second, cheaper route the baseline write-up had missed: the
+runner read the acting identity off `agent.name`, so an agent that renamed
+itself `trusted_runner` had the runner write that identity into the **receipt
+ledger** — the record case 00 had made read-only precisely so it could serve as
+evidence. Agents now receive an author-bound `EventLogView` minted from the
+routing table, and the runner verifies after every step that each
+runner-labelled event is one it wrote.
+
 **Bounded by B18:** the verdict is computed from the runner's receipt list,
 not from log events, so the forged event did not change the outcome — this is
-what `test_forged_agent_permission_event_cannot_change_verdict` locks in. The
-damage is to the *human-readable audit record*, not to the decision. State
-this distinction precisely; do not describe the log as trustworthy evidence of
-authorization.
+what `test_forged_agent_permission_event_cannot_change_verdict` locks in, and
+what case 04b measured end to end rather than assuming. The damage is to the
+*human-readable audit record*, not to the decision. State this distinction
+precisely; do not describe the log as trustworthy evidence of authorization.
+
+Still open, and not closable in-process: the runner's tally lives on the
+session object, so an adversary who forges and increments it passes; and the
+control binds attribution, not content.
 
 ### L5 — The on-disk log is rewritable
 

@@ -28,7 +28,9 @@ from agent_network_demo.contracts import (
     CONTRACT_SCHEMA_PROFILE, CONTRACT_TABLE_PREVIEW,
     CONTRACT_VALIDATION_VERDICT, ContractError, HandoffEnvelope, write_key_for,
 )
-from agent_network_demo.event_log import Event, EventLog
+from agent_network_demo.event_log import (
+    AuditIntegrityError, Event, EventLog, RUNNER_IDENTITY,
+)
 from agent_network_demo.receipts import ReceiptLedger
 
 
@@ -124,6 +126,10 @@ class RunSession:
         self._envelope: Optional[HandoffEnvelope] = None
         self._key_file: Dict[str, Any] = {}
         self._receipts: ReceiptLedger = ReceiptLedger()
+        # C3 (case 04): how many events the runner has written under its own
+        # identity. Verified against the log after every step, so a
+        # runner-labelled event the runner did not write is caught.
+        self._runner_event_count = 0
         self._last_snapshot: Optional[StepSnapshot] = None
         self.done = False
         self.error: Optional[str] = None
@@ -134,7 +140,7 @@ class RunSession:
         self.quarantined = False
 
     def _verify_routes(self) -> None:
-        """C3: the routing table in use must still match what was pinned."""
+        """C3 (case 03): the routing table in use must still match the pin."""
         actual = route_fingerprint(self._routes)
         if actual != self._route_fingerprint:
             raise RouteIntegrityError(
@@ -142,6 +148,25 @@ class RunSession:
                 f"{self._route_fingerprint[:8]}... does not match current "
                 f"{actual[:8]}... - runner-owned routing data was modified "
                 "after the run started"
+            )
+
+    def _append_runner_event(self, event: Event) -> Event:
+        """Append under the runner's identity and keep the tally in step."""
+        assert self.log is not None
+        event.agent = RUNNER_IDENTITY
+        self._runner_event_count += 1
+        return self.log.append(event)
+
+    def _verify_event_attribution(self) -> None:
+        """C3 (case 04): every runner-labelled event must be one we wrote."""
+        assert self.log is not None
+        actual = sum(1 for e in self.log.all() if e.agent == RUNNER_IDENTITY)
+        if actual != self._runner_event_count:
+            raise AuditIntegrityError(
+                f"audit log failed attribution verification: the runner wrote "
+                f"{self._runner_event_count} event(s) under {RUNNER_IDENTITY!r} "
+                f"but the log holds {actual} - an event carrying the runner's "
+                "identity was written by something else"
             )
 
     def _envelope_for(self, stage: str, from_agent: str, summary: str) -> HandoffEnvelope:
@@ -162,6 +187,7 @@ class RunSession:
         self.run_id = f"run_{uuid.uuid4().hex}"
         self.store = ArtifactStore()
         self.log = EventLog(self.run_id, data_dir=self.data_dir)
+        self._runner_event_count = 0
         source_ref = confine_path(self._key_file.get("source_ref", "sample_payload.json"))
         # C2: re-pin the policy for this run. Taken here rather than only in
         # __init__ so a reused session starts from the table as it stands now.
@@ -203,6 +229,10 @@ class RunSession:
         agent = self._agents[self._current]
         envelope = self._envelope
         route = self._routes[self._stages[self._current]]
+        # C2 (case 04): the acting identity comes from runner-owned policy, not
+        # from ``agent.name``. Reading it off the agent let one renamed
+        # attribute put the runner's identity into the receipt ledger.
+        identity = route.agent
         status, message, contract_result = "ok", "", "passed"
         event_count_before = len(self.log.all())
         keys_before = set(self.store.keys())
@@ -212,7 +242,17 @@ class RunSession:
             # C3: never issue or act on a grant derived from unverified policy.
             self._verify_routes()
             envelope.validate_inbound(self.store)
-            result = agent.run(envelope, view, self.log)
+            # C1 (case 04): an author-bound handle, never the log itself. A
+            # denial here is an agent overstepping its contract, not corruption
+            # already in the record - so it takes the Level 1 containment path
+            # rather than quarantining the run.
+            try:
+                result = agent.run(envelope, view,
+                                   self.log.view_for(identity))
+            except AuditIntegrityError as exc:
+                raise ContractError(str(exc)) from exc
+            # C3 (case 04): the runner's own label must still be its own.
+            self._verify_event_attribution()
             # C2: sweep every artifact before trusting anything this step did.
             # The new-key diff below compares key *sets*, so an in-place
             # mutation contributes nothing to it and would pass unnoticed.
@@ -224,7 +264,7 @@ class RunSession:
             if corrupted:
                 raise ArtifactIntegrityError(
                     f"artifact integrity verification failed after "
-                    f"{agent.name} for {corrupted}: content no longer matches "
+                    f"{identity} for {corrupted}: content no longer matches "
                     "the hash registered for it"
                 )
             new_keys = sorted(set(self.store.keys()) - keys_before)
@@ -239,7 +279,7 @@ class RunSession:
             declared = getattr(result, "output_keys", new_keys)
             if sorted(declared) != new_keys:
                 raise ContractError(f"agent result output keys {declared} != actual {new_keys}")
-            summary = getattr(result, "summary", f"{agent.name} completed")
+            summary = getattr(result, "summary", f"{identity} completed")
             self._current += 1
             if route.next_stage is None:
                 self.done = True
@@ -256,7 +296,16 @@ class RunSession:
             message = f"route integrity failure: {exc}"
             self.error = message
             self.quarantined = True
-            self._emit_error(agent.name, message)
+            self._emit_error(identity, message)
+        except AuditIntegrityError as exc:
+            # Audit-plane corruption: a runner-labelled event the runner did
+            # not write. Only reachable from the post-step sweep - a denial at
+            # the handle was converted to a ContractError above.
+            status, contract_result = "error", "failed"
+            message = f"audit integrity failure: {exc}"
+            self.error = message
+            self.quarantined = True
+            self._emit_error(identity, message)
         except ArtifactIntegrityError as exc:
             # Data-plane corruption, not a contract breach. Quarantine rather
             # than leaving the stage retryable against a store known corrupt.
@@ -264,21 +313,21 @@ class RunSession:
             message = f"artifact integrity failure: {exc}"
             self.error = message
             self.quarantined = True
-            self._emit_error(agent.name, message)
+            self._emit_error(identity, message)
         except ContractError as exc:
             status, contract_result = "error", "failed"
             message = f"contract violation: {exc}"
             self.error = message
-            self._emit_error(agent.name, str(exc))
+            self._emit_error(identity, str(exc))
         except Exception as exc:  # noqa: BLE001
             status, contract_result = "error", "failed"
             message = f"{type(exc).__name__}: {exc}"
             self.error = message
-            self._emit_error(agent.name, message)
+            self._emit_error(identity, message)
 
         actual_new_keys = sorted(set(self.store.keys()) - keys_before)
         receipt = {
-            "agent": agent.name,
+            "agent": identity,
             "granted_input_keys": list(envelope.input_keys),
             "granted_output_key": write_key_for(envelope.output_contract),
             "keys_actually_read": view.read_keys,
@@ -287,18 +336,18 @@ class RunSession:
             "status": status,
         }
         self._receipts.append(receipt)
-        self.log.append(Event(
-            run_id=self.run_id, agent="trusted_runner", action="step_receipt",
+        self._append_runner_event(Event(
+            run_id=self.run_id, agent=RUNNER_IDENTITY, action="step_receipt",
             input_keys=receipt["keys_actually_read"],
             output_keys=receipt["keys_actually_written"], status=status,
-            checks=deepcopy(receipt), message=f"Receipt for {agent.name}: {contract_result}.",
+            checks=deepcopy(receipt), message=f"Receipt for {identity}: {contract_result}.",
         ))
 
         new_events = [e.to_dict() for e in self.log.all()[event_count_before:]]
         snap = StepSnapshot(
-            self.run_id, self._current, agent.name, self.chain_status(),
+            self.run_id, self._current, identity, self.chain_status(),
             self._envelope.to_dict() if self._envelope else {}, self.store.keys(),
-            new_events, status, message or f"{agent.name} ran.", self.done,
+            new_events, status, message or f"{identity} ran.", self.done,
         )
         self._last_snapshot = snap
         return snap

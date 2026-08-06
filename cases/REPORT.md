@@ -12,8 +12,10 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-01](01-ungranted-read/README.md)<br>Reading artifacts the grant excludes | Read artifact.cleaned_output from a stage granted only artifact.raw_input, via view._store, a sys._getframe() walk, and a gc.get_objects() scan | 🔴 Undetected | 🔴 Undetected | None at this phase. Control is process isolation (Phase 5). | The entire case is open. StoreView does not contain arbitrary hostile Python sharing the process, interpreter, object graph, memory, module namespace and OS identity. |
 | [case-02](02-artifact-mutation/README.md)<br>In-place mutation of a registered artifact | A hostile schema stage rewrites one cell of artifact.raw_input after doing its legitimate work - no new key, no row-count change, no column change | 🔴 Undetected | 🟠 Detected after occurrence | Trusted hash verification in two places: ArtifactStore.get() at the read boundary (C1) and ArtifactStore.verify_all() as a runner post-step sweep (C2), plus fail-closed quarantine | Same-process hostile code may still mutate memory. Hash verification detects divergence but does not create memory isolation or undo confidentiality loss. The hash lives in the same dict as the data it protects, so an attacker who updates both passes; and the sweep runs at step boundaries, so an attacker who restores the original bytes first is not caught. |
 | [case-03](03-mutable-route-table/README.md)<br>Altering runner-owned routing data | A hostile agent rebinds WORKFLOW_ROUTES entries to widen the next stage's grant, to delete the validation stage, and - persistently - to contaminate later runs in the same process | 🔴 Undetected | 🟢 Prevented | Read-only MappingProxyType over a private table (C1), a per-run private copy pinned at start_run (C2), and a route fingerprint verified before and after every step (C3), with fail-closed quarantine on mismatch | The reference value lives inside the adversary's reach. MappingProxyType is a view, not a freeze, so the private dict is still writable; pre-run tampering is pinned rather than caught; and an adversary updating both the routes and the fingerprint passes verification. Closing these needs the expected policy held outside the process - a different boundary, not a different check. |
+| [case-04a](04-forged-runner-event/README.md)<br>Forged runner-labelled audit event - the record | A hostile agent appends an event carrying the trusted runner's identity through the log handle it was given, and - separately - renames itself 'trusted_runner' so the runner writes the identity into the receipt ledger on its behalf | 🔴 Undetected | 🟢 Prevented | An author-bound EventLogView minted from the routing table, not from agent.name (C1+C2), plus a runner-owned tally of runner-labelled events verified after every step (C3), with fail-closed quarantine on mismatch | Attribution is bound; content is not, so an agent may still write receipt-shaped prose under its own honest identity. The tally covers the runner's label only, because the runner has no independent record of what an agent legitimately wrote, so Level 2 forgery under another agent's label is undetected. And the tally is an ordinary attribute on the session: an adversary who forges and increments it passes. |
+| [case-04b](04-forged-runner-event/README.md)<br>Forged runner-labelled audit event - the decision | The same forged events, measured against the authorization decision rather than the record: does a run under forged permission claims reach a different verdict? | 🟢 Prevented | 🟢 Prevented | None added by this case. Pre-existing baseline control B18: ValidationAgent derives all_writes_allowed from the runner-owned receipt ledger and never reads log events | The separation holds because one consumer happens to read the right source. Nothing structurally prevents a future reader - a UI panel, a report, an operator - from deriving an authorization conclusion from the log, and no type or interface marks the log as narrative rather than evidence. |
 
-**4 cases** — 3 with a control, 1 open by design. 3 moved to a better result class.
+**6 cases** — 5 with a control, 1 open by design. 4 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -146,19 +148,84 @@ Reproduce: `python cases/02-artifact-mutation/attack.py` · Tests: `tests/advers
 
 Reproduce: `python cases/03-mutable-route-table/attack.py` · Tests: `tests/adversarial/test_case_03_mutable_route_table.py`
 
+### ✅ case-04a — Forged runner-labelled audit event - the record
+
+**Compromise level:** Level 1: malicious agent implementation (Level 2 for the residual)  
+**Attack:** A hostile agent appends an event carrying the trusted runner's identity through the log handle it was given, and - separately - renames itself 'trusted_runner' so the runner writes the identity into the receipt ledger on its behalf  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟢 Prevented
+
+**Control.** An author-bound EventLogView minted from the routing table, not from agent.name (C1+C2), plus a runner-owned tally of runner-labelled events verified after every step (C3), with fail-closed quarantine on mismatch
+
+**Evidence**
+
+- 5 events labelled trusted_runner against 4 receipts at baseline
+- AuditIntegrityError naming the claimed and the assigned identity
+- receipt ledger no longer adopts a renamed agent's identity
+- Level 2 append quarantines the run: 2 written, 3 in the log
+- tests/adversarial/test_case_04_forged_runner_event.py
+
+**What this proves.** The agent field in the audit log recorded a claim, not an observation, and two independent Level 1 routes could set it to the trusted runner's identity - one through the handle the runner passed in, one by renaming the agent so the runner wrote the lie itself. With the control the identity in the trusted record is assigned by runner-owned policy, an agent cannot append under another identity through the interfaces it is given, and a runner-labelled event the runner did not write is detected before the workflow advances.
+
+**What this does not prove.** It does not make the log tamper-evident: no hash chain, no signature, no external anchor, and the on-disk file is still rewritable (L5). It does not contain a Level 2 adversary, who reaches the EventLog through the object graph and can update the runner's tally alongside a forged event. It binds attribution, not content, and it says nothing about the authorization decision - that is case-04b.
+
+**Residual limitation.** Attribution is bound; content is not, so an agent may still write receipt-shaped prose under its own honest identity. The tally covers the runner's label only, because the runner has no independent record of what an agent legitimately wrote, so Level 2 forgery under another agent's label is undetected. And the tally is an ordinary attribute on the session: an adversary who forges and increments it passes.
+
+**Containment.** Attribution denied at the handle -> ContractError, the step fails and the workflow halts (Level 1 path, nothing corrupt entered the record). Attribution mismatch found by the sweep -> AuditIntegrityError and quarantine.
+
+**Recovery.** Not implemented. Deleting the forged event is the attack, not the remedy, and the ledger cannot reconstruct agent work events. Treat the run's log as untrusted narrative and read RunSession.receipts() instead.
+
+**Blast radius.** One run's narrative record - the log file is per-run, so unlike case 03 the tampering does not reach another run. What is lost is the ability to answer 'who did this?' for the whole run, since one entry indistinguishable from a real one devalues every entry beside it.
+
+**Notes.** A2 was the cheaper and the worse of the two routes: one renamed attribute put the runner's identity into the receipt ledger, the record case 00 had made read-only so it could serve as evidence. Noticed and recorded rather than fixed: _emit_error attributes runner-authored error events to the acting agent.
+
+Reproduce: `python cases/04-forged-runner-event/attack.py` · Tests: `tests/adversarial/test_case_04_forged_runner_event.py`
+
+### ✅ case-04b — Forged runner-labelled audit event - the decision
+
+**Compromise level:** Level 2: fully compromised agent process  
+**Attack:** The same forged events, measured against the authorization decision rather than the record: does a run under forged permission claims reach a different verdict?  
+**Baseline:** 🟢 Prevented → **Controlled:** 🟢 Prevented
+
+**Control.** None added by this case. Pre-existing baseline control B18: ValidationAgent derives all_writes_allowed from the runner-owned receipt ledger and never reads log events
+
+**Evidence**
+
+- verdict under forged events is field-for-field identical to a clean run
+- with ledger and log in direct contradiction the verdict follows the ledger: warn, all_writes_allowed False
+- test_forged_events_do_not_change_the_verdict
+- test_the_validator_follows_the_ledger_not_the_log
+
+**What this proves.** That corrupting the audit record and corrupting the authorization decision are separate incidents in this system, by measurement rather than by assertion. The decision plane does not read the narrative log at all, so a forged event - including one in the runner's own voice - changes nothing about what the workflow authorizes.
+
+**What this does not prove.** It does not make the log trustworthy evidence of authorization - it is not evidence of authorization at all, which is the point. It does not defend the receipt ledger, which is case 00's claim, and it does not show the verdict itself is trustworthy: the validator still authors its own conclusion (case 05).
+
+**Residual limitation.** The separation holds because one consumer happens to read the right source. Nothing structurally prevents a future reader - a UI panel, a report, an operator - from deriving an authorization conclusion from the log, and no type or interface marks the log as narrative rather than evidence.
+
+**Containment.** Not applicable: no unauthorized effect occurs on the decision plane. The containment for the forged event itself is case-04a's.
+
+**Recovery.** Not applicable. The decision was never derived from the corrupted source, so there is nothing to recompute. The record still needs case-04a's response.
+
+**Blast radius.** None on the decision plane. Stated as a measured result rather than an absence of findings.
+
+**Notes.** Registered green at the baseline, which is unusual here and deliberate: the entry records a containment that already existed and that this case measured. An unmeasured containment is indistinguishable from luck, and the collapse of these two effects into one sentence is what the case exists to prevent.
+
+Reproduce: `python cases/04-forged-runner-event/attack.py` · Tests: `tests/adversarial/test_case_04_forged_runner_event.py`
+
 ## Where the boundary stands
 
 The near-term milestone is a verified map of what a malicious agent can and cannot do inside the baseline process.
 
 | Question | Answer so far |
 |---|---|
-| Which interface controls genuinely work? | Scoped reads/writes through `StoreView`, contract-to-action binding, the read-only receipt handle (case 00), and the read-only routing table with per-run pinning (case 03). |
-| Which attacks remain possible through shared memory? | Ungranted reads by three independent paths (case 01); in-place mutation itself, which is detected but not prevented (case 02); rewriting the private routing table before a run starts, which is not detected at all (case 03 residual). |
-| Which unauthorized writes can be detected? | New-key writes, via the runner's store diff. In-place mutation, via hash verification (case 02). |
+| Which interface controls genuinely work? | Scoped reads/writes through `StoreView`, contract-to-action binding, the read-only receipt handle (case 00), the read-only routing table with per-run pinning (case 03), and the author-bound event-log handle (case 04). |
+| Which attacks remain possible through shared memory? | Ungranted reads by three independent paths (case 01); in-place mutation itself, which is detected but not prevented (case 02); rewriting the private routing table before a run starts, which is not detected at all (case 03 residual); appending a log event under another agent's identity, which the runner cannot tally (case 04a residual). |
+| Which unauthorized writes can be detected? | New-key writes, via the runner's store diff. In-place mutation, via hash verification (case 02). Events forged under the runner's own identity, via the runner's tally (case 04a). |
 | Which unauthorized reads remain invisible? | All of them. Bypassed reads leave `view.read_keys` empty (case 01). |
-| Which runner-owned structures can agents affect? | None through the documented interface: the receipt ledger (case 00) and the routing table (case 03) are both read-only to agents. Both remain reachable by a Level 2 adversary via private attributes. |
+| Which runner-owned structures can agents affect? | None through the documented interface: the receipt ledger (case 00), the routing table (case 03) and the identity an event is attributed to (case 04) are all runner-assigned. All remain reachable by a Level 2 adversary via private attributes. |
 | Which conclusions remain agent-authored? | The validation verdict (case 00 residual, to be closed by case 05). |
-| Which evidence remains trustworthy? | Runner receipts. The event log still accepts forged runner-labelled events (case 04, not yet run). |
+| Which evidence remains trustworthy? | Runner receipts. The event log is a *narrative record*, not evidence of authorization: nothing derives an authorization decision from it, which case 04b measured rather than assumed. Its attribution is now runner-assigned and runner-labelled forgery is detected (case 04a), but it is still not tamper-evident — no chain, and the file is rewritable (L5, Phase 7). |
+
+One entry is still outstanding: the agent-authored verdict, which is case 05. Phase 5 does not begin before it is answered.
 
 ### The cross-cutting finding
 

@@ -50,6 +50,8 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [01 — reading artifacts the grant excludes](cases/01-ungranted-read/README.md) | 🔴 Undetected | 🔴 Undetected — open by design |
 | [02 — in-place mutation of a registered artifact](cases/02-artifact-mutation/README.md) | 🔴 Undetected | 🟠 Detected after occurrence |
 | [03 — altering runner-owned routing data](cases/03-mutable-route-table/README.md) | 🔴 Undetected | 🟢 Prevented |
+| [04a — forged runner-labelled audit event: the record](cases/04-forged-runner-event/README.md) | 🔴 Undetected | 🟢 Prevented |
+| [04b — forged runner-labelled audit event: the decision](cases/04-forged-runner-event/README.md) | 🟢 Prevented | 🟢 Prevented |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",
@@ -60,6 +62,12 @@ compromised agent, the loss has already occurred.
 Case 01 stays red because it is genuinely open. An open case is never shown as
 green, and a patch that closes one path of a class is refused rather than
 shipped.
+
+Case 04 is registered as two rows because forging the audit record and
+corrupting the authorization decision are different effects with different
+results. 04b is green at the baseline: the decision was already contained by
+existing architecture, and the case measured that rather than claiming credit
+for it.
 
 Each case ships an executable attack you can run yourself:
 

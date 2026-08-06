@@ -92,11 +92,14 @@ charter list when the scope narrowed to confinement.
 | [`01-ungranted-read`](01-ungranted-read/README.md) ⚠️ | 2 | L1, L2 | A scoped view constrains interface access but not same-process reach-around, and the bypass is invisible in the read log |
 | [`02-artifact-mutation`](02-artifact-mutation/README.md) ✅ | 2 | L3 | In-place mutation creates no new key, so the store diff is blind to it; hash verification detects it |
 | [`03-mutable-route-table`](03-mutable-route-table/README.md) ✅ | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
-| `04-forged-runner-event` | 2 | L4 | Audit-record corruption and authorization corruption are separate effects and must be measured separately |
+| [`04-forged-runner-event`](04-forged-runner-event/README.md) ✅ | 2 | L4 | Audit-record corruption and authorization corruption are separate effects and must be measured separately |
 | `05-false-verdict` | 2 | case 00 residual | A conclusion an agent authors is not evidence; the runner must derive the mechanical verdict itself |
 
-Cases 00, 01 and 02 are recorded in the canonical registry
-([`registry.py`](registry.py)) and rendered in [`REPORT.md`](REPORT.md).
+Every case above is recorded in the canonical registry
+([`registry.py`](registry.py)) and rendered in [`REPORT.md`](REPORT.md). Case 04
+is registered as two entries — `case-04a` for the record, `case-04b` for the
+decision — because they have different results and one row would hide which
+effect actually changed a decision.
 
 ## Transition gate to process isolation
 
@@ -106,7 +109,7 @@ which unauthorized writes can be detected, which unauthorized reads remain
 invisible, which runner-owned structures agents can affect, which conclusions
 remain agent-authored, and which evidence remains trustworthy.
 
-`REPORT.md` maintains that map. Cases 03, 04 and 05 are the remaining entries.
+`REPORT.md` maintains that map. Case 05 is the last remaining entry.
 
 The transition statement, when it is earned:
 

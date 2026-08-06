@@ -27,8 +27,8 @@ This is the honest picture, not the target picture:
 | Execution | `IntakeAgent`, `SchemaAgent`, `TransformAgent`, `ValidationAgent` | — |
 | Control | `RunSession` + `WORKFLOW_ROUTES` | **No** — same process, same namespace (L6) |
 | Data | `ArtifactStore` (in-memory dict) | **No** — reachable via `view._store` (L1) |
-| Identity | *Does not exist.* Agents are identified by a `name` string with no authentication | **No** |
-| Audit | `EventLog` + `ReceiptLedger` | **Partly** — receipts are now read-only for agents (case 00), but the log still accepts forged identity (L4) and nothing is chained |
+| Identity | *Assigned, not authenticated.* The runner takes an agent's identity from the routing table rather than from `agent.name` (case 04), but nothing proves who is executing | **No** |
+| Audit | `EventLog` + `ReceiptLedger` | **Partly** — receipts are read-only for agents (case 00) and log attribution is runner-assigned (case 04), but nothing is chained and the file is rewritable (L5) |
 
 Four of five planes are currently collapsed into one process. The lab's job is
 to pull them apart one at a time and measure what each separation actually
@@ -102,9 +102,9 @@ AgentResult  ==>  RunSession.step()
 agent._emit()  ==>  EventLog  ==>  events_<run>.jsonl
 ```
 
-* **Enforced by:** nothing authenticates `Event.agent`.
-* **Holds against:** nothing.
-* **Contained by:** `ValidationAgent` deriving authorization from runner receipts rather than log events (B18) — so a forged event corrupts the *record*, not the *decision* (L4).
+* **Enforced by:** `EventLogView`, an author-bound handle minted by the runner from the routing table; the runner also tallies its own label and verifies it after every step (case 04).
+* **Holds against:** Level 1 — an agent using the handle it is given cannot append under another identity. Not against Level 2 reaching the `EventLog` itself, where only the runner's own label is tallied.
+* **Contained by:** `ValidationAgent` deriving authorization from runner receipts rather than log events (B18) — so a forged event corrupts the *record*, not the *decision* (L4). Measured in case 04b, not assumed.
 
 ### TB-7 — Runner → Audit (receipts)
 

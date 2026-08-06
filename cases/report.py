@@ -123,25 +123,36 @@ def render() -> str:
     w("|---|---|")
     w("| Which interface controls genuinely work? | Scoped reads/writes through "
       "`StoreView`, contract-to-action binding, the read-only receipt handle "
-      "(case 00), and the read-only routing table with per-run pinning "
-      "(case 03). |")
+      "(case 00), the read-only routing table with per-run pinning (case 03), "
+      "and the author-bound event-log handle (case 04). |")
     w("| Which attacks remain possible through shared memory? | Ungranted "
       "reads by three independent paths (case 01); in-place mutation itself, "
       "which is detected but not prevented (case 02); rewriting the private "
       "routing table before a run starts, which is not detected at all "
-      "(case 03 residual). |")
+      "(case 03 residual); appending a log event under another agent's "
+      "identity, which the runner cannot tally (case 04a residual). |")
     w("| Which unauthorized writes can be detected? | New-key writes, via the "
-      "runner's store diff. In-place mutation, via hash verification (case 02). |")
+      "runner's store diff. In-place mutation, via hash verification (case 02). "
+      "Events forged under the runner's own identity, via the runner's tally "
+      "(case 04a). |")
     w("| Which unauthorized reads remain invisible? | All of them. Bypassed "
       "reads leave `view.read_keys` empty (case 01). |")
     w("| Which runner-owned structures can agents affect? | None through the "
-      "documented interface: the receipt ledger (case 00) and the routing "
-      "table (case 03) are both read-only to agents. Both remain reachable by "
-      "a Level 2 adversary via private attributes. |")
+      "documented interface: the receipt ledger (case 00), the routing table "
+      "(case 03) and the identity an event is attributed to (case 04) are all "
+      "runner-assigned. All remain reachable by a Level 2 adversary via "
+      "private attributes. |")
     w("| Which conclusions remain agent-authored? | The validation verdict "
       "(case 00 residual, to be closed by case 05). |")
     w("| Which evidence remains trustworthy? | Runner receipts. The event log "
-      "still accepts forged runner-labelled events (case 04, not yet run). |")
+      "is a *narrative record*, not evidence of authorization: nothing derives "
+      "an authorization decision from it, which case 04b measured rather than "
+      "assumed. Its attribution is now runner-assigned and runner-labelled "
+      "forgery is detected (case 04a), but it is still not tamper-evident — "
+      "no chain, and the file is rewritable (L5, Phase 7). |")
+    w("")
+    w("One entry is still outstanding: the agent-authored verdict, which is "
+      "case 05. Phase 5 does not begin before it is answered.")
     w("")
     w("### The cross-cutting finding")
     w("")
