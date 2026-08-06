@@ -46,6 +46,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [00 — audited component edits its own evidence](cases/00-receipt-handle/README.md) | 🔴 Undetected | 🟢 Prevented |
 | [01 — reading artifacts the grant excludes](cases/01-ungranted-read/README.md) | 🔴 Undetected | 🔴 Undetected — open by design |
 | [02 — in-place mutation of a registered artifact](cases/02-artifact-mutation/README.md) | 🔴 Undetected | 🟠 Detected after occurrence |
+| [03 — altering runner-owned routing data](cases/03-mutable-route-table/README.md) | 🔴 Undetected | 🟢 Prevented |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",

@@ -91,7 +91,7 @@ charter list when the scope narrowed to confinement.
 | [`00-receipt-handle`](00-receipt-handle/README.md) ✅ | 2 | L7 | The component being audited must not be able to edit the evidence it is audited against |
 | [`01-ungranted-read`](01-ungranted-read/README.md) ⚠️ | 2 | L1, L2 | A scoped view constrains interface access but not same-process reach-around, and the bypass is invisible in the read log |
 | [`02-artifact-mutation`](02-artifact-mutation/README.md) ✅ | 2 | L3 | In-place mutation creates no new key, so the store diff is blind to it; hash verification detects it |
-| `03-mutable-route-table` | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
+| [`03-mutable-route-table`](03-mutable-route-table/README.md) ✅ | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
 | `04-forged-runner-event` | 2 | L4 | Audit-record corruption and authorization corruption are separate effects and must be measured separately |
 | `05-false-verdict` | 2 | case 00 residual | A conclusion an agent authors is not evidence; the runner must derive the mechanical verdict itself |
 

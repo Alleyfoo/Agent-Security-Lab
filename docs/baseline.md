@@ -55,6 +55,7 @@ security concept in [security-concepts.md](security-concepts.md).
 | B19 | Append-only log API | [event_log.py:36](../agent_network_demo/event_log.py:36) | No update or delete operation on the application interface |
 | B20 | Read-only receipt handle | [receipts.py](../agent_network_demo/receipts.py) | The audited agent cannot mutate the runner's evidence (added by case 00, not present at the tag) |
 | B21 | Live-path integrity verification | [artifact_store.py](../agent_network_demo/artifact_store.py) | `get()` verifies at the read boundary and `verify_all()` sweeps after every step; in-place mutation is detected, not prevented (added by case 02) |
+| B22 | Read-only, pinned routing policy | [demo_runner.py](../agent_network_demo/demo_runner.py) | Public route table is a `MappingProxyType`; each run pins a private copy and verifies its fingerprint every step (added by case 03) |
 
 ## 3. Baseline limitations — verified, not assumed
 
@@ -151,14 +152,31 @@ tamper-evident. Do not use the stronger term until a chain exists (Phase 7).
 
 ### L6 — The route table is mutable at runtime
 
-`demo_runner.WORKFLOW_ROUTES` is a module-level dict. Hostile code rewrote the
+> **PREVENTED** through the interface as of
+> [case 03](../cases/03-mutable-route-table/README.md). A Level 2 adversary
+> reaching the private table before `start_run` remains undetected. The tag
+> exhibits the fully open form.
+
+`demo_runner.WORKFLOW_ROUTES` was a module-level dict. Hostile code rewrote the
 `schema` entry to grant itself `artifact.cleaned_output` plus a broader output
-contract. `Route` is a frozen dataclass, but the dict holding the routes is
-not, and the module object is reachable from any agent.
+contract. `Route` is a frozen dataclass — including its tuple fields — but the
+dict holding the routes was not, and the module object is reachable from any
+agent by ordinary import.
 
 **Consequence:** B10 says routing is runner-owned. That is true of the
-*control flow*, but the routing *data* sits in the same mutable namespace as
+*control flow*, but the routing *data* sat in the same mutable namespace as
 the agents it governs.
+
+Case 03 measured three effects, the third found by accident and then
+deliberately: the runner **issued** grants the policy never contained; a
+hostile agent **deleted the validation stage** and the run still reported
+completion with no error and no quarantine; and the tampering **outlived the
+run**, so a later, entirely honest session in the same process inherited it.
+Blast radius was process lifetime, not run lifetime.
+
+Now: `WORKFLOW_ROUTES` is a `MappingProxyType` over a private table, each run
+pins its own copy at `start_run`, and a fingerprint over that copy is verified
+before and after every step with fail-closed quarantine on mismatch.
 
 ### L7 — The audited component holds a live handle to its own evidence
 

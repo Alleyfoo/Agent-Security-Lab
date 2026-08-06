@@ -122,22 +122,43 @@ def render() -> str:
     w("| Question | Answer so far |")
     w("|---|---|")
     w("| Which interface controls genuinely work? | Scoped reads/writes through "
-      "`StoreView`, contract-to-action binding, runner-owned routing, and the "
-      "read-only receipt handle (case 00). |")
+      "`StoreView`, contract-to-action binding, the read-only receipt handle "
+      "(case 00), and the read-only routing table with per-run pinning "
+      "(case 03). |")
     w("| Which attacks remain possible through shared memory? | Ungranted "
       "reads by three independent paths (case 01); in-place mutation itself, "
-      "which is detected but not prevented (case 02). |")
+      "which is detected but not prevented (case 02); rewriting the private "
+      "routing table before a run starts, which is not detected at all "
+      "(case 03 residual). |")
     w("| Which unauthorized writes can be detected? | New-key writes, via the "
       "runner's store diff. In-place mutation, via hash verification (case 02). |")
     w("| Which unauthorized reads remain invisible? | All of them. Bypassed "
       "reads leave `view.read_keys` empty (case 01). |")
-    w("| Which runner-owned structures can agents affect? | `WORKFLOW_ROUTES` "
-      "remains mutable (case 03, not yet run). The receipt ledger no longer "
-      "is (case 00). |")
+    w("| Which runner-owned structures can agents affect? | None through the "
+      "documented interface: the receipt ledger (case 00) and the routing "
+      "table (case 03) are both read-only to agents. Both remain reachable by "
+      "a Level 2 adversary via private attributes. |")
     w("| Which conclusions remain agent-authored? | The validation verdict "
       "(case 00 residual, to be closed by case 05). |")
     w("| Which evidence remains trustworthy? | Runner receipts. The event log "
       "still accepts forged runner-labelled events (case 04, not yet run). |")
+    w("")
+    w("### The cross-cutting finding")
+    w("")
+    w("Cases 02 and 03 arrived at the same wall from different directions:")
+    w("")
+    w("> An integrity check whose expected value is stored where the adversary "
+      "can reach it detects careless tampering, not careful tampering.")
+    w("")
+    w("Case 02's `source_hash` sits in the same dict as the data it protects. "
+      "Case 03's route fingerprint sits on the same session object as the "
+      "routes it protects. In both, an adversary who updates the reference "
+      "value alongside the data passes verification, and both residuals are "
+      "pinned by executable tests.")
+    w("")
+    w("Neither is fixable by a better check. Both need the expected value held "
+      "outside the adversary's reach, which means changing the trust boundary "
+      "rather than adding another comparison inside it.")
     w("")
     return "\n".join(out) + "\n"
 

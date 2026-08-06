@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
 import uuid
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from types import MappingProxyType
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _REPO_ROOT not in sys.path:
@@ -40,7 +42,20 @@ class Route:
     next_stage: Optional[str]
 
 
-WORKFLOW_ROUTES: Dict[str, Route] = {
+class RouteIntegrityError(RuntimeError):
+    """Raised when the routing table in use no longer matches what was pinned.
+
+    Distinct from ArtifactIntegrityError (data plane) and ReceiptIntegrityError
+    (audit plane): this is corruption of the *control* plane, and the three are
+    different incidents. See cases/03-mutable-route-table/README.md.
+    """
+
+
+# The private table. ``WORKFLOW_ROUTES`` below is a read-only view over it, so
+# an agent holding an ordinary import cannot rebind a stage's route. That is
+# prevention at the interface, not isolation: code that reaches this name
+# directly can still modify it (case 03 residual).
+_WORKFLOW_ROUTES: Dict[str, Route] = {
     "intake": Route("intake_agent", "intake_request", (), CONTRACT_TABLE_PREVIEW,
                     (ACTION_WRITE_TABLE_PREVIEW,), "schema"),
     "schema": Route("schema_agent", "schema_request", (KEY_RAW_INPUT,),
@@ -54,6 +69,26 @@ WORKFLOW_ROUTES: Dict[str, Route] = {
                         CONTRACT_VALIDATION_VERDICT,
                         (ACTION_READ_ARTIFACT, ACTION_WRITE_VALIDATION_VERDICT), None),
 }
+
+# C1: the public, read-only routing table.
+WORKFLOW_ROUTES: Mapping[str, Route] = MappingProxyType(_WORKFLOW_ROUTES)
+
+
+def route_fingerprint(routes: Mapping[str, Route]) -> str:
+    """SHA-256 over the canonical form of a routing table.
+
+    Used to pin a run's policy at start_run and re-verify it before every step
+    (C3). Like every integrity check in this repository, the reference value
+    lives in the same address space as the data it protects - it detects
+    careless tampering, not careful tampering.
+    """
+    canonical = json.dumps(
+        [[stage, route.agent, route.handoff_type, list(route.input_keys),
+          route.output_contract, list(route.allowed_actions), route.next_stage]
+         for stage, route in routes.items()],
+        sort_keys=False, separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 @dataclass
@@ -79,7 +114,12 @@ class RunSession:
         self.store: Optional[ArtifactStore] = None
         self.log: Optional[EventLog] = None
         self._agents: List[Any] = []
-        self._stages = list(WORKFLOW_ROUTES)
+        # C2: a run's policy is its own copy, pinned at start_run. Tampering
+        # with the module table mid-run cannot change a run already underway.
+        # Route is frozen with tuple fields, so a shallow copy is a real copy.
+        self._routes: Dict[str, Route] = dict(WORKFLOW_ROUTES)
+        self._route_fingerprint = route_fingerprint(self._routes)
+        self._stages = list(self._routes)
         self._current = 0
         self._envelope: Optional[HandoffEnvelope] = None
         self._key_file: Dict[str, Any] = {}
@@ -93,8 +133,19 @@ class RunSession:
         # retry the stage against tampered state. See case 02.
         self.quarantined = False
 
+    def _verify_routes(self) -> None:
+        """C3: the routing table in use must still match what was pinned."""
+        actual = route_fingerprint(self._routes)
+        if actual != self._route_fingerprint:
+            raise RouteIntegrityError(
+                f"routing table failed integrity verification: pinned "
+                f"{self._route_fingerprint[:8]}... does not match current "
+                f"{actual[:8]}... - runner-owned routing data was modified "
+                "after the run started"
+            )
+
     def _envelope_for(self, stage: str, from_agent: str, summary: str) -> HandoffEnvelope:
-        route = WORKFLOW_ROUTES[stage]
+        route = self._routes[stage]
         return HandoffEnvelope(
             run_id=self.run_id, from_agent=from_agent, to_agent=route.agent,
             handoff_type=route.handoff_type, input_keys=list(route.input_keys),
@@ -112,6 +163,11 @@ class RunSession:
         self.store = ArtifactStore()
         self.log = EventLog(self.run_id, data_dir=self.data_dir)
         source_ref = confine_path(self._key_file.get("source_ref", "sample_payload.json"))
+        # C2: re-pin the policy for this run. Taken here rather than only in
+        # __init__ so a reused session starts from the table as it stands now.
+        self._routes = dict(WORKFLOW_ROUTES)
+        self._route_fingerprint = route_fingerprint(self._routes)
+        self._stages = list(self._routes)
         self._receipts = ReceiptLedger()
         self._agents = [
             IntakeAgent(source_ref=source_ref), SchemaAgent(), TransformAgent(),
@@ -146,18 +202,24 @@ class RunSession:
         assert self.store is not None and self.log is not None and self._envelope
         agent = self._agents[self._current]
         envelope = self._envelope
-        route = WORKFLOW_ROUTES[self._stages[self._current]]
+        route = self._routes[self._stages[self._current]]
         status, message, contract_result = "ok", "", "passed"
         event_count_before = len(self.log.all())
         keys_before = set(self.store.keys())
         view = self.store.view(list(envelope.input_keys), write_key_for(envelope.output_contract))
 
         try:
+            # C3: never issue or act on a grant derived from unverified policy.
+            self._verify_routes()
             envelope.validate_inbound(self.store)
             result = agent.run(envelope, view, self.log)
             # C2: sweep every artifact before trusting anything this step did.
             # The new-key diff below compares key *sets*, so an in-place
             # mutation contributes nothing to it and would pass unnoticed.
+            # ... and again after it ran, so an agent that tampered during its
+            # own step cannot have that tampering used to build the next
+            # envelope below.
+            self._verify_routes()
             corrupted = self.store.verify_all()
             if corrupted:
                 raise ArtifactIntegrityError(
@@ -187,6 +249,14 @@ class RunSession:
                 )
             else:
                 self._envelope = self._envelope_for(route.next_stage, route.agent, summary)
+        except RouteIntegrityError as exc:
+            # Control-plane corruption. Quarantine rather than continuing to
+            # issue grants derived from policy that no longer verifies.
+            status, contract_result = "error", "failed"
+            message = f"route integrity failure: {exc}"
+            self.error = message
+            self.quarantined = True
+            self._emit_error(agent.name, message)
         except ArtifactIntegrityError as exc:
             # Data-plane corruption, not a contract breach. Quarantine rather
             # than leaving the stage retryable against a store known corrupt.

@@ -59,7 +59,7 @@ WORKFLOW_ROUTES  ==>  HandoffEnvelope + StoreView  ==>  agent.run()
 * **Crossing:** authority is issued.
 * **Enforced by:** `validate_inbound` ([contracts.py:126](../agent_network_demo/contracts.py:126)) and view construction ([demo_runner.py:139](../agent_network_demo/demo_runner.py:139)).
 * **Holds against:** unknown actions, grants inconsistent with the declared contract, input keys the agent invented.
-* **Bypassable by:** rewriting `WORKFLOW_ROUTES` (L6).
+* **Bypassable by:** rewriting the routing table (L6) — now **prevented** through the interface and **detected** mid-run ([case 03](../cases/03-mutable-route-table/README.md)). A Level 2 adversary rewriting the private table before `start_run` remains undetected.
 
 ### TB-3 — Agent → Store (read)
 
@@ -94,7 +94,7 @@ AgentResult  ==>  RunSession.step()
 * **Crossing:** the agent tries to influence what happens next.
 * **Enforced by:** `AgentResult` carries no routing or permission fields; the runner recomputes the next envelope from the route table and cross-checks `result.output_keys` against reality ([demo_runner.py:153](../agent_network_demo/demo_runner.py:153)).
 * **Holds against:** an agent choosing its successor, its grants, or lying about what it wrote.
-* **Bypassable by:** L6 (mutating the route table). L7's receipt-list path now requires Level 2 reach-around rather than a hostile agent implementation.
+* **Bypassable by:** nothing at Level 1. Both L6 (route table) and L7 (receipt list) now require Level 2 reach-around rather than a hostile agent implementation.
 
 ### TB-6 — Agent → Audit
 
@@ -126,7 +126,8 @@ Recording these explicitly, because each one is easy to mistake for a control.
 |---|---|
 | The leading underscore in `_store`, `_artifacts`, `_receipts` | A naming convention. CPython enforces nothing. |
 | Holding a reference in a closure instead of an attribute | Closes one reach-around path. The frame stack and the GC are unaffected — demonstrated and refused in case 01. |
-| `@dataclass(frozen=True)` on `Route` | Freezes an individual route object. The dict holding them is mutable, and rebinding the dict entry is unrestricted. |
+| `@dataclass(frozen=True)` on `Route` | Freezes an individual route object. At the baseline the dict holding them was mutable, so rebinding an entry was unrestricted — freezing the element is not freezing the collection (case 03). |
+| `MappingProxyType` over a dict | A read-only *view*, not a freeze. It removes write methods from one object; the underlying mapping stays writable to anything that reaches it. |
 | `deepcopy` on artifact reads | Prevents *accidental* aliasing and protects external callers. Does not stop deliberate access to the original. |
 | "Append-only" `EventLog` | A property of the API surface. The file underneath is an ordinary writable file. |
 | The `allowed_actions` list | Real, because `validate_inbound` ties it to the contract (B2). Would be decorative without that check — the distinction is the point. |
@@ -140,7 +141,7 @@ demonstrates the attack failing *for that specific reason*.
 | Boundary | v0 | Target phase |
 |---|---|---|
 | TB-1 path confinement | Enforced (interface) | — |
-| TB-2 grant issuance | Enforced (in-process) | P4: separate issuance from decision |
+| TB-2 grant issuance | Enforced; policy read-only + pinned per run (case 03) | Expected policy held outside the process |
 | TB-3 scoped read | **Interface only** | P5: process isolation |
 | TB-4 scoped write | Enforced + state-diff + integrity verification (case 02) | Hash held outside the store's reach — needs a different trust boundary |
 | TB-5 no self-authorization | Enforced (in-process) | P3: bind capabilities to workflow + audience |

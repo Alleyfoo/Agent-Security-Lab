@@ -11,8 +11,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-00](00-receipt-handle/README.md)<br>Audited component edits its own evidence | A hostile ValidationAgent deletes failing receipts from the runner's record through the handle it was given | 🔴 Undetected | 🟢 Prevented | Runner-owned append-only ReceiptLedger; agents receive a read-only ReceiptView with no mutation surface | The validator still controls its own output artifact and may state a false conclusion. The evidence is protected; the conclusion is not independently derived. Closing this is case 05. |
 | [case-01](01-ungranted-read/README.md)<br>Reading artifacts the grant excludes | Read artifact.cleaned_output from a stage granted only artifact.raw_input, via view._store, a sys._getframe() walk, and a gc.get_objects() scan | 🔴 Undetected | 🔴 Undetected | None at this phase. Control is process isolation (Phase 5). | The entire case is open. StoreView does not contain arbitrary hostile Python sharing the process, interpreter, object graph, memory, module namespace and OS identity. |
 | [case-02](02-artifact-mutation/README.md)<br>In-place mutation of a registered artifact | A hostile schema stage rewrites one cell of artifact.raw_input after doing its legitimate work - no new key, no row-count change, no column change | 🔴 Undetected | 🟠 Detected after occurrence | Trusted hash verification in two places: ArtifactStore.get() at the read boundary (C1) and ArtifactStore.verify_all() as a runner post-step sweep (C2), plus fail-closed quarantine | Same-process hostile code may still mutate memory. Hash verification detects divergence but does not create memory isolation or undo confidentiality loss. The hash lives in the same dict as the data it protects, so an attacker who updates both passes; and the sweep runs at step boundaries, so an attacker who restores the original bytes first is not caught. |
+| [case-03](03-mutable-route-table/README.md)<br>Altering runner-owned routing data | A hostile agent rebinds WORKFLOW_ROUTES entries to widen the next stage's grant, to delete the validation stage, and - persistently - to contaminate later runs in the same process | 🔴 Undetected | 🟢 Prevented | Read-only MappingProxyType over a private table (C1), a per-run private copy pinned at start_run (C2), and a route fingerprint verified before and after every step (C3), with fail-closed quarantine on mismatch | The reference value lives inside the adversary's reach. MappingProxyType is a view, not a freeze, so the private dict is still writable; pre-run tampering is pinned rather than caught; and an adversary updating both the routes and the fingerprint passes verification. Closing these needs the expected policy held outside the process - a different boundary, not a different check. |
 
-**3 cases** — 2 with a control, 1 open by design. 2 moved to a better result class.
+**4 cases** — 3 with a control, 1 open by design. 3 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -112,17 +113,60 @@ Reproduce: `python cases/01-ungranted-read/attack.py` · Tests: `tests/adversari
 
 Reproduce: `python cases/02-artifact-mutation/attack.py` · Tests: `tests/adversarial/test_case_02_artifact_mutation.py`
 
+### ✅ case-03 — Altering runner-owned routing data
+
+**Compromise level:** Level 1: malicious agent implementation (Level 2 for the residual)  
+**Attack:** A hostile agent rebinds WORKFLOW_ROUTES entries to widen the next stage's grant, to delete the validation stage, and - persistently - to contaminate later runs in the same process  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟢 Prevented
+
+**Control.** Read-only MappingProxyType over a private table (C1), a per-run private copy pinned at start_run (C2), and a route fingerprint verified before and after every step (C3), with fail-closed quarantine on mismatch
+
+**Evidence**
+
+- TypeError: 'mappingproxy' object does not support item assignment
+- issued grant matches policy - no smuggled action
+- all 4 agents run and the verdict artifact is produced
+- next run in the same process inherits a clean table
+- RouteIntegrityError + quarantine on mid-run copy tampering
+- tests/adversarial/test_case_03_mutable_route_table.py
+
+**What this proves.** That 'runner-owned routing' described the control flow but not the policy state, and that the gap was exploitable by an agent using nothing but an ordinary import. With the control, an agent using the documented interface cannot alter routing at all, a run's policy is fixed at start_run, and mid-run modification of the copy actually in use is detected before the runner acts.
+
+**What this does not prove.** It does not prove hostile same-process Python is contained: a Level 2 adversary reaches the private table behind the proxy, and if it does so before start_run the tampering is undetected. It does not prove the fingerprint is trustworthy evidence, since the fingerprint and the data it protects share an address space.
+
+**Residual limitation.** The reference value lives inside the adversary's reach. MappingProxyType is a view, not a freeze, so the private dict is still writable; pre-run tampering is pinned rather than caught; and an adversary updating both the routes and the fingerprint passes verification. Closing these needs the expected policy held outside the process - a different boundary, not a different check.
+
+**Containment.** Route fingerprint mismatch -> RouteIntegrityError, quarantine the run, refuse further steps rather than issuing grants derived from unverified policy.
+
+**Recovery.** Not implemented. Restoring routes from the module table or a same-module constant would launder the tampering, since that is what the adversary rewrote. Restart the process: attack C shows tampering outlives a session, so a fresh RunSession in a contaminated process is not a clean state.
+
+**Blast radius.** Process lifetime, not run lifetime. Without the control one hostile agent silently reconfigured every subsequent run in the same interpreter, including runs whose agents were entirely honest.
+
+**Notes.** The smuggled action in attack A did not by itself yield a usable capability, because StoreView's write grant derives from output_contract rather than allowed_actions - real defence in depth, recorded rather than claimed as the control. The persistence finding (attack C) was noticed by accident when one attack contaminated the next, then measured deliberately.
+
+Reproduce: `python cases/03-mutable-route-table/attack.py` · Tests: `tests/adversarial/test_case_03_mutable_route_table.py`
+
 ## Where the boundary stands
 
 The near-term milestone is a verified map of what a malicious agent can and cannot do inside the baseline process.
 
 | Question | Answer so far |
 |---|---|
-| Which interface controls genuinely work? | Scoped reads/writes through `StoreView`, contract-to-action binding, runner-owned routing, and the read-only receipt handle (case 00). |
-| Which attacks remain possible through shared memory? | Ungranted reads by three independent paths (case 01); in-place mutation itself, which is detected but not prevented (case 02). |
+| Which interface controls genuinely work? | Scoped reads/writes through `StoreView`, contract-to-action binding, the read-only receipt handle (case 00), and the read-only routing table with per-run pinning (case 03). |
+| Which attacks remain possible through shared memory? | Ungranted reads by three independent paths (case 01); in-place mutation itself, which is detected but not prevented (case 02); rewriting the private routing table before a run starts, which is not detected at all (case 03 residual). |
 | Which unauthorized writes can be detected? | New-key writes, via the runner's store diff. In-place mutation, via hash verification (case 02). |
 | Which unauthorized reads remain invisible? | All of them. Bypassed reads leave `view.read_keys` empty (case 01). |
-| Which runner-owned structures can agents affect? | `WORKFLOW_ROUTES` remains mutable (case 03, not yet run). The receipt ledger no longer is (case 00). |
+| Which runner-owned structures can agents affect? | None through the documented interface: the receipt ledger (case 00) and the routing table (case 03) are both read-only to agents. Both remain reachable by a Level 2 adversary via private attributes. |
 | Which conclusions remain agent-authored? | The validation verdict (case 00 residual, to be closed by case 05). |
 | Which evidence remains trustworthy? | Runner receipts. The event log still accepts forged runner-labelled events (case 04, not yet run). |
+
+### The cross-cutting finding
+
+Cases 02 and 03 arrived at the same wall from different directions:
+
+> An integrity check whose expected value is stored where the adversary can reach it detects careless tampering, not careful tampering.
+
+Case 02's `source_hash` sits in the same dict as the data it protects. Case 03's route fingerprint sits on the same session object as the routes it protects. In both, an adversary who updates the reference value alongside the data passes verification, and both residuals are pinned by executable tests.
+
+Neither is fixable by a better check. Both need the expected value held outside the adversary's reach, which means changing the trust boundary rather than adding another comparison inside it.
 
