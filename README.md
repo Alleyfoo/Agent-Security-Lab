@@ -1,4 +1,39 @@
-# Agents pass keys, not blobs
+# Agent Security Lab
+
+A laboratory for demonstrating what happens when an AI agent, agent process,
+service boundary, orchestrator, capability broker, audit system, or data
+authority is **compromised** — and exactly how much authority each compromise
+does and does not grant.
+
+The working assumption is not that agents behave:
+
+> Any agent may become confused, manipulated, malicious, or fully compromised.
+
+Controls therefore live outside the agents, and every security claim in this
+repository states its assumptions and scope. The project does not claim to
+build an unhackable AI system. Its defensible claim is that failures become
+*incremental, observable, containable, traceable, and recoverable* rather than
+one uninterrupted path from manipulated input to production authority.
+
+## Start here
+
+| Document | What it covers |
+|---|---|
+| [docs/threat-model.md](docs/threat-model.md) | Central assumption, trusted computing base, adversary levels, non-claims |
+| [docs/trust-boundaries.md](docs/trust-boundaries.md) | The five planes, every boundary, and what only *looks* like a boundary |
+| [docs/compromise-ladder.md](docs/compromise-ladder.md) | Levels 1–7, blast radius, detection, containment, recovery |
+| [docs/security-concepts.md](docs/security-concepts.md) | Mapping to standard terminology, and where the mapping is partial |
+| [docs/baseline.md](docs/baseline.md) | The preserved baseline's controls (B1–B19) and verified limitations (L1–L8) |
+| [cases/README.md](cases/README.md) | Case contract, adversarial-test-first rule, acceptance criteria |
+
+The clean architectural baseline is preserved at tag
+`v0-baseline-inprocess` and mirrored in the reference repository
+[Agent-payload-demo](https://github.com/Alleyfoo/Agent-payload-demo). This
+repository is the deliberately attacked, analysed, and hardened copy.
+
+---
+
+## The baseline under test
 
 A small, deterministic, in-process architecture demo. Agents exchange artifact
 keys rather than payload content. A trusted runner constructs every
@@ -38,19 +73,37 @@ Key file (intent + bounded source selection)
   described as tamper-proof or tamper-evident.
 - UUID-based run IDs avoid collisions between concurrent or deleted runs.
 
-## What this demo proves
+## What the baseline proves
+
+Scope: code that reaches the store **through the interfaces it is given**.
 
 - Handoffs carry keys rather than artifact content.
 - Runtime grants restrict reads and writes.
 - Only Intake accesses the source file.
-- Agents cannot choose their successors' permissions.
-- Artifact mutation outside a contracted write is blocked.
+- Agents cannot choose their successors' permissions — `AgentResult` carries no
+  routing or permission fields, and the runner rebuilds each envelope from the
+  trusted route table.
+- A write outside the contracted key is caught even if the scoped view is
+  bypassed, because the runner diffs actual store contents rather than trusting
+  the agent's self-report.
 - A final ValidationAgent checks the artifact chain and runner-owned receipts.
 
-## What this demo does not prove
+## What the baseline does not prove
 
+- **Containment of hostile code in the same process.** Verified against the
+  tagged baseline: such code reads ungranted artifacts undetected, mutates
+  stored artifacts in place, forges audit events attributed to the runner,
+  deletes the on-disk log, and rewrites the route table. See
+  [docs/baseline.md](docs/baseline.md) §3 for the reproduction and the exact
+  scope of each finding.
 - Security between separate processes or machines.
 - Cryptographic identity or authorization.
+- Tamper evidence. The event log is append-only *through the application API*;
+  the file underneath is an ordinary writable file.
+- Any information-flow property. Artifacts carry no classification, so a chain
+  of individually valid steps is not evaluated as a whole.
+- Any blast-radius property. Artifacts record content hashes but not producers,
+  so dependent outputs cannot be traced after a compromise.
 - LLM reliability.
 - Lower token usage at production scale.
 - Self-healing or adaptive retry.
