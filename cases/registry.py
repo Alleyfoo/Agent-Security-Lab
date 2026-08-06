@@ -1,0 +1,267 @@
+"""Canonical case-result registry.
+
+One structure, rendered in several places: the generated report, the Streamlit
+comparison surface, and assertions in the adversarial tests. Security claims
+are written here **once**. Do not restate a result in test code, README prose,
+report code and UI code independently - they drift, and a drifted claim is
+worse than no claim.
+
+Result vocabulary is closed. Every attack outcome is exactly one of:
+
+``prevented``                the unauthorized effect never occurred
+``rejected_before_commitment`` hostile output produced but never accepted into
+                             trusted state
+``detected_after_occurrence`` the effect occurred and was noticed later
+``undetected``               the effect occurred and no trusted observation
+                             identified it
+
+Vague terms - "handled", "protected", "secure", "mitigated" - are not results
+and must not appear in a ``*_result`` field.
+
+For confidentiality attacks, detection after the read is NOT prevention. Once
+secret content reaches the compromised agent the loss has already occurred.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List
+
+# ---------------------------------------------------------------------------
+# Closed result vocabulary.
+# ---------------------------------------------------------------------------
+
+PREVENTED = "prevented"
+REJECTED_BEFORE_COMMITMENT = "rejected_before_commitment"
+DETECTED_AFTER_OCCURRENCE = "detected_after_occurrence"
+UNDETECTED = "undetected"
+
+RESULTS = (PREVENTED, REJECTED_BEFORE_COMMITMENT,
+           DETECTED_AFTER_OCCURRENCE, UNDETECTED)
+
+RESULT_LABELS = {
+    PREVENTED: "Prevented",
+    REJECTED_BEFORE_COMMITMENT: "Rejected before commitment",
+    DETECTED_AFTER_OCCURRENCE: "Detected after occurrence",
+    UNDETECTED: "Undetected",
+}
+
+# Ordered worst -> best, for sorting and for colouring a comparison surface.
+RESULT_SEVERITY = {UNDETECTED: 0, DETECTED_AFTER_OCCURRENCE: 1,
+                   REJECTED_BEFORE_COMMITMENT: 2, PREVENTED: 3}
+
+
+@dataclass(frozen=True)
+class CaseResult:
+    case_id: str
+    title: str
+    compromise_level: str
+    attack: str
+    baseline_result: str
+    controlled_result: str
+    control: str
+    evidence: List[str]
+    what_this_proves: str
+    what_this_does_not_prove: str
+    residual_limitation: str
+    containment: str
+    recovery: str
+    status: str                      # "closed" | "open"
+    directory: str
+    test_module: str
+    notes: str = ""
+    blast_radius: str = ""
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        for value, name in ((self.baseline_result, "baseline_result"),
+                            (self.controlled_result, "controlled_result")):
+            if value not in RESULTS:
+                raise ValueError(
+                    f"{self.case_id}: {name}={value!r} is not one of {RESULTS}. "
+                    "Vague terms are not results."
+                )
+        if self.status not in ("closed", "open"):
+            raise ValueError(f"{self.case_id}: status must be closed|open")
+        # An open case must not advertise an improvement it has not made.
+        if self.status == "open" and self.controlled_result != self.baseline_result:
+            raise ValueError(
+                f"{self.case_id}: an open case must not claim a changed result"
+            )
+
+    @property
+    def improved(self) -> bool:
+        return (RESULT_SEVERITY[self.controlled_result]
+                > RESULT_SEVERITY[self.baseline_result])
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+CASES: List[CaseResult] = [
+    CaseResult(
+        case_id="case-00",
+        title="Audited component edits its own evidence",
+        compromise_level="Level 1: malicious agent implementation",
+        attack="A hostile ValidationAgent deletes failing receipts from the "
+               "runner's record through the handle it was given",
+        baseline_result=UNDETECTED,
+        controlled_result=PREVENTED,
+        control="Runner-owned append-only ReceiptLedger; agents receive a "
+                "read-only ReceiptView with no mutation surface",
+        evidence=[
+            "ReceiptIntegrityError naming the attempted operation",
+            "runner receipt record unchanged after the attack",
+            "final verdict still 'warn'",
+            "tests/adversarial/test_case_00_receipt_handle.py",
+        ],
+        what_this_proves=(
+            "An agent going through the interfaces it is given cannot alter "
+            "the trusted runner's record of what happened. Corrupting that "
+            "evidence now requires Level 2 in-process compromise instead of "
+            "merely a hostile agent implementation."),
+        what_this_does_not_prove=(
+            "It does not prove the verdict is trustworthy - a compromised "
+            "validator can still state a false conclusion. It does not contain "
+            "a Level 2 adversary, and it does not make the receipt record "
+            "tamper-evident: there is no hash chain, signature or external "
+            "anchor."),
+        residual_limitation=(
+            "The validator still controls its own output artifact and may "
+            "state a false conclusion. The evidence is protected; the "
+            "conclusion is not independently derived. Closing this is case 05."),
+        containment="Agent contract violation -> reject the operation and stop "
+                    "the workflow (existing runner behaviour).",
+        recovery="Treat the verdict artifact as untrusted; recompute the "
+                 "authorization result from RunSession.receipts(); re-run "
+                 "validation with a known-good build.",
+        status="closed",
+        directory="cases/00-receipt-handle",
+        test_module="tests/adversarial/test_case_00_receipt_handle.py",
+        blast_radius="One workflow's audit record and its verdict artifact. No "
+                     "data-plane artifact, no other run, no policy, no grant.",
+        notes="Prevented, not merely detected: the mutation never reaches the "
+              "ledger. The residual false-conclusion problem is a separate "
+              "claim and is deliberately not counted here.",
+    ),
+    CaseResult(
+        case_id="case-01",
+        title="Reading artifacts the grant excludes",
+        compromise_level="Level 2: fully compromised agent process",
+        attack="Read artifact.cleaned_output from a stage granted only "
+               "artifact.raw_input, via view._store, a sys._getframe() walk, "
+               "and a gc.get_objects() scan",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None at this phase. Control is process isolation (Phase 5).",
+        evidence=[
+            "all three paths return the ungranted artifact",
+            "view.read_keys empty after every bypass",
+            "ClosureStoreView closes path 1 only - refused as cosmetic",
+            "tests/adversarial/test_case_01_ungranted_read.py",
+        ],
+        what_this_proves=(
+            "The scoped view enforces exactly one thing - reads that go "
+            "through its interface - and closing individual reach-around paths "
+            "is not progress, because the three demonstrated paths share no "
+            "mechanism and only the first involves the view."),
+        what_this_does_not_prove=(
+            "Nothing about a Level 1 adversary, who is genuinely constrained "
+            "by the view. It does not show the store is easy to reach in a "
+            "hardened deployment, and it says nothing about whether process "
+            "isolation will hold - that belongs to Phase 5 and must be "
+            "measured there."),
+        residual_limitation=(
+            "The entire case is open. StoreView does not contain arbitrary "
+            "hostile Python sharing the process, interpreter, object graph, "
+            "memory, module namespace and OS identity."),
+        containment="None automatic - there is no detection. The honest "
+                    "posture is that a compromised agent process has read "
+                    "every artifact in its run.",
+        recovery="Treat every artifact in the affected run as disclosed. "
+                 "Nothing narrower is evidenced.",
+        status="open",
+        directory="cases/01-ungranted-read",
+        test_module="tests/adversarial/test_case_01_ungranted_read.py",
+        blast_radius="Every artifact in the process, for every run it has "
+                     "handled - stores from earlier sessions stay reachable "
+                     "via gc until collected.",
+        notes="Confidentiality loss occurs at the read. Detection after the "
+              "fact would not be prevention, and no detection exists anyway. "
+              "Tests assert the attack SUCCEEDS and are tripwires for Phase 5.",
+    ),
+    CaseResult(
+        case_id="case-02",
+        title="In-place mutation of a registered artifact",
+        compromise_level="Level 2: fully compromised agent process",
+        attack="A hostile schema stage rewrites one cell of artifact.raw_input "
+               "after doing its legitimate work - no new key, no row-count "
+               "change, no column change",
+        baseline_result=UNDETECTED,
+        controlled_result=DETECTED_AFTER_OCCURRENCE,
+        control="Trusted hash verification in two places: ArtifactStore.get() "
+                "at the read boundary (C1) and ArtifactStore.verify_all() as a "
+                "runner post-step sweep (C2), plus fail-closed quarantine",
+        evidence=[
+            "stored source_hash 16879f03... vs recomputed 8194315c...",
+            "ArtifactIntegrityError naming the affected key",
+            "runner receipt status 'error', contract_result 'failed'",
+            "cleaned_output never produced - corruption did not propagate",
+            "tests/adversarial/test_case_02_artifact_mutation.py",
+        ],
+        what_this_proves=(
+            "The baseline's immutability guarantee covered key rebinding but "
+            "not content mutation, and the gap was silently exploitable end to "
+            "end. With the control, unauthorized in-place mutation is detected "
+            "before the workflow accepts or consumes the altered state, by "
+            "trusted code that never asks the agent to vouch for the artifact "
+            "it may have modified."),
+        what_this_does_not_prove=(
+            "It does not prove prevention: the mutation occurs and the control "
+            "observes it afterwards. It does not create memory isolation - an "
+            "adversary that updates content and hash together passes "
+            "verification. It restores nothing and undoes no confidentiality "
+            "loss from case 01."),
+        residual_limitation=(
+            "Same-process hostile code may still mutate memory. Hash "
+            "verification detects divergence but does not create memory "
+            "isolation or undo confidentiality loss. The hash lives in the "
+            "same dict as the data it protects, so an attacker who updates "
+            "both passes; and the sweep runs at step boundaries, so an "
+            "attacker who restores the original bytes first is not caught."),
+        containment="Agent contract violation -> reject the operation and stop "
+                    "the workflow, extended with a quarantine flag so a store "
+                    "known to be corrupt is never retried.",
+        recovery="Not implemented in this slice. Abort and quarantine are "
+                 "implemented; discarding the store destroys evidence, and "
+                 "snapshot restoration needs its own specification and tests. "
+                 "Operationally: re-run from intake in a clean session.",
+        status="closed",
+        directory="cases/02-artifact-mutation",
+        test_module="tests/adversarial/test_case_02_artifact_mutation.py",
+        blast_radius="One workflow's artifacts, plus anything derived from the "
+                     "tampered one. Without the control, cleaned_output "
+                     "inherited the forged value and the verdict certified it. "
+                     "There is no provenance graph yet, so identifying derived "
+                     "outputs after the fact is not possible (Phase 8).",
+        notes="Classified Level 2, deviating from the direction's example "
+              "metadata: measured, there is no Level 1 path to in-place "
+              "mutation. Verification cost measured at 71 us per read and 69 "
+              "us per sweep at fixture scale; O(artifact size) and O(store "
+              "size) respectively, so not free asymptotically.",
+    ),
+]
+
+CASES_BY_ID = {case.case_id: case for case in CASES}
+
+
+def all_cases() -> List[CaseResult]:
+    return list(CASES)
+
+
+def get(case_id: str) -> CaseResult:
+    return CASES_BY_ID[case_id]
+
+
+def to_json_dicts() -> List[Dict[str, Any]]:
+    return [case.to_dict() for case in CASES]

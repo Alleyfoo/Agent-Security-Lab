@@ -26,17 +26,41 @@ one uninterrupted path from manipulated input to production authority.
 | [docs/baseline.md](docs/baseline.md) | The preserved baseline's controls (B1–B19) and verified limitations (L1–L8) |
 | [cases/README.md](cases/README.md) | Case contract, adversarial-test-first rule, acceptance criteria |
 
+## Current research question
+
+> Can an agent be restricted to its assigned function when it is manipulated,
+> malicious, or fully captured?
+
+The near-term milestone is not a secure multi-agent platform. It is **a
+verified map of what a malicious agent can and cannot do inside the baseline
+process** — which effects are prevented or detected, and which remaining
+failures require an actual process boundary.
+
 ## Cases so far
 
-| Case | Result |
-|---|---|
-| [00 — audited component edits its own evidence](cases/00-receipt-handle/README.md) | ✅ **Blocked.** A hostile validator could delete failing receipts through the handle it was given, flipping a run's verdict from `warn` to `ok`. The runner now owns an append-only ledger and agents get a read-only view, so the attack needs Level 2 rather than Level 1. |
-| [01 — reading artifacts the grant excludes](cases/01-ungranted-read/README.md) | ⚠️ **Open, by design.** Three unrelated reach-around paths all succeed and none appear in the read log. No in-process control exists; the obvious patch is demonstrated to close one path of three and is refused. Control is process isolation, Phase 5. |
+Full results: **[cases/REPORT.md](cases/REPORT.md)**, generated from the
+canonical registry so a claim cannot be true in one place and stale in another.
 
-Each case ships an executable attack you can run yourself, e.g.:
+| Case | Baseline | Controlled |
+|---|---|---|
+| [00 — audited component edits its own evidence](cases/00-receipt-handle/README.md) | 🔴 Undetected | 🟢 Prevented |
+| [01 — reading artifacts the grant excludes](cases/01-ungranted-read/README.md) | 🔴 Undetected | 🔴 Undetected — open by design |
+| [02 — in-place mutation of a registered artifact](cases/02-artifact-mutation/README.md) | 🔴 Undetected | 🟠 Detected after occurrence |
+
+Every outcome is exactly one of **prevented**, **rejected before commitment**,
+**detected after occurrence**, or **undetected**. Vague terms — "handled",
+"protected", "secure" — are not results. For confidentiality attacks,
+detection after the read is not prevention: once secret content reaches the
+compromised agent, the loss has already occurred.
+
+Case 01 stays red because it is genuinely open. An open case is never shown as
+green, and a patch that closes one path of a class is refused rather than
+shipped.
+
+Each case ships an executable attack you can run yourself:
 
 ```bash
-python cases/01-ungranted-read/attack.py
+python cases/02-artifact-mutation/attack.py
 ```
 
 The clean architectural baseline is preserved at tag

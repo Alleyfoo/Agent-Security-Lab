@@ -54,6 +54,7 @@ security concept in [security-concepts.md](security-concepts.md).
 | B18 | Verdict derived from receipts | [agents.py:375](../agent_network_demo/agents.py:375) | `ValidationAgent` reads runner receipts, not agent-authored log events |
 | B19 | Append-only log API | [event_log.py:36](../agent_network_demo/event_log.py:36) | No update or delete operation on the application interface |
 | B20 | Read-only receipt handle | [receipts.py](../agent_network_demo/receipts.py) | The audited agent cannot mutate the runner's evidence (added by case 00, not present at the tag) |
+| B21 | Live-path integrity verification | [artifact_store.py](../agent_network_demo/artifact_store.py) | `get()` verifies at the read boundary and `verify_all()` sweeps after every step; in-place mutation is detected, not prevented (added by case 02) |
 
 ## 3. Baseline limitations — verified, not assumed
 
@@ -102,14 +103,28 @@ control.
 
 ### L3 — Artifact immutability is interface-level only
 
+> **DETECTED** as of [case 02](../cases/02-artifact-mutation/README.md) — not
+> prevented. The mutation still occurs; trusted code now notices it. The tag
+> still exhibits the undetected form.
+
 Direct mutation of `view._store._artifacts[key]` succeeded and changed a
 registered artifact in place. B14 prevents *re-registration* with different
 content; it does not prevent in-place mutation of the stored dict.
 
-**Detection primitive exists but is not wired in.** The tampered artifact's
-stored `source_hash` no longer recomputes (`16879f03…` vs `f6434f29…`).
-Nothing on the live path checks this — B16 verifies hashes only during
-`from_snapshot` hydration. A recompute-on-read check is a cheap Phase 2 win.
+**The detection primitive existed but was not wired in.** The tampered
+artifact's stored `source_hash` no longer recomputes (`16879f03…` vs
+`f6434f29…`). Nothing on the live path checked this — B16 verified hashes only
+during `from_snapshot` hydration.
+
+Case 02 measured the consequence end to end: a hostile stage changed one cell
+of `raw_input`, no new key appeared, every structural check still passed, the
+forged value propagated into `cleaned_output`, and the run returned verdict
+`ok`. Now `ArtifactStore.get()` verifies at the read boundary and the runner
+sweeps every artifact after each step, with a fail-closed quarantine so a store
+known to be corrupt is never retried.
+
+Still open, and not closable in-process: `source_hash` lives in the same dict
+as the data it protects, so an adversary who updates both passes verification.
 
 ### L4 — The audit log accepts forged runner identity
 

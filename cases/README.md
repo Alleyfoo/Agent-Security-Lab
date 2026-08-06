@@ -68,37 +68,67 @@ A case is complete only when all ten hold:
 
 ## Planned cases
 
-Numbering is stable once created. Phase mapping per the project charter.
+## Current scope — agent confinement only
+
+Per manager direction, only the first research question is in scope:
+
+> Can an agent be restricted to its assigned function when it is manipulated,
+> malicious, or fully captured?
+
+Deferred, and explicitly **not** allowed to influence current slices unless
+required to expose or enforce the agent boundary: production customer-service
+architecture, multiple-LLM topology, external logging design, information-flow
+control, capability signing, orchestrator compromise, full deployment
+architecture. They remain documented future questions below.
+
+## In-process cases
+
+Numbering is stable once created. Cases 03–05 were renumbered from the original
+charter list when the scope narrowed to confinement.
 
 | Case | Phase | Baseline finding | Central claim |
 |---|---|---|---|
 | [`00-receipt-handle`](00-receipt-handle/README.md) ✅ | 2 | L7 | The component being audited must not be able to edit the evidence it is audited against |
 | [`01-ungranted-read`](01-ungranted-read/README.md) ⚠️ | 2 | L1, L2 | A scoped view constrains interface access but not same-process reach-around, and the bypass is invisible in the read log |
-| `02-ungranted-write` | 2 | TB-4 | The outbound store diff catches bypassed writes because it compares observed state, not self-report |
-| `03-forged-routing` | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
-| `04-path-traversal` | 2 | TB-1 | `realpath` confinement holds; the check point and the use point must not diverge |
-| `05-capability-replay` | 3 | L8 | A grant with no workflow, audience, expiry, or use count is replayable |
-| `06-confused-deputy` | 4 | — | Holding authority is not proof that a request to use it is legitimate |
-| `07-agent-process-compromise` | 5 | L1–L7 | What process separation actually buys, measured rather than asserted |
-| `08-host-compromise` | 5 | — | Co-tenancy is not a trust zone |
-| `09-information-flow` | 6 | — | A chain of individually valid steps can be a forbidden flow |
-| `10-audit-tampering` | 7 | L4, L5 | Append-only-by-API is not tamper-evident |
-| `11-orchestrator-compromise` | 5 | — | The orchestrator must not be able to declassify unilaterally |
-| `12-provenance-quarantine` | 8 | — | After a producer is declared compromised, dependent outputs are identifiable |
+| [`02-artifact-mutation`](02-artifact-mutation/README.md) ✅ | 2 | L3 | In-place mutation creates no new key, so the store diff is blind to it; hash verification detects it |
+| `03-mutable-route-table` | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
+| `04-forged-runner-event` | 2 | L4 | Audit-record corruption and authorization corruption are separate effects and must be measured separately |
+| `05-false-verdict` | 2 | case 00 residual | A conclusion an agent authors is not evidence; the runner must derive the mechanical verdict itself |
 
-Baseline findings promoted to the front of Phase 2 because they had no case
-number in the charter's list:
+Cases 00, 01 and 02 are recorded in the canonical registry
+([`registry.py`](registry.py)) and rendered in [`REPORT.md`](REPORT.md).
 
-* **L7 — the validator holds a live handle to the receipt list it audits.**
-  Charter-forbidden anti-pattern. **Done — [case 00](00-receipt-handle/README.md).**
-* **L3 — artifacts mutate in place, and the `source_hash` that would detect it
-  is only verified during snapshot hydration.** The detection primitive already
-  exists; it just is not wired into the live read path. Still open; number it
-  `00b` or fold it into `02` when its contract is written.
+## Transition gate to process isolation
 
-A case-00 residual limitation also needs its own slice eventually: **the
-validator's verdict is agent-authored and the runner does not cross-check it.**
-Separate security claim, so not folded into case 00.
+Phase 5 does not begin until the in-process cases establish which interface
+controls genuinely work, which attacks remain possible through shared memory,
+which unauthorized writes can be detected, which unauthorized reads remain
+invisible, which runner-owned structures agents can affect, which conclusions
+remain agent-authored, and which evidence remains trustworthy.
+
+`REPORT.md` maintains that map. Cases 03, 04 and 05 are the remaining entries.
+
+The transition statement, when it is earned:
+
+> The remaining attacks cannot be closed honestly while agent and trusted
+> infrastructure share a Python process. The next control changes the trust
+> boundary rather than hiding references inside the same boundary.
+
+## Deferred — out of current scope
+
+Documented so they are not forgotten, and not to be started while the
+confinement question is open.
+
+| Case | Phase | Question |
+|---|---|---|
+| `06-agent-process-compromise` | 5 | What process separation actually buys, measured rather than asserted |
+| `07-host-compromise` | 5 | Co-tenancy is not a trust zone |
+| `08-capability-replay` | 3 | A grant with no workflow, audience, expiry or use count is replayable |
+| `09-confused-deputy` | 4 | Holding authority is not proof that a request to use it is legitimate |
+| `10-information-flow` | 6 | A chain of individually valid steps can be a forbidden flow |
+| `11-audit-tampering` | 7 | Append-only-by-API is not tamper-evident |
+| `12-orchestrator-compromise` | 5 | The orchestrator must not be able to declassify unilaterally |
+| `13-provenance-quarantine` | 8 | After a producer is declared compromised, dependent outputs are identifiable |
 
 Legend: ✅ control implemented and attack blocked · ⚠️ open finding, control
 deferred to a later phase.

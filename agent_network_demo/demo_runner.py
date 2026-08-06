@@ -18,7 +18,7 @@ from agent_network_demo.agents import (
     IntakeAgent, SchemaAgent, TransformAgent, ValidationAgent,
     KEY_CLEANED, KEY_RAW_INPUT, KEY_SCHEMA, KEY_VERDICT, confine_path,
 )
-from agent_network_demo.artifact_store import ArtifactStore
+from agent_network_demo.artifact_store import ArtifactIntegrityError, ArtifactStore
 from agent_network_demo.contracts import (
     ACTION_READ_ARTIFACT, ACTION_WRITE_CLEANED_OUTPUT,
     ACTION_WRITE_SCHEMA_PROFILE, ACTION_WRITE_TABLE_PREVIEW,
@@ -87,6 +87,11 @@ class RunSession:
         self._last_snapshot: Optional[StepSnapshot] = None
         self.done = False
         self.error: Optional[str] = None
+        # Set when artifact integrity verification fails. The store is then
+        # known to be corrupt, so the workflow must not continue on it - the
+        # ordinary error path leaves _current unchanged and would otherwise
+        # retry the stage against tampered state. See case 02.
+        self.quarantined = False
 
     def _envelope_for(self, stage: str, from_agent: str, summary: str) -> HandoffEnvelope:
         route = WORKFLOW_ROUTES[stage]
@@ -126,6 +131,12 @@ class RunSession:
         return self.run_id
 
     def step(self) -> StepSnapshot:
+        if self.quarantined:
+            raise RuntimeError(
+                "run is quarantined after an artifact integrity failure; the "
+                "store is known to be corrupt. call reset() and re-run from "
+                "intake in a clean session"
+            )
         if self.done:
             raise RuntimeError("run is complete; call reset() to start again")
         if self._current >= len(self._agents):
@@ -144,6 +155,16 @@ class RunSession:
         try:
             envelope.validate_inbound(self.store)
             result = agent.run(envelope, view, self.log)
+            # C2: sweep every artifact before trusting anything this step did.
+            # The new-key diff below compares key *sets*, so an in-place
+            # mutation contributes nothing to it and would pass unnoticed.
+            corrupted = self.store.verify_all()
+            if corrupted:
+                raise ArtifactIntegrityError(
+                    f"artifact integrity verification failed after "
+                    f"{agent.name} for {corrupted}: content no longer matches "
+                    "the hash registered for it"
+                )
             new_keys = sorted(set(self.store.keys()) - keys_before)
             envelope.validate_outbound(new_keys)
             granted_output = write_key_for(envelope.output_contract)
@@ -166,6 +187,14 @@ class RunSession:
                 )
             else:
                 self._envelope = self._envelope_for(route.next_stage, route.agent, summary)
+        except ArtifactIntegrityError as exc:
+            # Data-plane corruption, not a contract breach. Quarantine rather
+            # than leaving the stage retryable against a store known corrupt.
+            status, contract_result = "error", "failed"
+            message = f"artifact integrity failure: {exc}"
+            self.error = message
+            self.quarantined = True
+            self._emit_error(agent.name, message)
         except ContractError as exc:
             status, contract_result = "error", "failed"
             message = f"contract violation: {exc}"

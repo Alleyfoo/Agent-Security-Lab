@@ -22,6 +22,27 @@ class DuplicateKeyError(KeyError):
     """Raised when an immutable key is reused for different content."""
 
 
+class ArtifactIntegrityError(RuntimeError):
+    """Raised when a stored artifact no longer matches its registered hash.
+
+    Distinct from :class:`DuplicateKeyError` (an attempt to rebind a key) and
+    from ``ContractError`` (an agent exceeding its grant). This one means the
+    bytes under an existing key changed after registration - corruption of the
+    data plane, which is a different incident and warrants different triage.
+
+    Detection, not prevention: by the time this raises, the mutation has
+    already happened. See cases/02-artifact-mutation/README.md.
+    """
+
+
+def _integrity_error(key: str, stored: str, recomputed: str) -> ArtifactIntegrityError:
+    return ArtifactIntegrityError(
+        f"artifact {key!r} failed integrity verification: stored hash "
+        f"{stored[:8]}... does not match recomputed {recomputed[:8]}... - "
+        "the artifact was modified in place after registration"
+    )
+
+
 @dataclass
 class ArtifactStore:
     """In-memory registry whose public reads always return deep copies."""
@@ -50,10 +71,44 @@ class ArtifactStore:
         return deepcopy(stored)
 
     def get(self, key: str) -> Dict[str, Any]:
+        """Return a deep copy, after verifying the artifact still matches the
+        hash registered for it (control C1, case 02).
+
+        Guarantee: no consumer receives artifact content that does not match
+        its registered hash.
+        """
         try:
-            return deepcopy(self._artifacts[key])
+            stored = self._artifacts[key]
         except KeyError:
             raise KeyError(key)
+        self._verify(key, stored)
+        return deepcopy(stored)
+
+    @staticmethod
+    def _verify(key: str, stored: Dict[str, Any]) -> None:
+        recorded = stored.get("source_hash", "")
+        recomputed = compute_source_hash(
+            {k: v for k, v in stored.items() if k != "source_hash"}
+        )
+        if recorded != recomputed:
+            raise _integrity_error(key, recorded, recomputed)
+
+    def verify_all(self) -> List[str]:
+        """Return the keys of every artifact whose content no longer matches
+        its registered hash (control C2, case 02).
+
+        Guarantee: an in-place mutation is detected at the end of the step in
+        which it occurred, whether or not anything subsequently reads the
+        artifact. Returns rather than raises, so the caller can report every
+        affected key instead of only the first.
+        """
+        corrupted: List[str] = []
+        for key, stored in self._artifacts.items():
+            try:
+                self._verify(key, stored)
+            except ArtifactIntegrityError:
+                corrupted.append(key)
+        return corrupted
 
     def has(self, key: str) -> bool:
         return key in self._artifacts

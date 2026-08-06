@@ -79,7 +79,7 @@ agent  ==>  StoreView.register()  ==>  ArtifactStore
 
 * **Enforced by:** [artifact_store.py:136](../agent_network_demo/artifact_store.py:136), plus the runner's store-diff at [demo_runner.py:144](../agent_network_demo/demo_runner.py:144).
 * **Holds against:** writing any key but the granted one — including via a bypass path, because the diff compares actual store contents rather than trusting the view.
-* **Bypassable by:** in-place mutation of an existing artifact, which is not a new key and so does not appear in the diff (L3).
+* **Bypassable by:** in-place mutation of an existing artifact, which is not a new key and so does not appear in the diff (L3). Now **detected** — not prevented — by hash verification at the read boundary and a runner post-step sweep ([case 02](../cases/02-artifact-mutation/README.md)).
 
 > **Asymmetry worth internalizing:** writes are checked against observed state,
 > reads are checked against a log the reader controls. That is why bypassed
@@ -142,7 +142,7 @@ demonstrates the attack failing *for that specific reason*.
 | TB-1 path confinement | Enforced (interface) | — |
 | TB-2 grant issuance | Enforced (in-process) | P4: separate issuance from decision |
 | TB-3 scoped read | **Interface only** | P5: process isolation |
-| TB-4 scoped write | Enforced + state-diff | P2: extend diff to detect mutation |
+| TB-4 scoped write | Enforced + state-diff + integrity verification (case 02) | Hash held outside the store's reach — needs a different trust boundary |
 | TB-5 no self-authorization | Enforced (in-process) | P3: bind capabilities to workflow + audience |
 | TB-6 agent audit claims | **None** | P7: identity-bound events |
 | TB-7 receipt integrity | Read-only vs. Level 1 (case 00) | P7 (hash chain); runner-side verdict cross-check still open |
