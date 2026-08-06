@@ -585,9 +585,10 @@ def main() -> None:
 
     # Verdict banner once ValidationAgent has acted (also carries the replay hint).
     if sess.done:
-        v = sess.report().get("verdict")
+        report = sess.report()
+        v = report.get("verdict")
         if v:
-            ui.verdict_banner(v)
+            ui.verdict_banner(v, report.get("verdict_differences"))
 
 
 if __name__ == "__main__":  # pragma: no cover

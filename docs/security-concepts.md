@@ -48,6 +48,13 @@ Worth stating plainly, because the rest of this repository is about attacking it
    The distinction between an agent-authored *work event* and a runner-owned
    *receipt* is the correct one, and it is already implemented.
 
+   Read precisely, this was true of the *inputs* only. The validator computed
+   the verdict from runner evidence and then published its own answer, which
+   nothing compared to anything ([case 05](../cases/05-false-verdict/README.md)).
+   Protecting the input to a computation is not the same as protecting its
+   output when the adversary owns the computation. The runner now derives the
+   conclusion itself.
+
 Points 1–4 are what makes the baseline a defensible starting point rather than
 a strawman. The laboratory's value comes from attacking a design that is
 already better than average.

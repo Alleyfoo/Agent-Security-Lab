@@ -93,7 +93,7 @@ charter list when the scope narrowed to confinement.
 | [`02-artifact-mutation`](02-artifact-mutation/README.md) ✅ | 2 | L3 | In-place mutation creates no new key, so the store diff is blind to it; hash verification detects it |
 | [`03-mutable-route-table`](03-mutable-route-table/README.md) ✅ | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
 | [`04-forged-runner-event`](04-forged-runner-event/README.md) ✅ | 2 | L4 | Audit-record corruption and authorization corruption are separate effects and must be measured separately |
-| `05-false-verdict` | 2 | case 00 residual | A conclusion an agent authors is not evidence; the runner must derive the mechanical verdict itself |
+| [`05-false-verdict`](05-false-verdict/README.md) ✅ | 2 | case 00 residual | A conclusion an agent authors is not evidence; the runner must derive the mechanical verdict itself |
 
 Every case above is recorded in the canonical registry
 ([`registry.py`](registry.py)) and rendered in [`REPORT.md`](REPORT.md). Case 04
@@ -109,13 +109,25 @@ which unauthorized writes can be detected, which unauthorized reads remain
 invisible, which runner-owned structures agents can affect, which conclusions
 remain agent-authored, and which evidence remains trustworthy.
 
-`REPORT.md` maintains that map. Case 05 is the last remaining entry.
-
-The transition statement, when it is earned:
+`REPORT.md` maintains that map. **All seven entries are now answered**, so the
+gate is met and the transition statement is earned:
 
 > The remaining attacks cannot be closed honestly while agent and trusted
 > infrastructure share a Python process. The next control changes the trust
 > boundary rather than hiding references inside the same boundary.
+
+The evidence is specific: case 01 is wholly open with no in-process control
+available, and every closed case's residual has the same shape — the reference
+value sits inside the adversary's reach (cases 02, 03, 04a and 05). One
+problem, not four.
+
+Meeting the gate authorizes Phase 5 to *begin*; it settles nothing about what
+process isolation buys. Case 06's initial claim must stay narrow — a separate
+process prevents direct inspection and modification of the runner's Python
+memory and object graph — and must not imply filesystem confinement, network
+confinement, host isolation, capability security, correctness of permitted
+output, or resistance to OS compromise. Each of those is measured separately or
+not claimed.
 
 ## Deferred — out of current scope
 

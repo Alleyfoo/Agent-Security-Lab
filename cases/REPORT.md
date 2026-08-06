@@ -8,14 +8,15 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 
 | Case | Attack | Baseline | Controlled | Control | Remaining limitation |
 |---|---|---|---|---|---|
-| [case-00](00-receipt-handle/README.md)<br>Audited component edits its own evidence | A hostile ValidationAgent deletes failing receipts from the runner's record through the handle it was given | 🔴 Undetected | 🟢 Prevented | Runner-owned append-only ReceiptLedger; agents receive a read-only ReceiptView with no mutation surface | The validator still controls its own output artifact and may state a false conclusion. The evidence is protected; the conclusion is not independently derived. Closing this is case 05. |
+| [case-00](00-receipt-handle/README.md)<br>Audited component edits its own evidence | A hostile ValidationAgent deletes failing receipts from the runner's record through the handle it was given | 🔴 Undetected | 🟢 Prevented | Runner-owned append-only ReceiptLedger; agents receive a read-only ReceiptView with no mutation surface | Closed by case 05. The validator still controls its own output artifact and may state a false conclusion; what changed is that the artifact is now a recommendation and the run's conclusion is derived by the runner from this same protected evidence. Case 00's tripwire test was written to fail when that happened, and was rewritten when it did. |
 | [case-01](01-ungranted-read/README.md)<br>Reading artifacts the grant excludes | Read artifact.cleaned_output from a stage granted only artifact.raw_input, via view._store, a sys._getframe() walk, and a gc.get_objects() scan | 🔴 Undetected | 🔴 Undetected | None at this phase. Control is process isolation (Phase 5). | The entire case is open. StoreView does not contain arbitrary hostile Python sharing the process, interpreter, object graph, memory, module namespace and OS identity. |
 | [case-02](02-artifact-mutation/README.md)<br>In-place mutation of a registered artifact | A hostile schema stage rewrites one cell of artifact.raw_input after doing its legitimate work - no new key, no row-count change, no column change | 🔴 Undetected | 🟠 Detected after occurrence | Trusted hash verification in two places: ArtifactStore.get() at the read boundary (C1) and ArtifactStore.verify_all() as a runner post-step sweep (C2), plus fail-closed quarantine | Same-process hostile code may still mutate memory. Hash verification detects divergence but does not create memory isolation or undo confidentiality loss. The hash lives in the same dict as the data it protects, so an attacker who updates both passes; and the sweep runs at step boundaries, so an attacker who restores the original bytes first is not caught. |
 | [case-03](03-mutable-route-table/README.md)<br>Altering runner-owned routing data | A hostile agent rebinds WORKFLOW_ROUTES entries to widen the next stage's grant, to delete the validation stage, and - persistently - to contaminate later runs in the same process | 🔴 Undetected | 🟢 Prevented | Read-only MappingProxyType over a private table (C1), a per-run private copy pinned at start_run (C2), and a route fingerprint verified before and after every step (C3), with fail-closed quarantine on mismatch | The reference value lives inside the adversary's reach. MappingProxyType is a view, not a freeze, so the private dict is still writable; pre-run tampering is pinned rather than caught; and an adversary updating both the routes and the fingerprint passes verification. Closing these needs the expected policy held outside the process - a different boundary, not a different check. |
 | [case-04a](04-forged-runner-event/README.md)<br>Forged runner-labelled audit event - the record | A hostile agent appends an event carrying the trusted runner's identity through the log handle it was given, and - separately - renames itself 'trusted_runner' so the runner writes the identity into the receipt ledger on its behalf | 🔴 Undetected | 🟢 Prevented | An author-bound EventLogView minted from the routing table, not from agent.name (C1+C2), plus a runner-owned tally of runner-labelled events verified after every step (C3), with fail-closed quarantine on mismatch | Attribution is bound; content is not, so an agent may still write receipt-shaped prose under its own honest identity. The tally covers the runner's label only, because the runner has no independent record of what an agent legitimately wrote, so Level 2 forgery under another agent's label is undetected. And the tally is an ordinary attribute on the session: an adversary who forges and increments it passes. |
 | [case-04b](04-forged-runner-event/README.md)<br>Forged runner-labelled audit event - the decision | The same forged events, measured against the authorization decision rather than the record: does a run under forged permission claims reach a different verdict? | 🟢 Prevented | 🟢 Prevented | None added by this case. Pre-existing baseline control B18: ValidationAgent derives all_writes_allowed from the runner-owned receipt ledger and never reads log events | The separation holds because one consumer happens to read the right source. Nothing structurally prevents a future reader - a UI panel, a report, an operator - from deriving an authorization conclusion from the log, and no type or interface marks the log as narrative rather than evidence. |
+| [case-05](05-false-verdict/README.md)<br>A conclusion the agent authors is not evidence | A hostile ValidationAgent writes a conclusion the evidence does not support: clean over a failed receipt, clean over a chain missing a row, clean on the basis of no checks at all, and - the symmetric direction - a false alarm on a healthy run | 🔴 Undetected | 🟡 Rejected before commitment | A deterministic derive_verdict() in verdict.py, called by the runner over its own ArtifactStore and ReceiptLedger at the terminal step (C1+C2); the agent's artifact becomes a recommendation, and any disagreement on the decision fields sets review_required and emits a verdict_disagreement event naming each differing field (C3) | The derivation trusts artifact metadata that agents wrote, so a transform that drops a row and decrements row_count passes both sides. Only the decision is compared - reasons and message are prose and are not bound. And the reference computation lives inside the adversary's reach: rewriting _derived_verdict or patching derive_verdict defeats it, though patching only one side still surfaces as disagreement with the other. |
 
-**6 cases** — 5 with a control, 1 open by design. 4 moved to a better result class.
+**7 cases** — 6 with a control, 1 open by design. 5 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -38,13 +39,13 @@ Open cases are not failures of the project; they are findings whose control belo
 
 **What this proves.** An agent going through the interfaces it is given cannot alter the trusted runner's record of what happened. Corrupting that evidence now requires Level 2 in-process compromise instead of merely a hostile agent implementation.
 
-**What this does not prove.** It does not prove the verdict is trustworthy - a compromised validator can still state a false conclusion. It does not contain a Level 2 adversary, and it does not make the receipt record tamper-evident: there is no hash chain, signature or external anchor.
+**What this does not prove.** It does not stop a compromised validator authoring a false conclusion - authorship is not constrainable from outside the component that authors, and case 05 had to make the conclusion come from somewhere else rather than constrain the artifact. It does not contain a Level 2 adversary, and it does not make the receipt record tamper-evident: there is no hash chain, signature or external anchor.
 
-**Residual limitation.** The validator still controls its own output artifact and may state a false conclusion. The evidence is protected; the conclusion is not independently derived. Closing this is case 05.
+**Residual limitation.** Closed by case 05. The validator still controls its own output artifact and may state a false conclusion; what changed is that the artifact is now a recommendation and the run's conclusion is derived by the runner from this same protected evidence. Case 00's tripwire test was written to fail when that happened, and was rewritten when it did.
 
 **Containment.** Agent contract violation -> reject the operation and stop the workflow (existing runner behaviour).
 
-**Recovery.** Treat the verdict artifact as untrusted; recompute the authorization result from RunSession.receipts(); re-run validation with a known-good build.
+**Recovery.** Treat the verdict artifact as untrusted and read the runner-derived conclusion from RunSession.report() instead (case 05 makes that the default); re-run validation with a known-good build.
 
 **Blast radius.** One workflow's audit record and its verdict artifact. No data-plane artifact, no other run, no policy, no grant.
 
@@ -211,6 +212,39 @@ Reproduce: `python cases/04-forged-runner-event/attack.py` · Tests: `tests/adve
 
 Reproduce: `python cases/04-forged-runner-event/attack.py` · Tests: `tests/adversarial/test_case_04_forged_runner_event.py`
 
+### ✅ case-05 — A conclusion the agent authors is not evidence
+
+**Compromise level:** Level 1: malicious agent implementation (Level 2 for the residual)  
+**Attack:** A hostile ValidationAgent writes a conclusion the evidence does not support: clean over a failed receipt, clean over a chain missing a row, clean on the basis of no checks at all, and - the symmetric direction - a false alarm on a healthy run  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟡 Rejected before commitment
+
+**Control.** A deterministic derive_verdict() in verdict.py, called by the runner over its own ArtifactStore and ReceiptLedger at the terminal step (C1+C2); the agent's artifact becomes a recommendation, and any disagreement on the decision fields sets review_required and emits a verdict_disagreement event naming each differing field (C3)
+
+**Evidence**
+
+- report()['verdict'] is runner-derived; verdict_source says so
+- clean recommendation over a failed receipt -> published 'warn'
+- clean recommendation over a 20->19 row chain -> published 'warn'
+- empty checks -> all four named individually as differences
+- false alarm on a healthy run -> published 'ok', still flagged
+- tests/adversarial/test_case_05_false_verdict.py
+
+**What this proves.** That protecting the evidence a component reads says nothing about the conclusion it writes, and that the two must be separated even when the same component legitimately does both. Case 00 made the receipt ledger read-only and case 04b showed the decision does not come from the event log - and a validator could still certify a failed run as clean by four routes with no contradiction recorded anywhere. With the control the run's conclusion is computed by the runner from its own evidence, the agent's conclusion is a recommendation, and disagreement is recorded and routed to review rather than resolved in either direction.
+
+**What this does not prove.** It does not prove the derived verdict is correct: it is four structural checks over metadata the pipeline's own agents wrote, and a self-consistent lie in the data plane passes both the recommendation and the derivation. It does not contain a Level 2 adversary, who rewrites the derived verdict after the comparison or patches the derivation before the run. It does not make review a workflow: nothing routes a flagged run to a human or stops its outputs being used.
+
+**Residual limitation.** The derivation trusts artifact metadata that agents wrote, so a transform that drops a row and decrements row_count passes both sides. Only the decision is compared - reasons and message are prose and are not bound. And the reference computation lives inside the adversary's reach: rewriting _derived_verdict or patching derive_verdict defeats it, though patching only one side still surfaces as disagreement with the other.
+
+**Containment.** Disagreement -> the agent's conclusion is not adopted, review_required is set, and a verdict_disagreement event names every differing field. Deliberately not quarantine: nothing is corrupt and the derived conclusion is sound.
+
+**Recovery.** Implemented, uniquely among the closed cases: nothing was lost, because the conclusion was never taken from the agent. The runner-derived verdict is served and the run is flagged; re-running validation with a known-good build changes only the recommendation.
+
+**Blast radius.** One run's conclusion and everything downstream that trusted it - not the validator's own output. Without the control a compromised validator certifies any run as clean, including runs whose other stages were caught failing. There is no provenance graph, so identifying what consumed a false verdict is not possible (Phase 8).
+
+**Notes.** First case closed by a later case's control: it resolves case 00's recorded residual, and case 00's tripwire test was written to fail when that happened. Both callers share one derivation on purpose - a second implementation would drift, and drift is a false positive in the one signal that must stay meaningful. Attack C exists because 'resolve disagreement by taking the worse verdict' would let a compromised validator condemn every run; the two conclusions are compared, never reconciled.
+
+Reproduce: `python cases/05-false-verdict/attack.py` · Tests: `tests/adversarial/test_case_05_false_verdict.py`
+
 ## Where the boundary stands
 
 The near-term milestone is a verified map of what a malicious agent can and cannot do inside the baseline process.
@@ -222,18 +256,35 @@ The near-term milestone is a verified map of what a malicious agent can and cann
 | Which unauthorized writes can be detected? | New-key writes, via the runner's store diff. In-place mutation, via hash verification (case 02). Events forged under the runner's own identity, via the runner's tally (case 04a). |
 | Which unauthorized reads remain invisible? | All of them. Bypassed reads leave `view.read_keys` empty (case 01). |
 | Which runner-owned structures can agents affect? | None through the documented interface: the receipt ledger (case 00), the routing table (case 03) and the identity an event is attributed to (case 04) are all runner-assigned. All remain reachable by a Level 2 adversary via private attributes. |
-| Which conclusions remain agent-authored? | The validation verdict (case 00 residual, to be closed by case 05). |
+| Which conclusions remain agent-authored? | None that the workflow acts on. The validator still *authors* a conclusion — authorship is not constrainable from outside the component that authors — but the run's conclusion is derived by the runner and disagreement is flagged (case 05). |
 | Which evidence remains trustworthy? | Runner receipts. The event log is a *narrative record*, not evidence of authorization: nothing derives an authorization decision from it, which case 04b measured rather than assumed. Its attribution is now runner-assigned and runner-labelled forgery is detected (case 04a), but it is still not tamper-evident — no chain, and the file is rewritable (L5, Phase 7). |
 
-One entry is still outstanding: the agent-authored verdict, which is case 05. Phase 5 does not begin before it is answered.
+**All seven entries are now answered.** The map is the gate to Phase 5, and it is met.
 
 ### The cross-cutting finding
 
-Cases 02 and 03 arrived at the same wall from different directions:
+Four cases arrived at the same wall from four directions:
 
 > An integrity check whose expected value is stored where the adversary can reach it detects careless tampering, not careful tampering.
 
-Case 02's `source_hash` sits in the same dict as the data it protects. Case 03's route fingerprint sits on the same session object as the routes it protects. In both, an adversary who updates the reference value alongside the data passes verification, and both residuals are pinned by executable tests.
+| Case | The check | Where its reference value lives |
+|---|---|---|
+| 02 | artifact hash | the same dict as the data it protects |
+| 03 | route fingerprint | the same session object as the routes |
+| 04a | runner event tally | an ordinary attribute on the session |
+| 05 | derived verdict | a module the adversary can patch, and an attribute it can rewrite |
 
-Neither is fixable by a better check. Both need the expected value held outside the adversary's reach, which means changing the trust boundary rather than adding another comparison inside it.
+In each one an adversary who updates the reference alongside the data passes verification, and each residual is pinned by an executable test rather than left as prose.
+
+None is fixable by a better check. All four need the expected value held outside the adversary's reach, which means changing the trust boundary rather than adding another comparison inside it.
+
+## The transition statement
+
+The boundary map above is the gate to Phase 5. With every entry answered, the statement the project reserved is now earned:
+
+> The remaining attacks cannot be closed honestly while agent and trusted infrastructure share a Python process. The next control changes the trust boundary rather than hiding references inside the same boundary.
+
+The evidence for it is specific, not rhetorical: one case is wholly open with no in-process control available (case 01, three independent reach-around read paths that share no mechanism), and every closed case's residual is the same shape — the reference value sits inside the adversary's reach. Those are not four problems with four fixes. They are one problem, and it is the boundary.
+
+What Phase 5 must **not** claim on arrival is set out in `cases/README.md`: a separate process prevents direct inspection and modification of the runner's memory and object graph, and nothing more until each further claim is measured on its own.
 

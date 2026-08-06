@@ -28,6 +28,7 @@ from agent_network_demo.contracts import (
 )
 from agent_network_demo.event_log import Event, EventLog, EventLogView
 from agent_network_demo.receipts import ReceiptView
+from agent_network_demo.verdict import derive_verdict
 
 # What ValidationAgent will accept as its evidence source: the runner's
 # read-only view, or any plain sequence of receipt dicts (tests).
@@ -362,7 +363,13 @@ class TransformAgent(_BaseAgent):
 # ---------------------------------------------------------------------------
 
 class ValidationAgent(_BaseAgent):
-    """Independently checks the artifact chain and trusted-runner receipts."""
+    """Recommends a verdict over the artifact chain and runner receipts.
+
+    Its output is a *recommendation*, not the run's conclusion. The runner
+    derives the conclusion itself from the same evidence and refuses to adopt a
+    disagreeing recommendation — see case 05. Nothing here is trusted; a
+    hostile implementation may write whatever it likes to its granted key.
+    """
 
     name = "validation_agent"
 
@@ -375,66 +382,27 @@ class ValidationAgent(_BaseAgent):
 
     def run(self, envelope: HandoffEnvelope, view: StoreView,
             log: EventSink) -> AgentResult:
-        checks: Dict[str, Any] = {}
-        reasons: List[str] = []
-
-        # 1. chain complete: every expected artifact is present (and granted).
-        expected = [KEY_RAW_INPUT, KEY_SCHEMA, KEY_CLEANED]
-        present = [k for k in expected if view.has(k)]
-        checks["chain_complete"] = len(present) == len(expected)
-        if not checks["chain_complete"]:
-            missing = [k for k in expected if k not in present]
-            reasons.append(f"chain incomplete: missing {missing}")
-
-        # 2. authorization is derived only from runner-owned receipts.
-        bad_receipts = [r for r in self.receipts
-                        if r.get("status") != "ok"
-                        or r.get("contract_result") != "passed"]
-        checks["all_writes_allowed"] = bool(self.receipts) and not bad_receipts
-        if bad_receipts:
-            reasons.append("runner receipts contain authorization failures")
-
-        # 3. schema matches cleaned output columns.
-        schema_matches = True
-        if view.has(KEY_SCHEMA) and view.has(KEY_CLEANED):
-            schema_cols = view.get(KEY_SCHEMA).get("columns", [])
-            cleaned_cols = view.get(KEY_CLEANED).get("columns", [])
-            schema_matches = schema_cols == cleaned_cols
-            checks["schema_matches_output"] = schema_matches
-            if not schema_matches:
-                reasons.append("schema columns != cleaned output columns")
-        else:
-            checks["schema_matches_output"] = False
-            reasons.append("schema or cleaned output missing")
-
-        # 4. row counts agree across the chain.
-        counts = []
-        for k in (KEY_RAW_INPUT, KEY_CLEANED):
-            if view.has(k):
-                counts.append(view.get(k).get("row_count"))
-        checks["row_counts_consistent"] = (
-            len(set(counts)) <= 1 and None not in counts
+        # The same derivation the runner uses, over the evidence this agent can
+        # see: the artifacts its grant covers and the read-only receipt view.
+        # Sharing the implementation is deliberate — see verdict.py.
+        artifacts = {k: view.get(k)
+                     for k in (KEY_RAW_INPUT, KEY_SCHEMA, KEY_CLEANED)
+                     if view.has(k)}
+        recommendation = derive_verdict(
+            artifacts, list(self.receipts),
+            KEY_RAW_INPUT, KEY_SCHEMA, KEY_CLEANED,
         )
-        if not checks["row_counts_consistent"] and counts:
-            reasons.append(f"inconsistent row counts: {counts}")
+        ok = recommendation["verdict"] == "ok"
 
-        ok = bool(checks) and all(v for v in checks.values()) and not reasons
-        verdict = {
-            "type": "validation_verdict",
-            "status": "ok" if ok else "warn",
-            "verdict": "ok" if ok else "warn",
-            "checks": checks,
-            "reasons": reasons if reasons else ["all checks passed"],
-        }
-        view.register(KEY_VERDICT, verdict)
+        view.register(KEY_VERDICT, recommendation)
         self._emit(
             log, action="validate",
             input_keys=[KEY_RAW_INPUT, KEY_SCHEMA, KEY_CLEANED],
             output_keys=[KEY_VERDICT],
-            status="ok" if ok else "warn",
-            checks=checks,
+            status=recommendation["status"],
+            checks=recommendation["checks"],
             message=("Chain validated: all checks passed."
                      if ok else "Chain validated with warnings."),
         )
         return AgentResult([KEY_VERDICT], "Validated artifacts and runner receipts.",
-                           {"verdict": verdict["verdict"]})
+                           {"verdict": recommendation["verdict"]})

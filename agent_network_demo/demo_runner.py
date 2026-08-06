@@ -32,6 +32,7 @@ from agent_network_demo.event_log import (
     AuditIntegrityError, Event, EventLog, RUNNER_IDENTITY,
 )
 from agent_network_demo.receipts import ReceiptLedger
+from agent_network_demo.verdict import derive_verdict, verdict_disagreement
 
 
 @dataclass(frozen=True)
@@ -131,8 +132,17 @@ class RunSession:
         # runner-labelled event the runner did not write is caught.
         self._runner_event_count = 0
         self._last_snapshot: Optional[StepSnapshot] = None
+        # Case 05: the run's conclusion, derived by the runner from its own
+        # evidence. The validation agent's artifact is a recommendation and is
+        # never adopted as this value.
+        self._derived_verdict: Optional[Dict[str, Any]] = None
         self.done = False
         self.error: Optional[str] = None
+        # Set when the recommendation and the derived conclusion disagree, in
+        # either direction. Not quarantine: nothing is corrupt, and the derived
+        # conclusion is sound. The run needs a human, not a halt.
+        self.review_required = False
+        self.verdict_differences: List[str] = []
         # Set when artifact integrity verification fails. The store is then
         # known to be corrupt, so the workflow must not continue on it - the
         # ordinary error path leaves _current unchanged and would otherwise
@@ -169,6 +179,41 @@ class RunSession:
                 "identity was written by something else"
             )
 
+    def _conclude(self) -> None:
+        """C2+C3 (case 05): derive the run's conclusion, then compare.
+
+        Runs once, at the end of the terminal step. The evidence is the
+        runner's own: its ArtifactStore and its ReceiptLedger. The validation
+        agent's artifact is read only to be compared against, never to be
+        adopted.
+        """
+        assert self.store is not None
+        artifacts = {k: self.store.get(k)
+                     for k in (KEY_RAW_INPUT, KEY_SCHEMA, KEY_CLEANED)
+                     if self.store.has(k)}
+        self._derived_verdict = derive_verdict(
+            artifacts, self._receipts.snapshot(),
+            KEY_RAW_INPUT, KEY_SCHEMA, KEY_CLEANED,
+        )
+        recommendation = (self.store.get(KEY_VERDICT)
+                          if self.store.has(KEY_VERDICT) else None)
+        self.verdict_differences = verdict_disagreement(
+            self._derived_verdict, recommendation)
+        if not self.verdict_differences:
+            return
+
+        self.review_required = True
+        self._append_runner_event(Event(
+            run_id=self.run_id, agent=RUNNER_IDENTITY,
+            action="verdict_disagreement", input_keys=[KEY_VERDICT],
+            output_keys=[], status="warn",
+            checks={"differences": list(self.verdict_differences),
+                    "derived": deepcopy(self._derived_verdict),
+                    "recommended": deepcopy(recommendation)},
+            message=("The validator's conclusion was not adopted: "
+                     + "; ".join(self.verdict_differences)),
+        ))
+
     def _envelope_for(self, stage: str, from_agent: str, summary: str) -> HandoffEnvelope:
         route = self._routes[stage]
         return HandoffEnvelope(
@@ -204,6 +249,9 @@ class RunSession:
         self._current = 0
         self.done = False
         self.error = None
+        self._derived_verdict = None
+        self.review_required = False
+        self.verdict_differences = []
         # Key-file actions are intentionally ignored; runtime grants come only
         # from WORKFLOW_ROUTES.
         self._envelope = self._envelope_for(
@@ -342,6 +390,10 @@ class RunSession:
             output_keys=receipt["keys_actually_written"], status=status,
             checks=deepcopy(receipt), message=f"Receipt for {identity}: {contract_result}.",
         ))
+        # C2+C3 (case 05): the run is over, so the runner draws its own
+        # conclusion before anything reads one.
+        if self.done and status == "ok":
+            self._conclude()
 
         new_events = [e.to_dict() for e in self.log.all()[event_count_before:]]
         snap = StepSnapshot(
@@ -392,11 +444,23 @@ class RunSession:
         return deepcopy(self._key_file)
 
     def report(self) -> Dict[str, Any]:
+        """The run as the outside world sees it.
+
+        ``verdict`` is the runner's own derivation (case 05). ``recommendation``
+        is the artifact the validation agent wrote — reported so the two can be
+        compared, never as the conclusion.
+        """
         assert self.store is not None and self.log is not None
-        verdict = self.store.get(KEY_VERDICT) if self.store.has(KEY_VERDICT) else None
+        verdict = deepcopy(self._derived_verdict)
+        recommendation = (self.store.get(KEY_VERDICT)
+                          if self.store.has(KEY_VERDICT) else None)
         schema = self.store.get(KEY_SCHEMA) if self.store.has(KEY_SCHEMA) else None
         cleaned = self.store.get(KEY_CLEANED) if self.store.has(KEY_CLEANED) else None
         return {"run_id": self.run_id, "done": self.done, "verdict": verdict,
+                "verdict_source": "runner_derived" if verdict else "none",
+                "recommendation": recommendation,
+                "review_required": self.review_required,
+                "verdict_differences": list(self.verdict_differences),
                 "schema": schema, "cleaned_output": cleaned,
                 "event_count": len(self.log.all()), "agents_acted": self._current,
                 "total_agents": len(self._agents), "receipts": self.receipts(),

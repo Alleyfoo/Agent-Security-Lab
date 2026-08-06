@@ -125,23 +125,28 @@ The hostile run is now indistinguishable from the honest one.
 
 ## Residual limitation
 
+> **CLOSED by [case 05](../05-false-verdict/README.md).** The text below
+> records what case 00's own control does and does not do, which has not
+> changed. What changed is downstream: the agent-authored artifact is now a
+> *recommendation*, and the run's conclusion is derived by the runner. The
+> tripwire test named here asserted the false verdict became the run's
+> conclusion; case 05 broke it, and it has been rewritten as
+> `test_case_00_still_cannot_stop_a_false_recommendation`.
+
 **The verdict is still an agent-authored artifact.** Case 00 protects the
 *evidence*, not the *conclusion drawn from it*. A hostile validator can rebind
 its own `self.receipts` to a fabricated list and write a clean verdict anyway —
 it controls its own process-local names, and no control can take that away.
+That remains true and always will: authorship is not constrainable from
+outside the component that authors.
 
-This is pinned by an executable test rather than left as prose:
-`test_residual_hostile_validator_can_still_emit_a_false_verdict`.
-
-The limitation is **bounded**, which is the point: the false verdict is
-contradicted by the runner's receipt record, which the attacker can no longer
-reach (`test_residual_but_the_runner_record_still_shows_the_failure`). The lie
-is detectable by comparing two records that no single compromised component
-controls.
-
-Closing it requires the runner to compute the authorization result itself and
-cross-check the verdict against it. That is a **separate security claim**, and
-therefore a separate slice.
+The limitation was **bounded** even before case 05, which is what made it
+tolerable to record and defer: the false verdict is contradicted by the
+runner's receipt record, which the attacker can no longer reach
+(`test_residual_but_the_runner_record_still_shows_the_failure`). The lie is
+detectable by comparing two records that no single compromised component
+controls — and case 05 is exactly that comparison, performed by the runner
+instead of left to a reader.
 
 Also unchanged, by design:
 
@@ -212,7 +217,7 @@ rewrite history without leaving cryptographic evidence.
 | `test_every_mutation_path_on_the_view_is_denied` (×11) | Every mutation method denied and the record untouched |
 | `test_view_yields_copies_so_receipts_cannot_be_edited_in_place` | Per-item deep copy on iteration and indexing |
 | `test_ledger_copies_on_append_so_later_caller_edits_do_not_apply` | Copy-on-append |
-| `test_residual_hostile_validator_can_still_emit_a_false_verdict` | The residual limitation is real |
+| `test_case_00_still_cannot_stop_a_false_recommendation` | The limit of this control, after case 05 closed the residual |
 | `test_residual_but_the_runner_record_still_shows_the_failure` | The residual limitation is bounded |
 
 Suite: **90 passed** (72 baseline + 18). No baseline test was modified or

@@ -217,8 +217,13 @@ same untrusted component being audited"), and it undermined B18.
 Now: the runner owns a `ReceiptLedger` and hands agents a read-only
 `ReceiptView` ([receipts.py](../agent_network_demo/receipts.py)). Editing the
 evidence requires Level 2 in-process reach-around rather than a merely hostile
-agent implementation. The verdict itself remains agent-authored — see the
-case's residual-limitation section.
+agent implementation.
+
+The verdict was still agent-authored, which case 00 recorded as its residual
+and [case 05](../cases/05-false-verdict/README.md) closed: the runner now
+derives the run's conclusion from this same ledger and the artifact chain, the
+validator's artifact is a recommendation, and disagreement in either direction
+flags the run for review.
 
 ### L8 — Structural limits inherited by design
 

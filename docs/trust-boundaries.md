@@ -116,7 +116,19 @@ RunSession.step()  ==>  self._receipts  ==>  ValidationAgent
 * **At the tag:** the same list object was handed to the validator (L7), and scrubbing it corrupted `RunSession.receipts()` itself.
 * **Enforced by (now):** `ReceiptLedger` / `ReceiptView` ([receipts.py](../agent_network_demo/receipts.py)) — read-only handle, deep copy per item, `ReceiptIntegrityError` on every mutation. See [case 00](../cases/00-receipt-handle/README.md).
 * **Holds against:** a hostile agent implementation (Level 1) editing the evidence it is audited against.
-* **Bypassable by:** Level 2 reach-around to `view._ledger._receipts` (L1 applies here too). The *verdict* also remains agent-authored — the runner does not yet cross-check it.
+* **Bypassable by:** Level 2 reach-around to `view._ledger._receipts` (L1 applies here too).
+
+### TB-8 — Agent → the run's conclusion
+
+```text
+ValidationAgent  ==>  artifact.validation_verdict  ==>  report()["verdict"]
+```
+
+* **Intended as:** an independent check on the chain, published as the run's answer.
+* **At the tag:** the same untrusted component read the evidence, drew the conclusion and published it. `report()` returned the agent's artifact verbatim.
+* **Enforced by (now):** `derive_verdict()` in [verdict.py](../agent_network_demo/verdict.py), called by the runner over its own store and ledger. The agent's artifact is `report()["recommendation"]`; disagreement on the decision fields sets `review_required`. See [case 05](../cases/05-false-verdict/README.md).
+* **Holds against:** a hostile validator (Level 1) publishing a conclusion the evidence does not support, in either direction.
+* **Bypassable by:** Level 2 rewriting `_derived_verdict` or patching the derivation — though patching only one side surfaces as disagreement with the other. The derivation also trusts artifact metadata the agents wrote.
 
 ## 3. Things that are not boundaries
 
@@ -146,7 +158,8 @@ demonstrates the attack failing *for that specific reason*.
 | TB-4 scoped write | Enforced + state-diff + integrity verification (case 02) | Hash held outside the store's reach — needs a different trust boundary |
 | TB-5 no self-authorization | Enforced (in-process) | P3: bind capabilities to workflow + audience |
 | TB-6 agent audit claims | **None** | P7: identity-bound events |
-| TB-7 receipt integrity | Read-only vs. Level 1 (case 00) | P7 (hash chain); runner-side verdict cross-check still open |
+| TB-7 receipt integrity | Read-only vs. Level 1 (case 00) | P7 (hash chain) |
+| TB-8 the run's conclusion | Runner-derived, recommendation compared (case 05) | Derivation and its reference value both in-process — needs a different trust boundary |
 | Flow / sink policy | **Absent** | P6 |
 | Provenance / blast radius | **Absent** | P8 |
 

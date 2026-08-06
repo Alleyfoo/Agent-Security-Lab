@@ -121,20 +121,26 @@ CASES: List[CaseResult] = [
             "evidence now requires Level 2 in-process compromise instead of "
             "merely a hostile agent implementation."),
         what_this_does_not_prove=(
-            "It does not prove the verdict is trustworthy - a compromised "
-            "validator can still state a false conclusion. It does not contain "
-            "a Level 2 adversary, and it does not make the receipt record "
-            "tamper-evident: there is no hash chain, signature or external "
-            "anchor."),
+            "It does not stop a compromised validator authoring a false "
+            "conclusion - authorship is not constrainable from outside the "
+            "component that authors, and case 05 had to make the conclusion "
+            "come from somewhere else rather than constrain the artifact. It "
+            "does not contain a Level 2 adversary, and it does not make the "
+            "receipt record tamper-evident: there is no hash chain, signature "
+            "or external anchor."),
         residual_limitation=(
-            "The validator still controls its own output artifact and may "
-            "state a false conclusion. The evidence is protected; the "
-            "conclusion is not independently derived. Closing this is case 05."),
+            "Closed by case 05. The validator still controls its own output "
+            "artifact and may state a false conclusion; what changed is that "
+            "the artifact is now a recommendation and the run's conclusion is "
+            "derived by the runner from this same protected evidence. Case "
+            "00's tripwire test was written to fail when that happened, and "
+            "was rewritten when it did."),
         containment="Agent contract violation -> reject the operation and stop "
                     "the workflow (existing runner behaviour).",
-        recovery="Treat the verdict artifact as untrusted; recompute the "
-                 "authorization result from RunSession.receipts(); re-run "
-                 "validation with a known-good build.",
+        recovery="Treat the verdict artifact as untrusted and read the "
+                 "runner-derived conclusion from RunSession.report() instead "
+                 "(case 05 makes that the default); re-run validation with a "
+                 "known-good build.",
         status="closed",
         directory="cases/00-receipt-handle",
         test_module="tests/adversarial/test_case_00_receipt_handle.py",
@@ -444,6 +450,86 @@ CASES: List[CaseResult] = [
               "existed and that this case measured. An unmeasured containment "
               "is indistinguishable from luck, and the collapse of these two "
               "effects into one sentence is what the case exists to prevent.",
+    ),
+    CaseResult(
+        case_id="case-05",
+        title="A conclusion the agent authors is not evidence",
+        compromise_level="Level 1: malicious agent implementation "
+                         "(Level 2 for the residual)",
+        attack="A hostile ValidationAgent writes a conclusion the evidence "
+               "does not support: clean over a failed receipt, clean over a "
+               "chain missing a row, clean on the basis of no checks at all, "
+               "and - the symmetric direction - a false alarm on a healthy run",
+        baseline_result=UNDETECTED,
+        controlled_result=REJECTED_BEFORE_COMMITMENT,
+        control="A deterministic derive_verdict() in verdict.py, called by the "
+                "runner over its own ArtifactStore and ReceiptLedger at the "
+                "terminal step (C1+C2); the agent's artifact becomes a "
+                "recommendation, and any disagreement on the decision fields "
+                "sets review_required and emits a verdict_disagreement event "
+                "naming each differing field (C3)",
+        evidence=[
+            "report()['verdict'] is runner-derived; verdict_source says so",
+            "clean recommendation over a failed receipt -> published 'warn'",
+            "clean recommendation over a 20->19 row chain -> published 'warn'",
+            "empty checks -> all four named individually as differences",
+            "false alarm on a healthy run -> published 'ok', still flagged",
+            "tests/adversarial/test_case_05_false_verdict.py",
+        ],
+        what_this_proves=(
+            "That protecting the evidence a component reads says nothing about "
+            "the conclusion it writes, and that the two must be separated even "
+            "when the same component legitimately does both. Case 00 made the "
+            "receipt ledger read-only and case 04b showed the decision does "
+            "not come from the event log - and a validator could still certify "
+            "a failed run as clean by four routes with no contradiction "
+            "recorded anywhere. With the control the run's conclusion is "
+            "computed by the runner from its own evidence, the agent's "
+            "conclusion is a recommendation, and disagreement is recorded and "
+            "routed to review rather than resolved in either direction."),
+        what_this_does_not_prove=(
+            "It does not prove the derived verdict is correct: it is four "
+            "structural checks over metadata the pipeline's own agents wrote, "
+            "and a self-consistent lie in the data plane passes both the "
+            "recommendation and the derivation. It does not contain a Level 2 "
+            "adversary, who rewrites the derived verdict after the comparison "
+            "or patches the derivation before the run. It does not make review "
+            "a workflow: nothing routes a flagged run to a human or stops its "
+            "outputs being used."),
+        residual_limitation=(
+            "The derivation trusts artifact metadata that agents wrote, so a "
+            "transform that drops a row and decrements row_count passes both "
+            "sides. Only the decision is compared - reasons and message are "
+            "prose and are not bound. And the reference computation lives "
+            "inside the adversary's reach: rewriting _derived_verdict or "
+            "patching derive_verdict defeats it, though patching only one side "
+            "still surfaces as disagreement with the other."),
+        containment="Disagreement -> the agent's conclusion is not adopted, "
+                    "review_required is set, and a verdict_disagreement event "
+                    "names every differing field. Deliberately not quarantine: "
+                    "nothing is corrupt and the derived conclusion is sound.",
+        recovery="Implemented, uniquely among the closed cases: nothing was "
+                 "lost, because the conclusion was never taken from the agent. "
+                 "The runner-derived verdict is served and the run is flagged; "
+                 "re-running validation with a known-good build changes only "
+                 "the recommendation.",
+        status="closed",
+        directory="cases/05-false-verdict",
+        test_module="tests/adversarial/test_case_05_false_verdict.py",
+        blast_radius="One run's conclusion and everything downstream that "
+                     "trusted it - not the validator's own output. Without the "
+                     "control a compromised validator certifies any run as "
+                     "clean, including runs whose other stages were caught "
+                     "failing. There is no provenance graph, so identifying "
+                     "what consumed a false verdict is not possible (Phase 8).",
+        notes="First case closed by a later case's control: it resolves case "
+              "00's recorded residual, and case 00's tripwire test was written "
+              "to fail when that happened. Both callers share one derivation "
+              "on purpose - a second implementation would drift, and drift is "
+              "a false positive in the one signal that must stay meaningful. "
+              "Attack C exists because 'resolve disagreement by taking the "
+              "worse verdict' would let a compromised validator condemn every "
+              "run; the two conclusions are compared, never reconciled.",
     ),
 ]
 

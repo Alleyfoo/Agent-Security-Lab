@@ -197,16 +197,20 @@ class LyingValidationAgent(ValidationAgent):
         return super().run(envelope, view, log)
 
 
-def test_residual_hostile_validator_can_still_emit_a_false_verdict(flaky_session):
-    """RESIDUAL LIMITATION (case 00 does not fix this).
+def test_case_00_still_cannot_stop_a_false_recommendation(flaky_session):
+    """The limit of case 00's control, stated exactly.
 
-    The validator's verdict is an agent-authored artifact. A hostile validator
-    can ignore the evidence and write a clean verdict anyway. Case 00's control
-    protects the *evidence*, not the *conclusion drawn from it*.
+    Until case 05 this test asserted that the false verdict became the run's
+    conclusion, and carried a tripwire message naming the change that should
+    break it. Case 05 landed, it broke, and this is the rewrite the message
+    asked for.
 
-    Closing this needs the runner to compute the authorization result itself
-    and cross-check the verdict against it - a separate security claim, and so
-    a separate slice.
+    What did not change: case 00 protects the *evidence*, not the *authorship*.
+    A hostile validator still writes whatever it likes to its granted key, and
+    nothing here prevents that. What changed is that the artifact is a
+    recommendation, and the run's conclusion is derived by the runner - so the
+    lie is rejected before commitment rather than published. See
+    cases/05-false-verdict/README.md.
     """
     flaky_session._agents[3] = LyingValidationAgent(
         flaky_session._receipts.view()
@@ -214,10 +218,14 @@ def test_residual_hostile_validator_can_still_emit_a_false_verdict(flaky_session
     _run_to_completion(flaky_session)
 
     report = flaky_session.report()
-    assert report["verdict"]["verdict"] == "ok", (
-        "if this now fails, the runner gained an independent cross-check - "
-        "update case 00's residual-limitation section and this test"
+    assert report["recommendation"]["verdict"] == "ok", (
+        "case 00 does not constrain what the validator writes, and a control "
+        "that appeared to would be constraining something else"
     )
+    assert report["verdict"]["verdict"] == "warn", (
+        "the run's conclusion is the runner's derivation, not the agent's"
+    )
+    assert report["review_required"] is True
 
 
 def test_residual_but_the_runner_record_still_shows_the_failure(flaky_session):

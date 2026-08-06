@@ -142,8 +142,11 @@ def render() -> str:
       "(case 03) and the identity an event is attributed to (case 04) are all "
       "runner-assigned. All remain reachable by a Level 2 adversary via "
       "private attributes. |")
-    w("| Which conclusions remain agent-authored? | The validation verdict "
-      "(case 00 residual, to be closed by case 05). |")
+    w("| Which conclusions remain agent-authored? | None that the workflow "
+      "acts on. The validator still *authors* a conclusion — authorship is not "
+      "constrainable from outside the component that authors — but the run's "
+      "conclusion is derived by the runner and disagreement is flagged "
+      "(case 05). |")
     w("| Which evidence remains trustworthy? | Runner receipts. The event log "
       "is a *narrative record*, not evidence of authorization: nothing derives "
       "an authorization decision from it, which case 04b measured rather than "
@@ -151,25 +154,55 @@ def render() -> str:
       "forgery is detected (case 04a), but it is still not tamper-evident — "
       "no chain, and the file is rewritable (L5, Phase 7). |")
     w("")
-    w("One entry is still outstanding: the agent-authored verdict, which is "
-      "case 05. Phase 5 does not begin before it is answered.")
+    w("**All seven entries are now answered.** The map is the gate to Phase 5, "
+      "and it is met.")
     w("")
     w("### The cross-cutting finding")
     w("")
-    w("Cases 02 and 03 arrived at the same wall from different directions:")
+    w("Four cases arrived at the same wall from four directions:")
     w("")
     w("> An integrity check whose expected value is stored where the adversary "
       "can reach it detects careless tampering, not careful tampering.")
     w("")
-    w("Case 02's `source_hash` sits in the same dict as the data it protects. "
-      "Case 03's route fingerprint sits on the same session object as the "
-      "routes it protects. In both, an adversary who updates the reference "
-      "value alongside the data passes verification, and both residuals are "
-      "pinned by executable tests.")
+    w("| Case | The check | Where its reference value lives |")
+    w("|---|---|---|")
+    w("| 02 | artifact hash | the same dict as the data it protects |")
+    w("| 03 | route fingerprint | the same session object as the routes |")
+    w("| 04a | runner event tally | an ordinary attribute on the session |")
+    w("| 05 | derived verdict | a module the adversary can patch, and an "
+      "attribute it can rewrite |")
     w("")
-    w("Neither is fixable by a better check. Both need the expected value held "
-      "outside the adversary's reach, which means changing the trust boundary "
-      "rather than adding another comparison inside it.")
+    w("In each one an adversary who updates the reference alongside the data "
+      "passes verification, and each residual is pinned by an executable test "
+      "rather than left as prose.")
+    w("")
+    w("None is fixable by a better check. All four need the expected value "
+      "held outside the adversary's reach, which means changing the trust "
+      "boundary rather than adding another comparison inside it.")
+    w("")
+
+    # -- the gate ---------------------------------------------------------
+    w("## The transition statement")
+    w("")
+    w("The boundary map above is the gate to Phase 5. With every entry "
+      "answered, the statement the project reserved is now earned:")
+    w("")
+    w("> The remaining attacks cannot be closed honestly while agent and "
+      "trusted infrastructure share a Python process. The next control changes "
+      "the trust boundary rather than hiding references inside the same "
+      "boundary.")
+    w("")
+    w("The evidence for it is specific, not rhetorical: one case is wholly "
+      "open with no in-process control available (case 01, three independent "
+      "reach-around read paths that share no mechanism), and every closed "
+      "case's residual is the same shape — the reference value sits inside the "
+      "adversary's reach. Those are not four problems with four fixes. They "
+      "are one problem, and it is the boundary.")
+    w("")
+    w("What Phase 5 must **not** claim on arrival is set out in "
+      "`cases/README.md`: a separate process prevents direct inspection and "
+      "modification of the runner's memory and object graph, and nothing more "
+      "until each further claim is measured on its own.")
     w("")
     return "\n".join(out) + "\n"
 

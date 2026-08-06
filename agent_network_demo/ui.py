@@ -545,9 +545,15 @@ def state_cards(state: Dict[str, Dict[str, Any]]) -> None:
 
 
 # --- Verdict banner ----------------------------------------------------------
-def verdict_banner(verdict: Dict[str, Any]) -> None:
+def verdict_banner(verdict: Dict[str, Any],
+                   differences: Optional[List[str]] = None) -> None:
     """The prominent end-of-run receipt: verdict status, checks passed count,
-    reasons, and per-check badges."""
+    reasons, and per-check badges.
+
+    ``verdict`` is the runner's own derivation, not the validation agent's
+    artifact (case 05). ``differences``, when non-empty, means the agent
+    recommended something else and the run is flagged for review — a state that
+    must be visible, or "routed to review" is a flag nobody sees."""
     if not verdict:
         return
     status = verdict.get("status", "—")
@@ -577,6 +583,14 @@ def verdict_banner(verdict: Dict[str, Any]) -> None:
             h.append(badge(f"{mark} {ck}", col,
                            _tint_for_status("ok" if cv else ("warn" if cv is False else "pending"))))
         h.append('</div>')
+    if differences:
+        h.append(
+            '<div class="vhint" style="color:#8a4b00">⚑ <b>Flagged for review.</b> '
+            'This verdict was derived by the trusted runner. The validation '
+            'agent recommended something else: '
+            + "; ".join(_e(d) for d in differences)
+            + '</div>'
+        )
     h.append('<div class="vhint">Run complete — click <b>↺ Reset</b>, then <b>⏭ Step</b> '
              'to watch it build one agent at a time.</div>')
     h.append('</div>')
