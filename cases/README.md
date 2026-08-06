@@ -136,6 +136,18 @@ not claimed.
 |---|---|---|
 | [`06-process-isolation`](06-process-isolation/README.md) ✅ | 5 | A stage in a separate interpreter cannot reach the runner's memory — and that is all it cannot do |
 
+## Phase 3 cases
+
+| Case | Phase | Central claim |
+|---|---|---|
+| [`08-derived-authority`](08-derived-authority/README.md) ⚠️ | 3 | Comparison: a stored per-stage grant against a grant derived at use time. Measures minimum tamper set, authority, scope and persistence — it does not apply a control |
+| `09-skill-registry` | 3 | Can the execution plane create, modify, replace or select an unapproved skill definition? |
+
+Case 08 is registered ⚠️ because it changes nothing in the product. Both arms
+are measured as they are, and the named capability is obtainable in both — so
+its baseline and controlled results are identical by construction, which is
+what an honest comparison looks like in this registry.
+
 ## Deferred — out of current scope
 
 Documented so they are not forgotten, and not to be started while the

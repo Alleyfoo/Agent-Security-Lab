@@ -17,8 +17,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-05](05-false-verdict/README.md)<br>A conclusion the agent authors is not evidence | A hostile ValidationAgent writes a conclusion the evidence does not support: clean over a failed receipt, clean over a chain missing a row, clean on the basis of no checks at all, and - the symmetric direction - a false alarm on a healthy run | 🔴 Undetected | 🟡 Rejected before commitment | A deterministic derive_verdict() in verdict.py, called by the runner over its own ArtifactStore and ReceiptLedger at the terminal step (C1+C2); the agent's artifact becomes a recommendation, and any disagreement on the decision fields sets review_required and emits a verdict_disagreement event naming each differing field (C3) | The derivation trusts artifact metadata that agents wrote, so a transform that drops a row and decrements row_count passes both sides. Only the decision is compared - reasons and message are prose and are not bound. And the reference computation lives inside the adversary's reach: rewriting _derived_verdict or patching derive_verdict defeats it, though patching only one side still surfaces as disagreement with the other. |
 | [case-06](06-process-isolation/README.md)<br>What process separation actually buys | The same hostile stage runs in the runner's process and in a spawned interpreter, probing for the artifact store, the RunSession, ungranted artifact content from an earlier run, and the host filesystem | 🔴 Undetected | 🟢 Prevented | The stage executes in a separate interpreter reached only by line-delimited JSON, with the parent acting as a trusted resolver that answers one read request at a time against the grant it issued; returned artifacts and events re-enter through the existing write contract, hash registration and attribution binding | Ambient authority is untouched: same uid, same filesystem, same network, no resource limits. The grant is untouched. Output honesty is untouched. And three of four stages remain in-process, which is the residual an 'isolation landed' headline would hide. |
 | [case-07](07-poisoned-chain/README.md)<br>Corrupting downstream artifacts through your own | A hostile schema stage writes one well-formed artifact to the key it was granted - a fabricated column set, a dropped column, a renamed column - and the honest transform stage builds the cleaned output from it | 🔴 Undetected | 🟠 Detected after occurrence | A fifth derived check, output_matches_source: the cleaned output's columns must equal the source artifact's columns, naming what went missing and what was added. It is the only check that looks back at the artifact the chain started from | Structure is compared; values are not. A stage that keeps every column name and mistypes them all passes, and the damage is selective because a failed coercion leaves the value alone. Identifier fidelity is lost on the honest path already - '1001' becomes 1001 - and closing that needs the canonical artifact to carry field semantics rather than have them guessed from shape. |
+| [case-08](08-derived-authority/README.md)<br>Stored grant versus grant derived at use time | Obtain a named unauthorized read at the schema step in each of two authority models, attacking every stored authority-bearing record independently: a future artifact (cleaned_output) and an existing unrelated one (key_material) | 🔴 Undetected | 🔴 Undetected | None. This case is a comparison and changes nothing in the product; both models are measured as they are. Arm A is the production Route table, arm B a candidate object-and-skill model living in the case directory per concept note 24 | Arm B's artifact map is unprotected, persisted, and reads as bookkeeping rather than policy - cheapest to reach, survives resume, and the surface this case nearly failed to test. The skill-contract edit has the widest scope in the whole table, every object until redeployment, and arm B has no answer to it. |
 
-**9 cases** — 8 with a control, 1 open by design. 7 moved to a better result class.
+**10 cases** — 8 with a control, 2 open by design. 7 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -312,6 +313,39 @@ Reproduce: `python cases/06-process-isolation/attack.py` · Tests: `tests/advers
 **Notes.** Found while measuring case 06, not by looking for it. Deliberately extends case 05's derivation rather than adding a parallel mechanism, for the reason case 05 recorded - a second derivation would drift. The cost was four tests elsewhere that pinned a four-check vocabulary; all four are listed in the case README and none was weakened. Measurement D is not an attack: it records that the honest pipeline turns the identifier '1001' into the number 1001 and no check notices.
 
 Reproduce: `python cases/07-poisoned-chain/attack.py` · Tests: `tests/adversarial/test_case_07_poisoned_chain.py`
+
+### ⚠️ case-08 — Stored grant versus grant derived at use time
+
+**Compromise level:** Narrow by design: may alter persisted policy or workflow records before execution; may not modify evaluator code or the administrative trust root  
+**Attack:** Obtain a named unauthorized read at the schema step in each of two authority models, attacking every stored authority-bearing record independently: a future artifact (cleaned_output) and an existing unrelated one (key_material)  
+**Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
+
+**Control.** None. This case is a comparison and changes nothing in the product; both models are measured as they are. Arm A is the production Route table, arm B a candidate object-and-skill model living in the case directory per concept note 24
+
+**Evidence**
+
+- minimum tamper set 1 in both arms, for both capabilities
+- arm A: 1 stored surface, yields both targets, additive
+- arm B: 5 stored surfaces, 2 yield - skill contract and artifact map
+- arm B transition, object-state and queue edits yield no key authority
+- scope differs sharply: object lifetime vs deployment lifetime
+- tests/adversarial/test_case_08_derived_authority.py
+
+**What this proves.** That the authority-bearing record is whatever binds a declared type to a concrete key, wherever it lives. Arm A keeps that binding in the policy table and arm B in the object's artifact map; neither removes it, and one edit to it suffices in both. Deriving the grant does bound what state, transition and queue lies obtain - three of arm B's five surfaces yielded nothing, because the grant still has to resolve through the artifact map and none of them touches it.
+
+**What this does not prove.** It does not show arm A is preferable: arm A's single surface is broader in scope and its edit is purely additive, so the tampering leaves the legitimate work intact and invisible. It does not generalise beyond one workflow position, one object type and one registry. And it says nothing about whether the skill registry is trustworthy - it attacks the registry as data and reports the radius. Case 09 owns that.
+
+**Residual limitation.** Arm B's artifact map is unprotected, persisted, and reads as bookkeeping rather than policy - cheapest to reach, survives resume, and the surface this case nearly failed to test. The skill-contract edit has the widest scope in the whole table, every object until redeployment, and arm B has no answer to it.
+
+**Containment.** None in either arm. Arm A's pre-run edit is case 03's unclosed residual; arm B has no independent account of what an object's state or artifact map should be.
+
+**Recovery.** Not applicable - no control was applied. Operationally, neither model can distinguish a tampered record from a legitimate one without an external account of what the premises should be.
+
+**Blast radius.** Recorded per surface rather than per case, on a scope scale. Arm A route edit: process lifetime and future independent runs. Arm B map edit: one object, including retries and resume. Arm B skill edit: deployment lifetime, every object running that skill.
+
+**Notes.** The hypothesis was that arm B would require two mutations. It was written into an early draft of the contract as an acceptance condition, corrected to a metric before measurement, and refuted: one edit is enough in both arms. 'Bounded by workflow progress' was also refuted, and only because the case tested two capabilities - arm B refused the future artifact through the transition and state surfaces, which looked like progress bounding until the artifact-map edit obtained it anyway. A single-probe case would have claimed object-centred authorization for what was timing.
+
+Reproduce: `python cases/08-derived-authority/attack.py` · Tests: `tests/adversarial/test_case_08_derived_authority.py`
 
 ## Where the boundary stands
 

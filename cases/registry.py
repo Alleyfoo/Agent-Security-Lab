@@ -682,6 +682,81 @@ CASES: List[CaseResult] = [
               "attack: it records that the honest pipeline turns the "
               "identifier '1001' into the number 1001 and no check notices.",
     ),
+    CaseResult(
+        case_id="case-08",
+        title="Stored grant versus grant derived at use time",
+        compromise_level="Narrow by design: may alter persisted policy or "
+                         "workflow records before execution; may not modify "
+                         "evaluator code or the administrative trust root",
+        attack="Obtain a named unauthorized read at the schema step in each of "
+               "two authority models, attacking every stored "
+               "authority-bearing record independently: a future artifact "
+               "(cleaned_output) and an existing unrelated one (key_material)",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None. This case is a comparison and changes nothing in the "
+                "product; both models are measured as they are. Arm A is the "
+                "production Route table, arm B a candidate object-and-skill "
+                "model living in the case directory per concept note 24",
+        evidence=[
+            "minimum tamper set 1 in both arms, for both capabilities",
+            "arm A: 1 stored surface, yields both targets, additive",
+            "arm B: 5 stored surfaces, 2 yield - skill contract and "
+            "artifact map",
+            "arm B transition, object-state and queue edits yield no key "
+            "authority",
+            "scope differs sharply: object lifetime vs deployment lifetime",
+            "tests/adversarial/test_case_08_derived_authority.py",
+        ],
+        what_this_proves=(
+            "That the authority-bearing record is whatever binds a declared "
+            "type to a concrete key, wherever it lives. Arm A keeps that "
+            "binding in the policy table and arm B in the object's artifact "
+            "map; neither removes it, and one edit to it suffices in both. "
+            "Deriving the grant does bound what state, transition and queue "
+            "lies obtain - three of arm B's five surfaces yielded nothing, "
+            "because the grant still has to resolve through the artifact map "
+            "and none of them touches it."),
+        what_this_does_not_prove=(
+            "It does not show arm A is preferable: arm A's single surface is "
+            "broader in scope and its edit is purely additive, so the "
+            "tampering leaves the legitimate work intact and invisible. It "
+            "does not generalise beyond one workflow position, one object "
+            "type and one registry. And it says nothing about whether the "
+            "skill registry is trustworthy - it attacks the registry as data "
+            "and reports the radius. Case 09 owns that."),
+        residual_limitation=(
+            "Arm B's artifact map is unprotected, persisted, and reads as "
+            "bookkeeping rather than policy - cheapest to reach, survives "
+            "resume, and the surface this case nearly failed to test. The "
+            "skill-contract edit has the widest scope in the whole table, "
+            "every object until redeployment, and arm B has no answer to it."),
+        containment="None in either arm. Arm A's pre-run edit is case 03's "
+                    "unclosed residual; arm B has no independent account of "
+                    "what an object's state or artifact map should be.",
+        recovery="Not applicable - no control was applied. Operationally, "
+                 "neither model can distinguish a tampered record from a "
+                 "legitimate one without an external account of what the "
+                 "premises should be.",
+        status="open",
+        directory="cases/08-derived-authority",
+        test_module="tests/adversarial/test_case_08_derived_authority.py",
+        blast_radius="Recorded per surface rather than per case, on a scope "
+                     "scale. Arm A route edit: process lifetime and future "
+                     "independent runs. Arm B map edit: one object, including "
+                     "retries and resume. Arm B skill edit: deployment "
+                     "lifetime, every object running that skill.",
+        notes="The hypothesis was that arm B would require two mutations. It "
+              "was written into an early draft of the contract as an "
+              "acceptance condition, corrected to a metric before "
+              "measurement, and refuted: one edit is enough in both arms. "
+              "'Bounded by workflow progress' was also refuted, and only "
+              "because the case tested two capabilities - arm B refused the "
+              "future artifact through the transition and state surfaces, "
+              "which looked like progress bounding until the artifact-map "
+              "edit obtained it anyway. A single-probe case would have "
+              "claimed object-centred authorization for what was timing.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}

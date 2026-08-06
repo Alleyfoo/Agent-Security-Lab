@@ -55,6 +55,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [05 — a conclusion the agent authors is not evidence](cases/05-false-verdict/README.md) | 🔴 Undetected | 🟡 Rejected before commitment |
 | [06 — what process separation actually buys](cases/06-process-isolation/README.md) | 🔴 Undetected | 🟢 Prevented — one stage, one attack class |
 | [07 — corrupting downstream artifacts through your own](cases/07-poisoned-chain/README.md) | 🔴 Undetected | 🟠 Detected after occurrence |
+| [08 — stored grant vs. grant derived at use time](cases/08-derived-authority/README.md) | 🔴 Undetected | 🔴 Undetected — a comparison, no control applied |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",
