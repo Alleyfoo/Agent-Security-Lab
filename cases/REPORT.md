@@ -18,8 +18,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-06](06-process-isolation/README.md)<br>What process separation actually buys | The same hostile stage runs in the runner's process and in a spawned interpreter, probing for the artifact store, the RunSession, ungranted artifact content from an earlier run, and the host filesystem | 🔴 Undetected | 🟢 Prevented | The stage executes in a separate interpreter reached only by line-delimited JSON, with the parent acting as a trusted resolver that answers one read request at a time against the grant it issued; returned artifacts and events re-enter through the existing write contract, hash registration and attribution binding | Ambient authority is untouched: same uid, same filesystem, same network, no resource limits. The grant is untouched. Output honesty is untouched. And three of four stages remain in-process, which is the residual an 'isolation landed' headline would hide. |
 | [case-07](07-poisoned-chain/README.md)<br>Corrupting downstream artifacts through your own | A hostile schema stage writes one well-formed artifact to the key it was granted - a fabricated column set, a dropped column, a renamed column - and the honest transform stage builds the cleaned output from it | 🔴 Undetected | 🟠 Detected after occurrence | A fifth derived check, output_matches_source: the cleaned output's columns must equal the source artifact's columns, naming what went missing and what was added. It is the only check that looks back at the artifact the chain started from | Structure is compared; values are not. A stage that keeps every column name and mistypes them all passes, and the damage is selective because a failed coercion leaves the value alone. Identifier fidelity is lost on the honest path already - '1001' becomes 1001 - and closing that needs the canonical artifact to carry field semantics rather than have them guessed from shape. |
 | [case-08](08-derived-authority/README.md)<br>Stored grant versus grant derived at use time | Obtain a named unauthorized read at the schema step in each of two authority models, attacking every stored authority-bearing record independently: a future artifact (cleaned_output) and an existing unrelated one (key_material) | 🔴 Undetected | 🔴 Undetected | None. This case is a comparison and changes nothing in the product; both models are measured as they are. Arm A is the production Route table, arm B a candidate object-and-skill model living in the case directory per concept note 24 | Arm B's artifact map is unprotected, persisted, and reads as bookkeeping rather than policy - cheapest to reach, survives resume, and the surface this case nearly failed to test. The skill-contract edit has the widest scope in the whole table, every object until redeployment, and arm B has no answer to it. |
+| [case-09](09-skill-registry/README.md)<br>Can the execution plane mint a transformation? | Create, modify, replace and select an unapproved skill definition - four verbs measured separately - then rewrite the private registry in three placements: before the run pins, mid-run, and mid-run with the pin updated | 🔴 Undetected | 🟢 Prevented | A read-only MappingProxyType registry over frozen Skill records with no mutation operation on the execution path (C1), plus per-run version pinning: each skill carries a content digest, a run pins the digests it may use at start and re-verifies before deriving any grant (C2) | Replacement before the run pins is undetected - the pin records what was there, not what should have been. Updating the pin alongside the registry passes, the fifth instance of the cross-cutting finding. MappingProxyType is a view, not a freeze. And removal mid-run is misreported as a selection failure, because validate runs before verify_pins and shadows the message that would name the real incident. |
 
-**10 cases** — 8 with a control, 2 open by design. 7 moved to a better result class.
+**11 cases** — 9 with a control, 2 open by design. 8 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -346,6 +347,39 @@ Reproduce: `python cases/07-poisoned-chain/attack.py` · Tests: `tests/adversari
 **Notes.** The hypothesis was that arm B would require two mutations. It was written into an early draft of the contract as an acceptance condition, corrected to a metric before measurement, and refuted: one edit is enough in both arms. 'Bounded by workflow progress' was also refuted, and only because the case tested two capabilities - arm B refused the future artifact through the transition and state surfaces, which looked like progress bounding until the artifact-map edit obtained it anyway. A single-probe case would have claimed object-centred authorization for what was timing.
 
 Reproduce: `python cases/08-derived-authority/attack.py` · Tests: `tests/adversarial/test_case_08_derived_authority.py`
+
+### ✅ case-09 — Can the execution plane mint a transformation?
+
+**Compromise level:** Level 1: a worker using the execution plane's interfaces (Level 2 for the residual)  
+**Attack:** Create, modify, replace and select an unapproved skill definition - four verbs measured separately - then rewrite the private registry in three placements: before the run pins, mid-run, and mid-run with the pin updated  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟢 Prevented
+
+**Control.** A read-only MappingProxyType registry over frozen Skill records with no mutation operation on the execution path (C1), plus per-run version pinning: each skill carries a content digest, a run pins the digests it may use at start and re-verifies before deriving any grant (C2)
+
+**Evidence**
+
+- create, update, setdefault, remove and clear all refused
+- no create_skill / publish_skill / disable_review anywhere on the execution path - absent, not denied
+- replacement between steps: baseline OBTAINED, pinned detected with both digests named
+- selection refused for an unregistered name and for a name the object's state does not require
+- Level 2: before-pin OBTAINED, mid-run detected, pin-updated OBTAINED
+- tests/adversarial/test_case_09_skill_registry.py
+
+**What this proves.** That an allowlist of names is not an allowlist of transformations. Selection was already sound before this case - an unregistered name and a name the object type does not permit were both refused - while the contents of an approved entry could be rewritten and the run would use them without comment. With the control a worker cannot create, modify or select through any interface it holds, and a definition replaced after the run started is detected before a grant is derived from it. It also establishes what a version pin is worth, which is less than it looks: continuity across one window, not legitimacy.
+
+**What this does not prove.** It does not prove the registry is trustworthy. There is no independent account of what the approved set should be, so tampering before a run pins is undetected and tampering with the pin alongside the registry passes. It implements no part of the concept note's administrative lifecycle - no proposal, review, approval, signing or versioned release. And it does not secure the type-to-key binding: case 08's artifact-map edit still works with every control here active, which a scope-guard test pins.
+
+**Residual limitation.** Replacement before the run pins is undetected - the pin records what was there, not what should have been. Updating the pin alongside the registry passes, the fifth instance of the cross-cutting finding. MappingProxyType is a view, not a freeze. And removal mid-run is misreported as a selection failure, because validate runs before verify_pins and shadows the message that would name the real incident.
+
+**Containment.** A version mismatch raises SkillRegistryError, distinct from AuthorizationError, and the run refuses to derive a grant from a definition it did not start with. Fails closed: there is no sound conclusion available from an unapproved contract.
+
+**Recovery.** Restart the run - the pin is taken at start, so a fresh run over an untampered registry is clean, and unlike cases 02, 03 and 05 there is nothing to reconstruct because a skill definition is not run state. Restoring the registry itself is out of scope and would be unsound: the process holds no record of what the approved set was.
+
+**Blast radius.** A successful registry edit reaches every object running that skill until redeployment - the widest scope measured anywhere here. C2 narrows it to runs starting after the edit; runs in flight detect it and stop. A real reduction, and not containment: the edit is still there and every later run picks it up silently.
+
+**Notes.** The candidate model moved to object_model/ this slice, because cases 08, 09 and 10 share it and loading it across case directories by file path was worse. It is not the product and agent_network_demo does not import it. Case 08's own copy is deliberately left frozen at what it measured - retrofitting these controls into it would have changed a published table. The independent-authority question is answered 'there is none', which is the honest answer at this phase.
+
+Reproduce: `python cases/09-skill-registry/attack.py` · Tests: `tests/adversarial/test_case_09_skill_registry.py`
 
 ## Where the boundary stands
 

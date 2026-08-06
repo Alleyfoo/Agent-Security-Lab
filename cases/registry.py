@@ -757,6 +757,91 @@ CASES: List[CaseResult] = [
               "edit obtained it anyway. A single-probe case would have "
               "claimed object-centred authorization for what was timing.",
     ),
+    CaseResult(
+        case_id="case-09",
+        title="Can the execution plane mint a transformation?",
+        compromise_level="Level 1: a worker using the execution plane's "
+                         "interfaces (Level 2 for the residual)",
+        attack="Create, modify, replace and select an unapproved skill "
+               "definition - four verbs measured separately - then rewrite the "
+               "private registry in three placements: before the run pins, "
+               "mid-run, and mid-run with the pin updated",
+        baseline_result=UNDETECTED,
+        controlled_result=PREVENTED,
+        control="A read-only MappingProxyType registry over frozen Skill "
+                "records with no mutation operation on the execution path "
+                "(C1), plus per-run version pinning: each skill carries a "
+                "content digest, a run pins the digests it may use at start "
+                "and re-verifies before deriving any grant (C2)",
+        evidence=[
+            "create, update, setdefault, remove and clear all refused",
+            "no create_skill / publish_skill / disable_review anywhere on the "
+            "execution path - absent, not denied",
+            "replacement between steps: baseline OBTAINED, pinned detected "
+            "with both digests named",
+            "selection refused for an unregistered name and for a name the "
+            "object's state does not require",
+            "Level 2: before-pin OBTAINED, mid-run detected, pin-updated "
+            "OBTAINED",
+            "tests/adversarial/test_case_09_skill_registry.py",
+        ],
+        what_this_proves=(
+            "That an allowlist of names is not an allowlist of "
+            "transformations. Selection was already sound before this case - "
+            "an unregistered name and a name the object type does not permit "
+            "were both refused - while the contents of an approved entry could "
+            "be rewritten and the run would use them without comment. With the "
+            "control a worker cannot create, modify or select through any "
+            "interface it holds, and a definition replaced after the run "
+            "started is detected before a grant is derived from it. It also "
+            "establishes what a version pin is worth, which is less than it "
+            "looks: continuity across one window, not legitimacy."),
+        what_this_does_not_prove=(
+            "It does not prove the registry is trustworthy. There is no "
+            "independent account of what the approved set should be, so "
+            "tampering before a run pins is undetected and tampering with the "
+            "pin alongside the registry passes. It implements no part of the "
+            "concept note's administrative lifecycle - no proposal, review, "
+            "approval, signing or versioned release. And it does not secure "
+            "the type-to-key binding: case 08's artifact-map edit still works "
+            "with every control here active, which a scope-guard test pins."),
+        residual_limitation=(
+            "Replacement before the run pins is undetected - the pin records "
+            "what was there, not what should have been. Updating the pin "
+            "alongside the registry passes, the fifth instance of the "
+            "cross-cutting finding. MappingProxyType is a view, not a freeze. "
+            "And removal mid-run is misreported as a selection failure, "
+            "because validate runs before verify_pins and shadows the message "
+            "that would name the real incident."),
+        containment="A version mismatch raises SkillRegistryError, distinct "
+                    "from AuthorizationError, and the run refuses to derive a "
+                    "grant from a definition it did not start with. Fails "
+                    "closed: there is no sound conclusion available from an "
+                    "unapproved contract.",
+        recovery="Restart the run - the pin is taken at start, so a fresh run "
+                 "over an untampered registry is clean, and unlike cases 02, "
+                 "03 and 05 there is nothing to reconstruct because a skill "
+                 "definition is not run state. Restoring the registry itself "
+                 "is out of scope and would be unsound: the process holds no "
+                 "record of what the approved set was.",
+        status="closed",
+        directory="cases/09-skill-registry",
+        test_module="tests/adversarial/test_case_09_skill_registry.py",
+        blast_radius="A successful registry edit reaches every object running "
+                     "that skill until redeployment - the widest scope "
+                     "measured anywhere here. C2 narrows it to runs starting "
+                     "after the edit; runs in flight detect it and stop. A "
+                     "real reduction, and not containment: the edit is still "
+                     "there and every later run picks it up silently.",
+        notes="The candidate model moved to object_model/ this slice, because "
+              "cases 08, 09 and 10 share it and loading it across case "
+              "directories by file path was worse. It is not the product and "
+              "agent_network_demo does not import it. Case 08's own copy is "
+              "deliberately left frozen at what it measured - retrofitting "
+              "these controls into it would have changed a published table. "
+              "The independent-authority question is answered 'there is none', "
+              "which is the honest answer at this phase.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}
