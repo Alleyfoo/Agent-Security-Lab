@@ -842,6 +842,82 @@ CASES: List[CaseResult] = [
               "The independent-authority question is answered 'there is none', "
               "which is the honest answer at this phase.",
     ),
+    CaseResult(
+        case_id="case-10",
+        title="The type-to-key binding",
+        compromise_level="The case 08 attacker: may alter persisted policy or "
+                         "workflow records, may not modify evaluator code",
+        attack="Rebind an artifact type to a different key mid-workflow - "
+               "through the API, appended past it, and by overwriting the "
+               "record - plus pre-seeding a type before its producer runs, and "
+               "tampering after completion to hit resume",
+        baseline_result=UNDETECTED,
+        controlled_result=DETECTED_AFTER_OCCURRENCE,
+        control="Derive the map instead of storing it: a runner-owned "
+                "append-only ProductionLedger records what each completed step "
+                "produced, the binding is computed from it with first "
+                "production winning, and an artifact type may be produced at "
+                "most once per object",
+        evidence=[
+            "map maintenance implemented first - both arms run the same "
+            "three-step workflow and resolve identical grants untampered",
+            "stored map: rebinding succeeds by every route, silently",
+            "derived: refused through the API, inert when appended past it, "
+            "and the conflict stays in the record",
+            "derived: tampering is inert across reload and resume",
+            "residual: overwriting a production record still works",
+            "tests/adversarial/test_case_10_type_to_key_binding.py",
+        ],
+        what_this_proves=(
+            "That the shape of a record decides what tampering with it costs, "
+            "independently of how well it is protected. The stored map and the "
+            "derived ledger are both unprotected in-process data with a "
+            "minimum tamper set of one, and they behave completely "
+            "differently: a dictionary write is total and silent, while an "
+            "append-only record with a produced-once invariant makes the cheap "
+            "edits inert and leaves the contradiction in place. First case in "
+            "the comparison series where the derived model is materially "
+            "better rather than merely different."),
+        what_this_does_not_prove=(
+            "It does not close the surface: overwriting a production record "
+            "obtains the capability at the same cost as before, and the ledger "
+            "is append-only by API rather than tamper-evident. It does not "
+            "come free - the produced-once invariant introduces a denial of "
+            "service the stored map does not have. And it does not touch the "
+            "skill registry, which case 09 measured as the wider-scope half."),
+        residual_limitation=(
+            "Overwriting an existing production record still works, with the "
+            "same tamper set as the stored map - the sixth appearance of the "
+            "cross-cutting finding. One forged append for a type not yet "
+            "produced permanently blocks its legitimate producer, so the "
+            "object cannot complete. And conflicts_for() reports "
+            "contradictions but nothing calls it during a run."),
+        containment="None automatic. The API refusal stops the ordinary path; "
+                    "past it the derivation makes tampering ineffective rather "
+                    "than detected-and-halted, and the conflict sits in the "
+                    "record until something looks.",
+        recovery="Better than the stored map, and the derived arm's clearest "
+                 "practical advantage: the original binding is still in the "
+                 "record, so first-production-wins means recovery is already "
+                 "what happens. In the stored map the original key is gone and "
+                 "there is nothing to recover it from.",
+        status="closed",
+        directory="cases/10-type-to-key-binding",
+        test_module="tests/adversarial/test_case_10_type_to_key_binding.py",
+        blast_radius="Unchanged in reach, changed in durability. One object "
+                     "including its retries and resume. In the derived arm an "
+                     "append-shaped edit affects nothing and a DoS-shaped edit "
+                     "stops that object permanently.",
+        notes="Map maintenance was implemented before any attack, because case "
+              "08's arm B never changed its map and tampering with a record "
+              "nothing maintains would have measured nothing. The "
+              "denial-of-service finding was not predicted - it fell out of "
+              "attack B, where the invariant that makes rebinding hard also "
+              "makes one forged append fatal to the object. A ledger with no "
+              "records was falsy because __len__ was defined without "
+              "__bool__, and the first harness run silently measured the "
+              "stored arm twice; both the class and the test now pin it.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}

@@ -57,6 +57,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [07 — corrupting downstream artifacts through your own](cases/07-poisoned-chain/README.md) | 🔴 Undetected | 🟠 Detected after occurrence |
 | [08 — stored grant vs. grant derived at use time](cases/08-derived-authority/README.md) | 🔴 Undetected | 🔴 Undetected — a comparison, no control applied |
 | [09 — can the execution plane mint a transformation?](cases/09-skill-registry/README.md) | 🔴 Undetected | 🟢 Prevented — for a worker; the registry is not trustworthy |
+| [10 — the type-to-key binding](cases/10-type-to-key-binding/README.md) | 🔴 Undetected | 🟠 Detected after occurrence |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",

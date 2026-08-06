@@ -19,8 +19,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-07](07-poisoned-chain/README.md)<br>Corrupting downstream artifacts through your own | A hostile schema stage writes one well-formed artifact to the key it was granted - a fabricated column set, a dropped column, a renamed column - and the honest transform stage builds the cleaned output from it | 🔴 Undetected | 🟠 Detected after occurrence | A fifth derived check, output_matches_source: the cleaned output's columns must equal the source artifact's columns, naming what went missing and what was added. It is the only check that looks back at the artifact the chain started from | Structure is compared; values are not. A stage that keeps every column name and mistypes them all passes, and the damage is selective because a failed coercion leaves the value alone. Identifier fidelity is lost on the honest path already - '1001' becomes 1001 - and closing that needs the canonical artifact to carry field semantics rather than have them guessed from shape. |
 | [case-08](08-derived-authority/README.md)<br>Stored grant versus grant derived at use time | Obtain a named unauthorized read at the schema step in each of two authority models, attacking every stored authority-bearing record independently: a future artifact (cleaned_output) and an existing unrelated one (key_material) | 🔴 Undetected | 🔴 Undetected | None. This case is a comparison and changes nothing in the product; both models are measured as they are. Arm A is the production Route table, arm B a candidate object-and-skill model living in the case directory per concept note 24 | Arm B's artifact map is unprotected, persisted, and reads as bookkeeping rather than policy - cheapest to reach, survives resume, and the surface this case nearly failed to test. The skill-contract edit has the widest scope in the whole table, every object until redeployment, and arm B has no answer to it. |
 | [case-09](09-skill-registry/README.md)<br>Can the execution plane mint a transformation? | Create, modify, replace and select an unapproved skill definition - four verbs measured separately - then rewrite the private registry in three placements: before the run pins, mid-run, and mid-run with the pin updated | 🔴 Undetected | 🟢 Prevented | A read-only MappingProxyType registry over frozen Skill records with no mutation operation on the execution path (C1), plus per-run version pinning: each skill carries a content digest, a run pins the digests it may use at start and re-verifies before deriving any grant (C2) | Replacement before the run pins is undetected - the pin records what was there, not what should have been. Updating the pin alongside the registry passes, the fifth instance of the cross-cutting finding. MappingProxyType is a view, not a freeze. And removal mid-run is misreported as a selection failure, because validate runs before verify_pins and shadows the message that would name the real incident. |
+| [case-10](10-type-to-key-binding/README.md)<br>The type-to-key binding | Rebind an artifact type to a different key mid-workflow - through the API, appended past it, and by overwriting the record - plus pre-seeding a type before its producer runs, and tampering after completion to hit resume | 🔴 Undetected | 🟠 Detected after occurrence | Derive the map instead of storing it: a runner-owned append-only ProductionLedger records what each completed step produced, the binding is computed from it with first production winning, and an artifact type may be produced at most once per object | Overwriting an existing production record still works, with the same tamper set as the stored map - the sixth appearance of the cross-cutting finding. One forged append for a type not yet produced permanently blocks its legitimate producer, so the object cannot complete. And conflicts_for() reports contradictions but nothing calls it during a run. |
 
-**11 cases** — 9 with a control, 2 open by design. 8 moved to a better result class.
+**12 cases** — 10 with a control, 2 open by design. 9 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -380,6 +381,39 @@ Reproduce: `python cases/08-derived-authority/attack.py` · Tests: `tests/advers
 **Notes.** The candidate model moved to object_model/ this slice, because cases 08, 09 and 10 share it and loading it across case directories by file path was worse. It is not the product and agent_network_demo does not import it. Case 08's own copy is deliberately left frozen at what it measured - retrofitting these controls into it would have changed a published table. The independent-authority question is answered 'there is none', which is the honest answer at this phase.
 
 Reproduce: `python cases/09-skill-registry/attack.py` · Tests: `tests/adversarial/test_case_09_skill_registry.py`
+
+### ✅ case-10 — The type-to-key binding
+
+**Compromise level:** The case 08 attacker: may alter persisted policy or workflow records, may not modify evaluator code  
+**Attack:** Rebind an artifact type to a different key mid-workflow - through the API, appended past it, and by overwriting the record - plus pre-seeding a type before its producer runs, and tampering after completion to hit resume  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟠 Detected after occurrence
+
+**Control.** Derive the map instead of storing it: a runner-owned append-only ProductionLedger records what each completed step produced, the binding is computed from it with first production winning, and an artifact type may be produced at most once per object
+
+**Evidence**
+
+- map maintenance implemented first - both arms run the same three-step workflow and resolve identical grants untampered
+- stored map: rebinding succeeds by every route, silently
+- derived: refused through the API, inert when appended past it, and the conflict stays in the record
+- derived: tampering is inert across reload and resume
+- residual: overwriting a production record still works
+- tests/adversarial/test_case_10_type_to_key_binding.py
+
+**What this proves.** That the shape of a record decides what tampering with it costs, independently of how well it is protected. The stored map and the derived ledger are both unprotected in-process data with a minimum tamper set of one, and they behave completely differently: a dictionary write is total and silent, while an append-only record with a produced-once invariant makes the cheap edits inert and leaves the contradiction in place. First case in the comparison series where the derived model is materially better rather than merely different.
+
+**What this does not prove.** It does not close the surface: overwriting a production record obtains the capability at the same cost as before, and the ledger is append-only by API rather than tamper-evident. It does not come free - the produced-once invariant introduces a denial of service the stored map does not have. And it does not touch the skill registry, which case 09 measured as the wider-scope half.
+
+**Residual limitation.** Overwriting an existing production record still works, with the same tamper set as the stored map - the sixth appearance of the cross-cutting finding. One forged append for a type not yet produced permanently blocks its legitimate producer, so the object cannot complete. And conflicts_for() reports contradictions but nothing calls it during a run.
+
+**Containment.** None automatic. The API refusal stops the ordinary path; past it the derivation makes tampering ineffective rather than detected-and-halted, and the conflict sits in the record until something looks.
+
+**Recovery.** Better than the stored map, and the derived arm's clearest practical advantage: the original binding is still in the record, so first-production-wins means recovery is already what happens. In the stored map the original key is gone and there is nothing to recover it from.
+
+**Blast radius.** Unchanged in reach, changed in durability. One object including its retries and resume. In the derived arm an append-shaped edit affects nothing and a DoS-shaped edit stops that object permanently.
+
+**Notes.** Map maintenance was implemented before any attack, because case 08's arm B never changed its map and tampering with a record nothing maintains would have measured nothing. The denial-of-service finding was not predicted - it fell out of attack B, where the invariant that makes rebinding hard also makes one forged append fatal to the object. A ledger with no records was falsy because __len__ was defined without __bool__, and the first harness run silently measured the stored arm twice; both the class and the test now pin it.
+
+Reproduce: `python cases/10-type-to-key-binding/attack.py` · Tests: `tests/adversarial/test_case_10_type_to_key_binding.py`
 
 ## Where the boundary stands
 

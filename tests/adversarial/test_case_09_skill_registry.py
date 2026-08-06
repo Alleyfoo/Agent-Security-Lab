@@ -266,8 +266,15 @@ def test_this_case_does_not_secure_the_artifact_map(run):
     """SCOPE GUARD. Case 09 addresses the registry only.
 
     The map edit case 08 measured still works with every control in this case
-    active. If this ever starts failing, case 10 landed and this test should be
-    rewritten to point at it - not deleted.
+    active, because a *stored* map is what this run uses. Case 10 has since
+    measured the alternative - deriving the map from an append-only production
+    ledger - and that is an opt-in arm, so this guard still holds for the
+    stored form and should keep holding.
+
+    The two halves of the trust root are independent: neither case's control
+    substitutes for the other's, which
+    ``test_case_10::test_case_09s_registry_controls_still_hold_here`` asserts
+    from the other side.
     """
     obj, pins = run
     obj.artifacts[skills.T_TABLE_PREVIEW] = TARGET
