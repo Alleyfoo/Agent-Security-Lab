@@ -17,6 +17,9 @@ one uninterrupted path from manipulated input to production authority.
 
 ## Start here
 
+**Picking this up in a new session? [HANDOUT.md](HANDOUT.md)** — scope, working
+rules, canonical sources, gotchas.
+
 | Document | What it covers |
 |---|---|
 | [docs/threat-model.md](docs/threat-model.md) | Central assumption, trusted computing base, adversary levels, non-claims |
