@@ -27,14 +27,15 @@ from agent_network_demo.agents import (
 from agent_network_demo.demo_runner import RunSession
 from agent_network_demo.event_log import RUNNER_IDENTITY
 from agent_network_demo.verdict import (
-    CHECK_ALL_WRITES_ALLOWED, CHECK_CHAIN_COMPLETE,
-    CHECK_ROW_COUNTS_CONSISTENT, CHECK_SCHEMA_MATCHES_OUTPUT,
+    CHECK_ALL_WRITES_ALLOWED, CHECK_CHAIN_COMPLETE, CHECK_OUTPUT_MATCHES_SOURCE,
+    CHECK_ROW_COUNTS_CONSISTENT, CHECK_SCHEMA_MATCHES_OUTPUT, CHECKS,
     derive_verdict, verdict_disagreement,
 )
 
-ALL_PASSED = {CHECK_CHAIN_COMPLETE: True, CHECK_ALL_WRITES_ALLOWED: True,
-              CHECK_SCHEMA_MATCHES_OUTPUT: True,
-              CHECK_ROW_COUNTS_CONSISTENT: True}
+# Derived from CHECKS rather than spelled out, so a case that adds a check to
+# the derivation does not silently leave these tests asserting a stale
+# vocabulary. Case 07 added the fifth one.
+ALL_PASSED = {name: True for name in CHECKS}
 
 PASSING_RECEIPT = {"agent": "schema_agent", "status": "ok",
                    "contract_result": "passed"}
@@ -278,7 +279,7 @@ def test_a_conclusion_with_no_evidence_is_rejected(session):
     assert report["recommendation"]["checks"] == {}
     assert set(report["checks"]) == set(ALL_PASSED)
     assert report["review_required"] is True
-    assert len(report["verdict_differences"]) == 4, (
+    assert len(report["verdict_differences"]) == len(CHECKS), (
         "every unsupported check must be named individually"
     )
 

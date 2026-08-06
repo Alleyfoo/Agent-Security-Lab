@@ -195,9 +195,13 @@ upstream stage is laundered by an honest downstream one into a chain that is
 internally consistent. Nothing compares the output back to the source artifact
 the chain started from.
 
-Recorded rather than fixed: adding that comparison changes case 05's control,
-and this slice makes a different claim. It is the recommended next case, and it
-is pinned by `test_finding_a_poisoned_upstream_stage_launders_into_a_consistent_chain`.
+> **Closed by [case 07](../07-poisoned-chain/README.md)**, which added the
+> missing comparison. The test that pinned the behaviour above was a tripwire;
+> it fired and was rewritten as
+> `test_a_poisoned_upstream_stage_is_caught_across_the_boundary`. Isolation was
+> never what caught it — the attack works in-process too — but the control does
+> apply to output that came from a captured process, which is worth having
+> measured.
 
 ## Residual limitation
 

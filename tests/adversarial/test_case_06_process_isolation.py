@@ -31,6 +31,7 @@ from agent_network_demo.contracts import ContractError
 from agent_network_demo.demo_runner import RunSession
 from agent_network_demo.event_log import RUNNER_IDENTITY
 from agent_network_demo.isolation import AgentSpec, IsolatedAgent, IsolationError
+from agent_network_demo.verdict import CHECK_OUTPUT_MATCHES_SOURCE
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
@@ -223,25 +224,19 @@ def test_the_verdict_is_still_runner_derived(isolated):
     assert session.report()["verdict_source"] == "runner_derived"
 
 
-def test_finding_a_poisoned_upstream_stage_launders_into_a_consistent_chain(
-        isolated):
-    """NEW FINDING, discovered while measuring case 06. No case covers it.
+def test_a_poisoned_upstream_stage_is_caught_across_the_boundary(isolated):
+    """The finding case 06 turned up, now closed by case 07.
 
-    The isolated stage writes a fabricated schema. The honest transform stage
-    then does its job perfectly: it builds the cleaned output *from that
-    schema*, so the poison propagates into a chain that is internally
-    consistent in every way the runner checks. Every column of real data is
-    gone - each row is ``{"fabricated": None}`` - and the verdict is ``ok``.
+    Until case 07 this test asserted the opposite - that the poison laundered
+    into a chain passing every check - and carried a tripwire message naming
+    the change that should break it. It broke, and this is the rewrite.
 
-    Isolation is not implicated: the same attack works in-process. Nor is this
-    case 05 failing, exactly. Case 05 derives the conclusion from the runner's
-    own evidence, and the evidence agrees, because the only checks that exist
-    compare derived artifacts to each other. Nothing compares the output back
-    to the source artifact the chain started from.
-
-    Pinned here rather than fixed: adding that comparison is a change to case
-    05's control, and this slice makes a different claim. It is the
-    recommended next case.
+    What did not change: isolation is not what catches this, and never was.
+    The same attack works in-process, and what detects it is case 07's
+    source-comparison check running in the runner's derivation. Recorded here
+    because the attack crossed a process boundary and the control still
+    applied to it - output from a captured process is validated on the
+    parent's side like anything else.
     """
     session = isolated("LyingSchemaAgent")
     _drain(session)
@@ -251,13 +246,9 @@ def test_finding_a_poisoned_upstream_stage_launders_into_a_consistent_chain(
     raw = session.store.get(KEY_RAW_INPUT)
     assert cleaned["columns"] == ["fabricated"]
     assert raw["columns"] != cleaned["columns"], "the data really is gone"
-    assert all(row == {"fabricated": None} for row in cleaned["rows_data"])
 
-    assert report["verdict"]["verdict"] == "ok", (
-        "if this now fails, a check comparing output to source was added - "
-        "that is the follow-up case; update this test and case 06's findings"
-    )
-    assert report["review_required"] is False
+    assert report["verdict"]["verdict"] == "warn"
+    assert report["checks"][CHECK_OUTPUT_MATCHES_SOURCE] is False
 
 
 def test_a_crashing_stage_is_reported_as_an_isolation_failure(isolated):

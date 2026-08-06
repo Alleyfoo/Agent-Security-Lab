@@ -217,6 +217,12 @@ disagreed, not that something is wrong.
 
 ## Residual limitation
 
+> **Extended by [case 07](../07-poisoned-chain/README.md).** A fifth check,
+> `output_matches_source`, was added to this derivation. It belongs to case
+> 07's claim — *what* the conclusion is computed over — not to this one, which
+> is about *who* computes it. Four tests here pinned the four-name check
+> vocabulary and were updated; case 07's README lists them.
+
 **The derivation trusts artifact metadata that agents wrote.** `row_count` and
 `columns` are fields inside artifacts the pipeline's own agents produced. A
 hostile transform that drops a row *and* decrements `row_count` is

@@ -34,9 +34,11 @@ CHECK_CHAIN_COMPLETE = "chain_complete"
 CHECK_ALL_WRITES_ALLOWED = "all_writes_allowed"
 CHECK_SCHEMA_MATCHES_OUTPUT = "schema_matches_output"
 CHECK_ROW_COUNTS_CONSISTENT = "row_counts_consistent"
+CHECK_OUTPUT_MATCHES_SOURCE = "output_matches_source"
 
 CHECKS = (CHECK_CHAIN_COMPLETE, CHECK_ALL_WRITES_ALLOWED,
-          CHECK_SCHEMA_MATCHES_OUTPUT, CHECK_ROW_COUNTS_CONSISTENT)
+          CHECK_SCHEMA_MATCHES_OUTPUT, CHECK_ROW_COUNTS_CONSISTENT,
+          CHECK_OUTPUT_MATCHES_SOURCE)
 
 
 def derive_verdict(artifacts: Mapping[str, Any],
@@ -79,6 +81,26 @@ def derive_verdict(artifacts: Mapping[str, Any],
     else:
         checks[CHECK_SCHEMA_MATCHES_OUTPUT] = False
         reasons.append("schema or cleaned output missing")
+
+    # Case 07. The three checks above compare derived artifacts to each other,
+    # so a poisoned upstream stage is laundered by an honest downstream one
+    # into a chain that agrees with itself. This is the only check that looks
+    # back at the artifact the chain started from.
+    if raw_key in artifacts and cleaned_key in artifacts:
+        source_cols = artifacts[raw_key].get("columns", [])
+        output_cols = artifacts[cleaned_key].get("columns", [])
+        preserved = source_cols == output_cols
+        checks[CHECK_OUTPUT_MATCHES_SOURCE] = preserved
+        if not preserved:
+            missing = [c for c in source_cols if c not in output_cols]
+            added = [c for c in output_cols if c not in source_cols]
+            reasons.append(
+                f"output columns do not match the source: missing {missing}, "
+                f"added {added}"
+            )
+    else:
+        checks[CHECK_OUTPUT_MATCHES_SOURCE] = False
+        reasons.append("source or cleaned output missing")
 
     counts = [artifacts[k].get("row_count")
               for k in (raw_key, cleaned_key) if k in artifacts]

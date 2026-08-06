@@ -16,8 +16,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-04b](04-forged-runner-event/README.md)<br>Forged runner-labelled audit event - the decision | The same forged events, measured against the authorization decision rather than the record: does a run under forged permission claims reach a different verdict? | 🟢 Prevented | 🟢 Prevented | None added by this case. Pre-existing baseline control B18: ValidationAgent derives all_writes_allowed from the runner-owned receipt ledger and never reads log events | The separation holds because one consumer happens to read the right source. Nothing structurally prevents a future reader - a UI panel, a report, an operator - from deriving an authorization conclusion from the log, and no type or interface marks the log as narrative rather than evidence. |
 | [case-05](05-false-verdict/README.md)<br>A conclusion the agent authors is not evidence | A hostile ValidationAgent writes a conclusion the evidence does not support: clean over a failed receipt, clean over a chain missing a row, clean on the basis of no checks at all, and - the symmetric direction - a false alarm on a healthy run | 🔴 Undetected | 🟡 Rejected before commitment | A deterministic derive_verdict() in verdict.py, called by the runner over its own ArtifactStore and ReceiptLedger at the terminal step (C1+C2); the agent's artifact becomes a recommendation, and any disagreement on the decision fields sets review_required and emits a verdict_disagreement event naming each differing field (C3) | The derivation trusts artifact metadata that agents wrote, so a transform that drops a row and decrements row_count passes both sides. Only the decision is compared - reasons and message are prose and are not bound. And the reference computation lives inside the adversary's reach: rewriting _derived_verdict or patching derive_verdict defeats it, though patching only one side still surfaces as disagreement with the other. |
 | [case-06](06-process-isolation/README.md)<br>What process separation actually buys | The same hostile stage runs in the runner's process and in a spawned interpreter, probing for the artifact store, the RunSession, ungranted artifact content from an earlier run, and the host filesystem | 🔴 Undetected | 🟢 Prevented | The stage executes in a separate interpreter reached only by line-delimited JSON, with the parent acting as a trusted resolver that answers one read request at a time against the grant it issued; returned artifacts and events re-enter through the existing write contract, hash registration and attribution binding | Ambient authority is untouched: same uid, same filesystem, same network, no resource limits. The grant is untouched. Output honesty is untouched. And three of four stages remain in-process, which is the residual an 'isolation landed' headline would hide. |
+| [case-07](07-poisoned-chain/README.md)<br>Corrupting downstream artifacts through your own | A hostile schema stage writes one well-formed artifact to the key it was granted - a fabricated column set, a dropped column, a renamed column - and the honest transform stage builds the cleaned output from it | 🔴 Undetected | 🟠 Detected after occurrence | A fifth derived check, output_matches_source: the cleaned output's columns must equal the source artifact's columns, naming what went missing and what was added. It is the only check that looks back at the artifact the chain started from | Structure is compared; values are not. A stage that keeps every column name and mistypes them all passes, and the damage is selective because a failed coercion leaves the value alone. Identifier fidelity is lost on the honest path already - '1001' becomes 1001 - and closing that needs the canonical artifact to carry field semantics rather than have them guessed from shape. |
 
-**8 cases** — 7 with a control, 1 open by design. 6 moved to a better result class.
+**9 cases** — 8 with a control, 1 open by design. 7 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -279,6 +280,39 @@ Reproduce: `python cases/05-false-verdict/attack.py` · Tests: `tests/adversaria
 
 Reproduce: `python cases/06-process-isolation/attack.py` · Tests: `tests/adversarial/test_case_06_process_isolation.py`
 
+### ✅ case-07 — Corrupting downstream artifacts through your own
+
+**Compromise level:** Level 1: malicious agent implementation  
+**Attack:** A hostile schema stage writes one well-formed artifact to the key it was granted - a fabricated column set, a dropped column, a renamed column - and the honest transform stage builds the cleaned output from it  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟠 Detected after occurrence
+
+**Control.** A fifth derived check, output_matches_source: the cleaned output's columns must equal the source artifact's columns, naming what went missing and what was added. It is the only check that looks back at the artifact the chain started from
+
+**Evidence**
+
+- fabricated schema: 20 rows of {'fabricated': None}, verdict ok at the baseline
+- dropped money column: row counts still agree, verdict ok
+- renamed column: present, entirely None, verdict ok
+- with the control all three report warn and name the divergence
+- the honest run is unaffected
+- tests/adversarial/test_case_07_poisoned_chain.py
+
+**What this proves.** That deriving a conclusion from trustworthy evidence is not enough if the evidence only describes derived state. Three of case 05's four checks compared artifacts the pipeline produced against each other, so an honest downstream stage laundered a poisoned upstream artifact into a chain that agreed with itself, and the lie became the standard everything after it was measured against. It also shows how cheap this class is: no control was defeated, and a single legal write destroyed every column of a dataset while every other control held.
+
+**What this does not prove.** It does not prove the output is correct - the check compares column shape, and a mistyped schema silently truncates money while passing. It does not address the identifier fidelity the honest pipeline already loses. It does not generalise to a longer chain, since only the raw-to-cleaned pair is compared. And it prevents nothing.
+
+**Residual limitation.** Structure is compared; values are not. A stage that keeps every column name and mistypes them all passes, and the damage is selective because a failed coercion leaves the value alone. Identifier fidelity is lost on the honest path already - '1001' becomes 1001 - and closing that needs the canonical artifact to carry field semantics rather than have them guessed from shape.
+
+**Containment.** The run completes and reports warn with the divergence named. No quarantine: the artifacts are exactly what their producer wrote and their hashes verify. The workflow's own conclusion is the containment.
+
+**Recovery.** Re-run from intake with a known-good schema stage. The case where the immutable canonical artifact earns its keep: the thing to recover from is provably the thing the run started with.
+
+**Blast radius.** Every artifact downstream of the poisoned one, which here is all of them, plus anything that consumed the run's output - and there is no provenance graph to identify what did (Phase 8). Bounded by the run: the source artifact is untouched and the poison does not persist into later runs.
+
+**Notes.** Found while measuring case 06, not by looking for it. Deliberately extends case 05's derivation rather than adding a parallel mechanism, for the reason case 05 recorded - a second derivation would drift. The cost was four tests elsewhere that pinned a four-check vocabulary; all four are listed in the case README and none was weakened. Measurement D is not an attack: it records that the honest pipeline turns the identifier '1001' into the number 1001 and no check notices.
+
+Reproduce: `python cases/07-poisoned-chain/attack.py` · Tests: `tests/adversarial/test_case_07_poisoned_chain.py`
+
 ## Where the boundary stands
 
 The near-term milestone is a verified map of what a malicious agent can and cannot do inside the baseline process.
@@ -330,5 +364,14 @@ Three things the same measurement found, and they are the reason the transition 
 
 - The isolated stage's ambient authority, grant and authorship are all unchanged. It read the repository filesystem and listed every run's event log from inside the boundary.
 - Three stages of four still share the runner's process, so case 01's finding stands unaltered. Its tripwires did not fire, and should not have.
-- A poisoned upstream stage launders into a chain that passes every check, because every check compares derived artifacts to each other and none compares output back to the source artifact. That one is new, belongs to no case yet, and is pinned by a test.
+- A poisoned upstream stage laundered into a chain that passed every check, because every check compared derived artifacts to each other and none compared output back to the source artifact. That became case 07, which added the missing comparison.
+
+### What is still open at the end of Phase 5's first slice
+
+| Open | Where it is recorded |
+|---|---|
+| Three stages of four share the runner's process | case 01, still red |
+| Ambient authority is unbounded for every stage | case 06 residual |
+| Values are never compared, only structure | case 07 residual |
+| The honest pipeline loses identifier fidelity | case 07, measurement D |
 

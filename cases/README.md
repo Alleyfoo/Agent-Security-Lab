@@ -94,6 +94,7 @@ charter list when the scope narrowed to confinement.
 | [`03-mutable-route-table`](03-mutable-route-table/README.md) ✅ | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
 | [`04-forged-runner-event`](04-forged-runner-event/README.md) ✅ | 2 | L4 | Audit-record corruption and authorization corruption are separate effects and must be measured separately |
 | [`05-false-verdict`](05-false-verdict/README.md) ✅ | 2 | case 00 residual | A conclusion an agent authors is not evidence; the runner must derive the mechanical verdict itself |
+| [`07-poisoned-chain`](07-poisoned-chain/README.md) ✅ | 2 | case 06 finding | Checks that compare derived artifacts to each other are laundered by an honest downstream stage; one must look back at the source |
 
 Every case above is recorded in the canonical registry
 ([`registry.py`](registry.py)) and rendered in [`REPORT.md`](REPORT.md). Case 04

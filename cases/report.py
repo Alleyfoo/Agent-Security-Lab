@@ -225,10 +225,19 @@ def render() -> str:
     w("- Three stages of four still share the runner's process, so case 01's "
       "finding stands unaltered. Its tripwires did not fire, and should not "
       "have.")
-    w("- A poisoned upstream stage launders into a chain that passes every "
-      "check, because every check compares derived artifacts to each other "
-      "and none compares output back to the source artifact. That one is new, "
-      "belongs to no case yet, and is pinned by a test.")
+    w("- A poisoned upstream stage laundered into a chain that passed every "
+      "check, because every check compared derived artifacts to each other "
+      "and none compared output back to the source artifact. That became "
+      "case 07, which added the missing comparison.")
+    w("")
+    w("### What is still open at the end of Phase 5's first slice")
+    w("")
+    w("| Open | Where it is recorded |")
+    w("|---|---|")
+    w("| Three stages of four share the runner's process | case 01, still red |")
+    w("| Ambient authority is unbounded for every stage | case 06 residual |")
+    w("| Values are never compared, only structure | case 07 residual |")
+    w("| The honest pipeline loses identifier fidelity | case 07, measurement D |")
     w("")
     return "\n".join(out) + "\n"
 
