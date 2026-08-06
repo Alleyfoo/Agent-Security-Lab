@@ -27,6 +27,7 @@ from agent_network_demo.contracts import (
     CONTRACT_VALIDATION_VERDICT, ContractError, HandoffEnvelope, write_key_for,
 )
 from agent_network_demo.event_log import Event, EventLog
+from agent_network_demo.receipts import ReceiptLedger
 
 
 @dataclass(frozen=True)
@@ -82,7 +83,7 @@ class RunSession:
         self._current = 0
         self._envelope: Optional[HandoffEnvelope] = None
         self._key_file: Dict[str, Any] = {}
-        self._receipts: List[Dict[str, Any]] = []
+        self._receipts: ReceiptLedger = ReceiptLedger()
         self._last_snapshot: Optional[StepSnapshot] = None
         self.done = False
         self.error: Optional[str] = None
@@ -106,10 +107,12 @@ class RunSession:
         self.store = ArtifactStore()
         self.log = EventLog(self.run_id, data_dir=self.data_dir)
         source_ref = confine_path(self._key_file.get("source_ref", "sample_payload.json"))
-        self._receipts = []
+        self._receipts = ReceiptLedger()
         self._agents = [
             IntakeAgent(source_ref=source_ref), SchemaAgent(), TransformAgent(),
-            ValidationAgent(self._receipts),
+            # Read-only handle: the validator audits the runner's evidence but
+            # cannot edit it. See agent_network_demo/receipts.py.
+            ValidationAgent(self._receipts.view()),
         ]
         self._current = 0
         self.done = False
@@ -229,7 +232,7 @@ class RunSession:
         return self.log.as_dicts()
 
     def receipts(self) -> List[Dict[str, Any]]:
-        return deepcopy(self._receipts)
+        return self._receipts.snapshot()
 
     def log_path(self) -> str:
         return self.log.path if self.log is not None else ""

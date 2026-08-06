@@ -28,7 +28,7 @@ This is the honest picture, not the target picture:
 | Control | `RunSession` + `WORKFLOW_ROUTES` | **No** — same process, same namespace (L6) |
 | Data | `ArtifactStore` (in-memory dict) | **No** — reachable via `view._store` (L1) |
 | Identity | *Does not exist.* Agents are identified by a `name` string with no authentication | **No** |
-| Audit | `EventLog` + runner receipt list | **No** — log accepts forged identity (L4), receipts handle shared with the validator (L7) |
+| Audit | `EventLog` + `ReceiptLedger` | **Partly** — receipts are now read-only for agents (case 00), but the log still accepts forged identity (L4) and nothing is chained |
 
 Four of five planes are currently collapsed into one process. The lab's job is
 to pull them apart one at a time and measure what each separation actually
@@ -94,7 +94,7 @@ AgentResult  ==>  RunSession.step()
 * **Crossing:** the agent tries to influence what happens next.
 * **Enforced by:** `AgentResult` carries no routing or permission fields; the runner recomputes the next envelope from the route table and cross-checks `result.output_keys` against reality ([demo_runner.py:153](../agent_network_demo/demo_runner.py:153)).
 * **Holds against:** an agent choosing its successor, its grants, or lying about what it wrote.
-* **Bypassable by:** L6/L7 (mutating the route table or the receipt list).
+* **Bypassable by:** L6 (mutating the route table). L7's receipt-list path now requires Level 2 reach-around rather than a hostile agent implementation.
 
 ### TB-6 — Agent → Audit
 
@@ -113,8 +113,10 @@ RunSession.step()  ==>  self._receipts  ==>  ValidationAgent
 ```
 
 * **Intended as:** trusted evidence, produced by the runner, consumed by an independent checker.
-* **Actually:** the same list object is handed to the validator (L7). `receipts()` deep-copies for *external* callers, but the agent-side handle is live.
-* **Status:** the weakest link in the audit plane and the first Phase 2 fix.
+* **At the tag:** the same list object was handed to the validator (L7), and scrubbing it corrupted `RunSession.receipts()` itself.
+* **Enforced by (now):** `ReceiptLedger` / `ReceiptView` ([receipts.py](../agent_network_demo/receipts.py)) — read-only handle, deep copy per item, `ReceiptIntegrityError` on every mutation. See [case 00](../cases/00-receipt-handle/README.md).
+* **Holds against:** a hostile agent implementation (Level 1) editing the evidence it is audited against.
+* **Bypassable by:** Level 2 reach-around to `view._ledger._receipts` (L1 applies here too). The *verdict* also remains agent-authored — the runner does not yet cross-check it.
 
 ## 3. Things that are not boundaries
 
@@ -142,7 +144,7 @@ demonstrates the attack failing *for that specific reason*.
 | TB-4 scoped write | Enforced + state-diff | P2: extend diff to detect mutation |
 | TB-5 no self-authorization | Enforced (in-process) | P3: bind capabilities to workflow + audience |
 | TB-6 agent audit claims | **None** | P7: identity-bound events |
-| TB-7 receipt integrity | **Shared handle** | P2 (fix), P7 (hash chain) |
+| TB-7 receipt integrity | Read-only vs. Level 1 (case 00) | P7 (hash chain); runner-side verdict cross-check still open |
 | Flow / sink policy | **Absent** | P6 |
 | Provenance / blast radius | **Absent** | P8 |
 

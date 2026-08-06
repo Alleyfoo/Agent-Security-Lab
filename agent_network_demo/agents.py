@@ -11,7 +11,7 @@ import json
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Sequence, Tuple, Union
 
 # Ensure the package parent (repo root) is on sys.path so the absolute imports
 # below resolve whether this module is run as a script, imported as a top-level
@@ -27,6 +27,11 @@ from agent_network_demo.contracts import (
     HandoffEnvelope,
 )
 from agent_network_demo.event_log import Event, EventLog
+from agent_network_demo.receipts import ReceiptView
+
+# What ValidationAgent will accept as its evidence source: the runner's
+# read-only view, or any plain sequence of receipt dicts (tests).
+ReceiptSource = Union[ReceiptView, Sequence[Dict[str, Any]]]
 
 # Canonical artifact keys — used everywhere (fixtures, README, tests).
 KEY_RAW_INPUT = "artifact.raw_input"
@@ -355,7 +360,11 @@ class ValidationAgent(_BaseAgent):
 
     name = "validation_agent"
 
-    def __init__(self, receipts: List[Dict[str, Any]] | None = None) -> None:
+    def __init__(self, receipts: "ReceiptSource | None" = None) -> None:
+        # The runner passes a read-only ``ReceiptView``. Plain sequences are
+        # still accepted so tests can construct fixed receipt lists directly —
+        # but the runner must never hand over its own mutable list, or the
+        # audited component could edit its own evidence (case 00).
         self.receipts = receipts if receipts is not None else []
 
     def run(self, envelope: HandoffEnvelope, view: StoreView,

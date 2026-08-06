@@ -53,6 +53,7 @@ security concept in [security-concepts.md](security-concepts.md).
 | B17 | Receipts separate from agent claims | [demo_runner.py:178](../agent_network_demo/demo_runner.py:178) | The runner records what actually happened, independent of what the agent said |
 | B18 | Verdict derived from receipts | [agents.py:375](../agent_network_demo/agents.py:375) | `ValidationAgent` reads runner receipts, not agent-authored log events |
 | B19 | Append-only log API | [event_log.py:36](../agent_network_demo/event_log.py:36) | No update or delete operation on the application interface |
+| B20 | Read-only receipt handle | [receipts.py](../agent_network_demo/receipts.py) | The audited agent cannot mutate the runner's evidence (added by case 00, not present at the tag) |
 
 ## 3. Baseline limitations — verified, not assumed
 
@@ -126,18 +127,28 @@ the agents it governs.
 
 ### L7 — The audited component holds a live handle to its own evidence
 
-`ValidationAgent` is constructed with the runner's actual receipt list, not a
-copy ([demo_runner.py:112](../agent_network_demo/demo_runner.py:112)):
-`va.receipts is runner._receipts` is `True`.
+> **FIXED** by [case 00](../cases/00-receipt-handle/README.md). Described below
+> as it stood at `v0-baseline-inprocess`; the tag still exhibits it.
 
-A compromised validator can filter failing receipts out of the list it is
-supposed to be checking. Note that `RunSession.receipts()` *does* deep-copy on
-the way out, so external readers are safe — the exposure is specifically the
-agent-side handle.
+`ValidationAgent` was constructed with the runner's actual receipt list, not a
+copy (`demo_runner.py:112` at the tag): `va.receipts is runner._receipts` was
+`True`.
 
-**This is the anti-pattern the project charter forbids** ("logs written by the
-same untrusted component being audited"). It is the highest-value Phase 2
-target because it is cheap to fix and currently undermines B18.
+A compromised validator could filter failing receipts out of the list it was
+supposed to be checking. Verified end to end: a run whose schema stage failed
+its contract once reported verdict `ok` with zero failing receipts, against
+`warn` with one for the honest run. The corruption reached
+`RunSession.receipts()` — the accessor `report()` and the UI read — so the
+exposure was not confined to the agent-side handle as first assessed.
+
+**This was the anti-pattern the project charter forbids** ("logs written by the
+same untrusted component being audited"), and it undermined B18.
+
+Now: the runner owns a `ReceiptLedger` and hands agents a read-only
+`ReceiptView` ([receipts.py](../agent_network_demo/receipts.py)). Editing the
+evidence requires Level 2 in-process reach-around rather than a merely hostile
+agent implementation. The verdict itself remains agent-authored — see the
+case's residual-limitation section.
 
 ### L8 — Structural limits inherited by design
 

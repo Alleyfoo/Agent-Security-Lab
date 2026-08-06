@@ -58,7 +58,9 @@ At the baseline **none of the "denied" column holds**, because the agent shares
 a process with the runner and the store. Verified consequences: ungranted
 reads succeed unlogged (L1/L2), artifacts mutate in place (L3), runner-attributed
 events are forgeable (L4), the log file is deletable (L5), the route table is
-rewritable (L6), the receipt list is editable by the validator (L7).
+rewritable (L6), and the receipt list was editable by the validator (L7 —
+fixed against Level 1 by [case 00](../cases/00-receipt-handle/README.md), still
+reachable at Level 2 through private attributes).
 
 Target statement once Phase 5 lands, for the Schema stage:
 

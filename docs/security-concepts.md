@@ -80,8 +80,12 @@ From the charter, restated as review criteria. A slice is rejected if it:
 * presents a container as a magical security boundary;
 * bundles several independent security claims into one change.
 
-> The baseline currently violates one of these: **the audited component holds a
-> live handle to its own evidence** (L7). It is the first thing Phase 2 fixes.
+> The baseline violated one of these — **the audited component held a live
+> handle to its own evidence** (L7). Fixed by
+> [case 00](../cases/00-receipt-handle/README.md); the `v0-baseline-inprocess`
+> tag still exhibits it. The related weakness that the validator's *conclusion*
+> is still agent-authored is recorded as that case's residual limitation, not
+> as a fixed item.
 
 ## 5. Required framing on every case and UI result
 

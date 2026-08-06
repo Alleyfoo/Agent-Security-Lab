@@ -72,6 +72,7 @@ Numbering is stable once created. Phase mapping per the project charter.
 
 | Case | Phase | Baseline finding | Central claim |
 |---|---|---|---|
+| [`00-receipt-handle`](00-receipt-handle/README.md) ✅ | 2 | L7 | The component being audited must not be able to edit the evidence it is audited against |
 | `01-ungranted-read` | 2 | L1, L2 | A scoped view constrains interface access but not same-process reach-around, and the bypass is invisible in the read log |
 | `02-ungranted-write` | 2 | TB-4 | The outbound store diff catches bypassed writes because it compares observed state, not self-report |
 | `03-forged-routing` | 2 | L6 | Routing data must not be mutable from the namespace the routed code runs in |
@@ -85,15 +86,19 @@ Numbering is stable once created. Phase mapping per the project charter.
 | `11-orchestrator-compromise` | 5 | — | The orchestrator must not be able to declassify unilaterally |
 | `12-provenance-quarantine` | 8 | — | After a producer is declared compromised, dependent outputs are identifiable |
 
-Two cases are promoted to the front of Phase 2 because they are baseline
-findings with no case number yet — fold them into `01`/`10` or give them their
-own directories when the contracts are written:
+Baseline findings promoted to the front of Phase 2 because they had no case
+number in the charter's list:
 
 * **L7 — the validator holds a live handle to the receipt list it audits.**
-  Charter-forbidden anti-pattern. Cheapest high-value fix in the repository.
+  Charter-forbidden anti-pattern. **Done — [case 00](00-receipt-handle/README.md).**
 * **L3 — artifacts mutate in place, and the `source_hash` that would detect it
   is only verified during snapshot hydration.** The detection primitive already
-  exists; it just is not wired into the live read path.
+  exists; it just is not wired into the live read path. Still open; number it
+  `00b` or fold it into `02` when its contract is written.
+
+A case-00 residual limitation also needs its own slice eventually: **the
+validator's verdict is agent-authored and the runner does not cross-check it.**
+Separate security claim, so not folded into case 00.
 
 ## Sequencing rule
 
