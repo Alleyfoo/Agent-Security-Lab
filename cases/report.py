@@ -124,7 +124,7 @@ def _review() -> list:
     w("This is the sharpest thing the set says, and it is checkable against "
       "the table above rather than argued. Exactly "
       f"{len(l2_prevented)} cases prevent anything against a fully "
-      "compromised process, and neither does it by checking:")
+      "compromised process, and not one does it by checking:")
     w("")
     w("| Case | What prevents the effect | Mechanism |")
     w("|---|---|---|")
@@ -132,6 +132,17 @@ def _review() -> list:
       "absence |")
     w("| case-06 | the isolated interpreter contains no runner objects | an "
       "absence |")
+    w("| case-21 | the approval gate's code, state and credential are not in "
+      "the worker's process | an absence |")
+    w("")
+    w("**Case 21 is the first one the rule predicted rather than explained.** "
+      "The design rule below was written after cases 04b and 06; case 21 was "
+      "then built by applying it to the approval plane, and it produced the "
+      "third absence and the third Level 2 prevention. Five of its six probes "
+      "land on nothing for the same reason case 06 gave - the room is empty, "
+      "not the door locked. Its sixth is the instructive one: the gate's "
+      "*persisted store* stayed in the worker's reach, so that probe still "
+      "succeeds. Moving the code is half an absence.")
     w("")
     w("Every other Level 2 result is detection or nothing. That is the "
       "empirical form of the cross-cutting finding below: a check compares two "

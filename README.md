@@ -69,6 +69,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [18 — Gate 1: distribution validity](cases/18-distribution/README.md) | 🔴 Undetected | 🔴 Undetected — a validity measurement, not a control |
 | [19 — two-sided sign-off](cases/19-two-sided-signoff/README.md) | 🔴 Undetected | 🟢 Prevented — against Level 1, and only Level 1 |
 | [20 — racing one one-use approval](cases/20-one-use-race/README.md) | 🔴 Undetected | 🟢 Prevented — concurrent acquisition only, not exactly-once |
+| [21 — gate independence](cases/21-gate-independence/README.md) | 🔴 Undetected | 🟢 Prevented — for the claim as written; the persisted store still falls |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",

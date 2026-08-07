@@ -30,8 +30,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-18](18-distribution/README.md)<br>Gate 1: distribution validity | An attack on case 17's own result: remove the n_causes parameter from its generator, sample deployments from four distributions including the heavy-tailed shape real entitlement data has, and find where the reduction stops working | 🔴 Undetected | 🔴 Undetected | None. A validity measurement, and the first of the two gates the reachability hypothesis was given. What it adds is a grouping that survives realistic distributions without losing what case 17's grouping protected | Still synthetic: four shapes argued from what entitlement data is usually like, none sampled from a real estate. READABLE = 50 is declared rather than measured, stated once so it can be argued with. The pathological shape is honestly unreadable and no grouping rescues it, which a test asserts so the case cannot be read as claiming the approach always works. |
 | [case-19](19-two-sided-signoff/README.md)<br>Two-sided sign-off | Make the execution gate run an action no reviewer approved: sign your own approval, change what the request points at after an honest approval, replay an old approval under a new request, and - as the configuration adversary - forge the approval record or add yourself to the reviewer list | 🔴 Undetected | 🟢 Prevented | Four conditions added one rung at a time: bind authority to action content rather than request identity, require a reviewer credential, make approvals append-only, and spend an approval on use. Only the last one moves the Level 1 result | Two-sided sign-off is a Level 1 control and the case says so as its headline: the configuration adversary appends an approval or adds the worker to the reviewer list, one commit either way, at every rung. Gate independence is absent and is the obvious next boundary. Object version is in the digest but nothing advances it, so the stale-approval class is claimed by construction rather than measured. |
 | [case-20](20-one-use-race/README.md)<br>Two executors racing one one-use approval | Race two executors against one one-use approval, then crash a process before the external effect and after it, across four gate orderings - case 19's as built, the tempting reorder, an atomic claim, and an atomic claim with an idempotent sink | 🔴 Undetected | 🟢 Prevented | An atomic claim: the state test and the write happen together under one lock, so exactly one executor acquires the approval and every other refuses | The lock is a threading.Lock in one process, so exclusivity says nothing about two processes or two hosts - the same boundary case 19 hit. A crash after the claim leaves the approval stuck with no reclaim path; a lease with an expiry is the obvious answer and introduces its own race, unmeasured. Crashes are simulated as an exception at a named point, which does not model partial writes or torn records. |
+| [case-21](21-gate-independence/README.md)<br>Gate independence | Six probes against the approval gate from the worker's process - replace its code, write its approval state, forge reviewer membership, bypass the protocol, read its credential, manipulate its datastore - run against a gate sharing the worker's boundary and a gate in its own process | 🔴 Undetected | 🟢 Prevented | The gate runs in a separate interpreter under its own authority, reached only by line-delimited JSON. It holds its own approvals, its own reviewer list and its own credential, and the protocol is the entire surface | Same uid, same filesystem, same host - the gate is a subprocess of the worker's own interpreter under one OS identity, and a separate uid, container or service is the next boundary. The persisted store is the measured hole: process separation separated the code and not the storage, so Level 1.5 still wins against a gate that keeps its approvals in a file the worker can write. |
 
-**22 cases** — 14 with a control, 8 open by design. 13 moved to a better result class.
+**23 cases** — 15 with a control, 8 open by design. 14 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -56,7 +57,7 @@ A review of the entries above as a set rather than a further case. The per-case 
 | case-19 — Two-sided sign-off | 🟢 Prevented |
 | case-20 — Two executors racing one one-use approval | 🟢 Prevented |
 
-**Fully captured — no, and no check has ever changed that.** The 4 cases whose adversary holds arbitrary code in the runner's process:
+**Fully captured — no, and no check has ever changed that.** The 5 cases whose adversary holds arbitrary code in the runner's process:
 
 | Case | Result |
 |---|---|
@@ -64,15 +65,19 @@ A review of the entries above as a set rather than a further case. The per-case 
 | case-02 — In-place mutation of a registered artifact | 🟠 Detected after occurrence |
 | case-04b — Forged runner-labelled audit event - the decision | 🟢 Prevented |
 | case-06 — What process separation actually buys | 🟢 Prevented |
+| case-21 — Gate independence | 🟢 Prevented |
 
 ### Every Level 2 prevention here is an absence, not a check
 
-This is the sharpest thing the set says, and it is checkable against the table above rather than argued. Exactly 2 cases prevent anything against a fully compromised process, and neither does it by checking:
+This is the sharpest thing the set says, and it is checkable against the table above rather than argued. Exactly 3 cases prevent anything against a fully compromised process, and not one does it by checking:
 
 | Case | What prevents the effect | Mechanism |
 |---|---|---|
 | case-04b | the decision plane never reads the corrupted record | an absence |
 | case-06 | the isolated interpreter contains no runner objects | an absence |
+| case-21 | the approval gate's code, state and credential are not in the worker's process | an absence |
+
+**Case 21 is the first one the rule predicted rather than explained.** The design rule below was written after cases 04b and 06; case 21 was then built by applying it to the approval plane, and it produced the third absence and the third Level 2 prevention. Five of its six probes land on nothing for the same reason case 06 gave - the room is empty, not the door locked. Its sixth is the instructive one: the gate's *persisted store* stayed in the worker's reach, so that probe still succeeds. Moving the code is half an absence.
 
 Every other Level 2 result is detection or nothing. That is the empirical form of the cross-cutting finding below: a check compares two values, at Level 2 the adversary reaches both, so a check can only ever notice. Case 06's probes reporting *nothing found* rather than *access denied* is the same fact stated from the other side.
 
@@ -1039,6 +1044,40 @@ Reproduce: `python cases/19-two-sided-signoff/attack.py` · Tests: `tests/advers
 **Notes.** The G1 result is the one to remember: the fix that looks right makes the bug nearly untestable while leaving it exploitable, and it took a forced interleaving and an unforced run together to see that. Measuring only the unforced run would have reported G1 as correct. The scope limit is enforced by a test rather than by prose, including a naming guard that no gate may have 'exactly' in its name.
 
 Reproduce: `python cases/20-one-use-race/attack.py` · Tests: `tests/adversarial/test_case_20_one_use_race.py`
+
+### ✅ case-21 — Gate independence
+
+**Compromise level:** Level 2 against the boundary: arbitrary code in the worker's process, attacking the gate rather than the model  
+**Attack:** Six probes against the approval gate from the worker's process - replace its code, write its approval state, forge reviewer membership, bypass the protocol, read its credential, manipulate its datastore - run against a gate sharing the worker's boundary and a gate in its own process  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟢 Prevented
+
+**Control.** The gate runs in a separate interpreter under its own authority, reached only by line-delimited JSON. It holds its own approvals, its own reviewer list and its own credential, and the protocol is the entire surface
+
+**Evidence**
+
+- arm A: 6 of 6 probes succeed - there is no boundary to cross
+- arm B: 0 of 6 - patching this process's copy of the module never reaches the running gate, and its approval count does not move
+- the forged reviewer is refused by name; unknown ops are refused and extra fields on known ops are ignored rather than honoured
+- the protocol exposes counts and reviewer names, not the credential
+- the isolated gate still approves, executes, and refuses a second execution - one-use survives the boundary
+- the seventh probe SUCCEEDS: a persisted store on a shared filesystem is writable by the worker
+- tests/adversarial/test_case_21_gate_independence.py
+
+**What this proves.** That a gate in its own process is a genuinely different object from a gate in the worker's process: five probes that are unanimous in arm A land on nothing in arm B, and they fail for the reason case 06 gave - the room is empty rather than the door locked. And that moving the code is half a boundary. The store is the other half, and until it moves the sign-off machinery of cases 19 and 20 stays exactly where those cases left it.
+
+**What this does not prove.** It does not prove secure isolation, host isolation, or resistance to an adversary holding the worker's OS identity - which is precisely what the persisted-store probe demonstrates it does not have. It does not address availability: nothing stops the worker killing the gate. It does not attack the protocol in depth, and it does not run a restart to show the forged approval being honoured, which would make the finding stronger.
+
+**Residual limitation.** Same uid, same filesystem, same host - the gate is a subprocess of the worker's own interpreter under one OS identity, and a separate uid, container or service is the next boundary. The persisted store is the measured hole: process separation separated the code and not the storage, so Level 1.5 still wins against a gate that keeps its approvals in a file the worker can write.
+
+**Containment.** The gate refuses and names the reason - an unknown operation, or an actor that is not a reviewer. Extra fields on a known operation are ignored rather than honoured, which is the difference between a protocol and a bypass with extra steps.
+
+**Recovery.** Restart the gate, which is cheap because it holds no state the worker contributed - the same property case 06 found for an isolated stage. That is true only while the store is in memory; a restart against a tampered persisted store loads the forgery, which is the residual.
+
+**Blast radius.** Arm A: everything - the gate's code, state, membership, credential and store are all attributes in the adversary's process. Arm B: the persisted store only, which is enough to authorise any action the worker proposes.
+
+**Notes.** The claim was kept to one sentence about one boundary on purpose, and a test guards the wording because the repository's history says this is where overclaiming starts. The seventh probe is the deliverable: it turns cases 19 and 20's 'this is a Level 1 control' into something actionable - sign-off stays Level 1 until the STORE moves, not just the code.
+
+Reproduce: `python cases/21-gate-independence/attack.py` · Tests: `tests/adversarial/test_case_21_gate_independence.py`
 
 ## Where the boundary stands
 

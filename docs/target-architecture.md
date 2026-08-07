@@ -240,6 +240,60 @@ sign-off case**, with the prediction that the current implementation loses the
 race: `execute()` marks `consumed` only after the checks, with nothing between
 them, so any concurrent caller passing the check first also executes.
 
+### Action identity is not execution identity
+
+Case 19 found that content binding cannot distinguish occurrences. Case 20
+produced the identifier that does, and the pair should never be collapsed:
+
+```text
+action_digest   answers  WHAT was approved?
+execution_id    answers  WHICH exercise of that approval is this?
+```
+
+Two legitimate operations can be byte-identical — *pay supplier EUR100* twice
+is two occurrences of one action. A sink deduplicating on the action digest
+would silently drop the second real payment, which case 20 asserts.
+
+The chain that results, each layer answering its own question instead of one
+identifier doing everything:
+
+```text
+object state
+    -> action
+    -> digest        -> proposal
+                     -> approval
+    -> one-use claim -> execution_id
+                     -> external sink
+                     -> receipt
+```
+
+### Reclaim, when it is eventually built
+
+Case 20 left an approval stuck in `claimed` after a crash, deliberately
+unmeasured rather than quietly designed away. A lease is the obvious answer and
+immediately reintroduces the race:
+
+```text
+A claims -> A performs the effect slowly -> lease expires
+         -> B reclaims -> B performs the effect -> A finishes
+```
+
+An idempotent sink saves this **only if both share an execution id**. If
+reclaim mints a new one, duplication is back. So the invariant to pre-register
+for that case:
+
+> **Reclaim may transfer ownership of an execution, but must not create a new
+> execution occurrence.**
+
+Which implies the durable record owns the execution id, generated once at
+approval, with the executor as the thing that changes:
+
+```text
+approval -> execution_id (generated once) -> claim(executor) -> reclaim(other)
+```
+
+Not measured. Recorded so it is not invented ad hoc later.
+
 ### What authority should actually bind to
 
 Not the request. **`request_id` must not be security-sensitive at all** — it may

@@ -153,6 +153,7 @@ not claimed.
 | [`18-distribution`](18-distribution/README.md) ⚠️ | 3 | Gate 1: case 17's cause count was a generator parameter. Estate size is irrelevant; fan-out is not, and the fix is endpoints as an attribute |
 | [`19-two-sided-signoff`](19-two-sided-signoff/README.md) ✅ | 3 | Built naively first: binding to action content closes swapping and opens replay, and only a lifecycle rule moves the result. A Level 1 control |
 | [`20-one-use-race`](20-one-use-race/README.md) ✅ | 3 | One-use was not one-use under concurrency. The obvious reorder narrows the window without closing it; exactly-once lives in the sink, not the approval |
+| [`21-gate-independence`](21-gate-independence/README.md) ✅ | 5 | Moving the gate's code closes five of six probes; the persisted store closes none. Sign-off stays Level 1 until the store moves too |
 
 Cases 08 and 12 are registered ⚠️ because they change nothing in the product.
 Both arms — all three, for case 12 — are measured as they are, and the named

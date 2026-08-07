@@ -205,15 +205,20 @@ def test_review_every_level_2_prevention_is_an_absence():
     the decision plane never reads the corrupted record, case 06 because the
     isolated interpreter contains no runner objects.
 
-    A third entry here means a check has prevented something at Level 2 - or
-    that an absence has - and either way the review's design rule and the
-    cross-cutting finding both need rewriting before this test is changed.
+    Case 21 joined them by applying the rule rather than contradicting it:
+    the approval gate's code, state and credential are not in the worker's
+    process, so five of its six probes land on nothing. It is the first
+    absence this repository built on purpose instead of discovering.
+
+    A fourth entry that is a CHECK rather than an absence would break the
+    review's design rule and the cross-cutting finding, and both need
+    rewriting before this test is changed.
     """
     from cases.registry import PREVENTED
     prevented = {c.case_id for c in ALL
                  if c.case_id in _by_level("Level 2")
                  and c.controlled_result == PREVENTED}
-    assert prevented == {"case-04b", "case-06"}, (
+    assert prevented == {"case-04b", "case-06", "case-21"}, (
         "the set of Level 2 preventions changed. rewrite 'Every Level 2 "
         "prevention here is an absence, not a check' in cases/report.py "
         "against the new evidence - do not edit this assertion first"
