@@ -58,22 +58,62 @@ worker proposes  →  independent reviewer approves
 | 6 | Important actions require a second independent authority | **not built — and the lab has a warning about it** |
 | 7 | The execution layer, not the prompt, enforces this | standing rule, not yet a structural test |
 
-### Claim 1 — effects only through authorised skills
+### Claim 1 — split into two claims, and they stay split
 
-Case 09 measured the closest thing: a worker cannot create, modify, replace or
-select a skill definition through any interface it holds. That is real and it
-is `prevented` **for a Level 1 worker**.
+The single sentence *"an agent can only cause effects through its authorised
+skills"* is too strong while the process still has ambient OS authority. A
+runtime with `socket()`, `open()` and `subprocess()` available does not care
+what the skill registry says. **Frozen as two separate claims:**
 
-It is **false for a fully compromised agent process.** Case 06 measured an
-isolated stage's ambient authority directly: same uid, same filesystem, network
-reachable, no resource limits. An agent that can open a socket does not need a
-skill to cause an effect. Claim 1 is therefore a claim about *the execution
-layer's interfaces*, not about the process, and it must be stated that way or
-it overclaims.
+```text
+Application claim
+    The agent runtime exposes externally consequential operations only
+    through authorised skills.
 
-**What would have to be built:** the skill set as the only effect path implies
-ambient authority is removed, which is an execution-isolation problem (layer 3
-in `security-concepts.md` §0), not an application-layer one.
+Isolation claim
+    The agent process possesses no ambient authority capable of bypassing
+    that runtime.
+```
+
+| | Status |
+|---|---|
+| **application claim** | `prevented` for a Level 1 worker — case 09: a worker cannot create, modify, replace or select a skill definition through any interface it holds |
+| **isolation claim** | **false today.** Case 06 measured it directly: same uid, same filesystem, network reachable, no resource limits, and three stages of four still share the runner's process |
+
+**They must never be collapsed.** If they are, every later "security by
+function" result quietly assumes a sandbox the application architecture did not
+provide — which is the cosmetic-confinement failure mode this project exists to
+avoid.
+
+Stated positively, the split makes the idea stronger rather than weaker:
+
+> **Security by function is only meaningful once raw authority has been removed
+> underneath it.**
+
+The application claim is layer 1 in `security-concepts.md` §0; the isolation
+claim is layer 3. Case 06 is the only case that has ever moved the isolation
+claim, and it moved it for one stage.
+
+### Independence has layers, and "we used two agents" is not one of them
+
+Case 15 points straight at this: two decisions are worthless if they share one
+authority path. Naming the layers separately so a future case cannot claim
+independence it did not measure:
+
+```text
+decision independence     a different actor and reasoning context
+credential independence   the worker cannot exercise reviewer authority
+state independence        the worker cannot mutate the record that makes
+                          the reviewer appear to have approved
+gate independence         neither worker nor reviewer can bypass or rewrite
+                          the gate itself
+```
+
+Two model instances sharing one writable approval store and one service
+credential have **decision** independence and none of the other three. That is
+the shorthand this taxonomy exists to prevent.
+
+A first case need not implement all four. It must say which ones it has.
 
 ### Claim 2 — skills operate only on authorised object types
 
@@ -127,6 +167,33 @@ together.
 3. the gate must compare **the content of the action**, not just the presence
    of two records — otherwise an approval for action A executes action B, which
    is case 05's false-verdict shape moved to the approval plane.
+
+### What authority should actually bind to
+
+Not the request. **`request_id` must not be security-sensitive at all** — it may
+remain a correlation and debugging identifier, and nothing may authorise on it.
+Authority binds to *action content*:
+
+```text
+ACTION = skill + object + parameters + object version/state (+ policy version)
+
+action_digest = H(canonical(ACTION))
+
+worker:    propose(action_digest)
+reviewer:  approve(action_digest)
+gate:      receives the actual action, independently computes
+           H(actual_action) and requires it to equal both attestations,
+           then executes *that action* - not whatever currently lives
+           under request 123
+```
+
+One change of shape, several classes closed at once: re-pointing the join,
+reusing an approval for a different action, mutating parameters after review,
+and — if object version is in the digest — acting on a stale approval after the
+object moved. Replay needs a nonce or lifecycle rule on top; the digest alone
+does not close it.
+
+This is what the first case must measure rather than assume.
 
 ## 4. What this changes about the current model
 
