@@ -333,6 +333,38 @@ Integrity can fail by **subtraction** as easily as by addition, which is case 22
 
 And one property to keep separate, because arm C made them look identical: **a narrow blast radius is not detectability.** Case 15 measured the object model's per-object binding as the narrowest exposure and the quietest attack in the same breath; case 16 detected it without changing either fact.
 
+### The reachability subsystem's contract
+
+Cases 16 to 18 and 24 collapse into one sentence, and it is the one worth carrying rather than the journey:
+
+> **Exposure is derived from the authority graph; severity is supplied from an independent source.**
+
+Which fixes what each layer is allowed to answer:
+
+| | |
+|---|---|
+| **the graph answers** | which authority is reachable, through which intermediaries, which endpoints are exposed, how many paths lead there |
+| **the graph does not answer** | how important that authority is, or how urgently anyone should look at it |
+
+And what a finding is made of:
+
+```text
+identity     the intermediary
+attributes   the endpoints it exposes, the path evidence
+enrichment   severity / business value / sensitivity - from outside
+
+reporting    group by the structural finding
+             rank by the supplied severity
+```
+
+The practical payoff is that an organisation can change what it calls critical without touching the reachability computation. Same graph, same causes, same findings, different prioritisation — this year the production database, next year the training corpus. Case 24's structural test is what keeps that true: `by_sensitivity` may take a severity map because ranking is where supplied knowledge belongs, while `causes`, `findings`, `endpoints_exposed` and `path_count` may not mention it. Severity reaching the presentation layer is not contamination; severity reaching discovery would be.
+
+The conditional that produced this, stated with the assumption it depends on rather than as a law:
+
+> When high-value authority is **rare**, exposure frequency may be *anti-correlated* with severity. Severity therefore cannot safely be inferred from reachability prevalence without an independently justified relationship between prevalence and value.
+
+Case 24 measured that anti-correlation at ρ = −0.995, and case 17 showed what it costs: ranked by prevalence, none of the planted needles reached the top ten.
+
 ### Where the reachability line actually stands
 
 Case 17 was the gate case 16 set for itself, and it split cleanly:

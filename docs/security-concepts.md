@@ -41,6 +41,24 @@ the OS stops the worker escaping its process, the workflow layer controls
 credentials, the object layer controls which transformation is valid, and the
 artifact layer controls what data resolves.
 
+## 0.05 The analysis subsystem, and what it may not conclude
+
+Separate from the agent runtime above: cases 16 to 18 and 24 built a
+reachability view, and the one sentence they amount to is
+
+> **Exposure is derived from the authority graph; severity is supplied from an
+> independent source.**
+
+The graph answers *which authority is reachable, through which intermediaries,
+which endpoints are exposed, and how many paths lead there*. It does not answer
+*how important that authority is*. Case 24 measured what happens when it is
+asked to: a severity computed from the graph is not a weaker input than none —
+it is the same input, and it changes no ordering.
+
+Full argument, the report-length criterion from case 18, and the −0.995
+anti-correlation: **The reachability subsystem's contract** in
+[`cases/REPORT.md`](../cases/REPORT.md).
+
 ## 0.1 Principles matrix
 
 The comparison this project should be running is not architecture against

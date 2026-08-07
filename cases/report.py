@@ -683,6 +683,57 @@ def _review() -> list:
       "exposure and the quietest attack in the same breath; case 16 detected "
       "it without changing either fact.")
     w("")
+    w("### The reachability subsystem's contract")
+    w("")
+    w("Cases 16 to 18 and 24 collapse into one sentence, and it is the one "
+      "worth carrying rather than the journey:")
+    w("")
+    w("> **Exposure is derived from the authority graph; severity is supplied "
+      "from an independent source.**")
+    w("")
+    w("Which fixes what each layer is allowed to answer:")
+    w("")
+    w("| | |")
+    w("|---|---|")
+    w("| **the graph answers** | which authority is reachable, through which "
+      "intermediaries, which endpoints are exposed, how many paths lead there |")
+    w("| **the graph does not answer** | how important that authority is, or "
+      "how urgently anyone should look at it |")
+    w("")
+    w("And what a finding is made of:")
+    w("")
+    w("```text")
+    w("identity     the intermediary")
+    w("attributes   the endpoints it exposes, the path evidence")
+    w("enrichment   severity / business value / sensitivity - from outside")
+    w("")
+    w("reporting    group by the structural finding")
+    w("             rank by the supplied severity")
+    w("```")
+    w("")
+    w("The practical payoff is that an organisation can change what it calls "
+      "critical without touching the reachability computation. Same graph, "
+      "same causes, same findings, different prioritisation — this year the "
+      "production database, next year the training corpus. Case 24's "
+      "structural test is what keeps that true: `by_sensitivity` may take a "
+      "severity map because ranking is where supplied knowledge belongs, "
+      "while `causes`, `findings`, `endpoints_exposed` and `path_count` may "
+      "not mention it. Severity reaching the presentation layer is not "
+      "contamination; severity reaching discovery would be.")
+    w("")
+    w("The conditional that produced this, stated with the assumption it "
+      "depends on rather than as a law:")
+    w("")
+    w("> When high-value authority is **rare**, exposure frequency may be "
+      "*anti-correlated* with severity. Severity therefore cannot safely be "
+      "inferred from reachability prevalence without an independently "
+      "justified relationship between prevalence and value.")
+    w("")
+    w("Case 24 measured that anti-correlation at ρ = −0.995, and case 17 "
+      "showed what it costs: ranked by prevalence, none of the planted "
+      "needles reached the top ten.")
+    w("")
+
     w("### Where the reachability line actually stands")
     w("")
     w("Case 17 was the gate case 16 set for itself, and it split cleanly:")
