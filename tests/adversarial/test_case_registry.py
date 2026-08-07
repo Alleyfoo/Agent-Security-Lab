@@ -192,12 +192,14 @@ def test_review_the_persisted_record_adversary_is_still_unnamed():
     strings change, and this test is the reminder that the review's section has
     to change with them.
 
-    It has already fired once, when case 12 joined the set, and the review
-    prose was rewritten rather than the assertion relaxed - which is what a
-    tripwire is for.
+    It has fired twice, when cases 12 and 13 joined the set, and both times
+    the review prose was rewritten rather than the assertion relaxed - which
+    is what a tripwire is for. That it keeps firing is itself the argument for
+    naming the adversary: the set only grows.
     """
     persisted = _by_level("persisted-record")
-    assert persisted == {"case-08", "case-10", "case-11", "case-12"}, (
+    assert persisted == {"case-08", "case-10", "case-11", "case-12",
+                         "case-13"}, (
         "the set of cases using case 08's attacker changed. update the review "
         "section 'N cases measure an adversary the ladder has no row for' "
         "before changing this assertion"

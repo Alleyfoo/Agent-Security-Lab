@@ -1118,6 +1118,87 @@ CASES: List[CaseResult] = [
               "case12_common - a plain import bound case 08's module and the "
               "test file failed to collect.",
     ),
+    CaseResult(
+        case_id="case-13",
+        title="Does a second independent premise raise the cost?",
+        compromise_level="The case 08 attacker, unchanged from case 12: may "
+                         "alter persisted configuration or workflow records, "
+                         "may not modify executable code or the trust root",
+        attack="The same read of artifact.key_material at the schema step, "
+               "against case 12's arm A and arm C after one additional "
+               "independent premise is layered onto each - a MAC-style label "
+               "policy over the permission table, and artifacts that declare "
+               "what they are",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None in the product. An experiment on laboratory reference "
+                "arms, testing a prediction pre-registered in the report "
+                "before the code existed. object_model is untouched and case "
+                "12's arms are frozen; this case layers onto them",
+        evidence=[
+            "arm A + label policy keyed on the stage: minimum tamper set "
+            "rises 1 -> 2, prediction confirmed",
+            "arm A + the same policy keyed on the subject: stays 1, because "
+            "reassigning the subject moves both premises at once",
+            "arm C + artifact declaration: closes case 10's surviving "
+            "overwrite route completely, and the skill-contract route still "
+            "obtains at one edit",
+            "arm C + a premise per surface: rises to 2",
+            "each added premise is asserted to be genuinely consulted and to "
+            "leave the honest run intact",
+            "tests/adversarial/test_case_13_second_premise.py",
+        ],
+        what_this_proves=(
+            "That case 12's principle is architecture-neutral as claimed - it "
+            "worked in an identity model and in an object model, neither of "
+            "which had it before - and that it is conditional in two ways "
+            "nobody had stated. A second premise buys nothing if it is a "
+            "function of an index the attacker can pivot, which is the "
+            "confused-deputy shape arriving in the authority model: the "
+            "attacker does not forge a permission, it changes which principal "
+            "the question is asked about. And a premise raises the cost only "
+            "of the surface it covers, so an arm with more authority-bearing "
+            "surfaces needs more premises to reach the same minimum - which "
+            "cost the object model two where arm A needed one."),
+        what_this_does_not_prove=(
+            "It does not show any arm is secure. Every premise here sits "
+            "inside the same adversary's reach, so two edits is a price and "
+            "not a wall, and the cross-cutting finding is untouched. It does "
+            "not show the object model is worse - expressiveness is paid for "
+            "in premises, which is a cost a designer may choose to pay. And it "
+            "tests one capability at one workflow position; a surface no "
+            "premise covers is unaffected by any of it."),
+        residual_limitation=(
+            "The premises are laboratory constructs layered onto laboratory "
+            "arms, and none of them exists in the product. Arm A's label "
+            "policy models the *structure* of MAC over DAC and not kernel "
+            "enforcement, which is the dimension case 12 already recorded its "
+            "identity arm cannot reproduce. Both of arm C's premises are "
+            "in-process data the same attacker reaches."),
+        containment="None. Refusals here are ordinary authorization denials - "
+                    "the premise disagrees and the key is not in the grant. No "
+                    "arm records that a disagreement happened, so a tamper "
+                    "that fails is as silent as one that succeeds.",
+        recovery="Not applicable - no control was applied. The finding that "
+                 "matters operationally is negative: an added premise keyed on "
+                 "an attacker-controlled index gives the appearance of defence "
+                 "in depth and none of the substance.",
+        status="open",
+        directory="cases/13-second-premise",
+        test_module="tests/adversarial/test_case_13_second_premise.py",
+        blast_radius="Unchanged from case 12 in every configuration. Adding "
+                     "premises changes the price of a successful edit, not "
+                     "what a successful edit reaches.",
+        notes="Written to test a prediction rather than to build a control, "
+              "and the prediction survived in a more useful form than it was "
+              "stated. The rule it produces is applicable rather than "
+              "admirable: a premise must be consulted at use time, must not be "
+              "a function of an index the attacker can change, and must sit on "
+              "the surface being defended - missing any of the three buys "
+              "nothing. The subject-keyed variant is the one to remember, "
+              "because it looks exactly like defence in depth and measures as "
+              "no defence at all.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}

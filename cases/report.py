@@ -230,12 +230,48 @@ def _review() -> list:
       "ever bought more than a price increase. The first is cheap to do and "
       "worth doing; it should not be mistaken for the second.")
     w("")
-    w("**Falsifiable prediction, pre-registered here.** If the principle is "
-      "architectural rather than incidental to arm B, then adding a second "
-      "independent premise to arm A or arm C should raise that arm's minimum "
-      "tamper set to 2 — without changing which model it is. If it does not, "
-      "the principle is really a fact about workflow configuration and this "
-      "section is wrong. No case has tested it yet.")
+    w("**The falsifiable prediction, and its result.** Pre-registered here "
+      "before case 13 existed: *adding a second independent premise to arm A "
+      "or arm C should raise that arm's minimum tamper set to 2, without "
+      "changing which model it is.* Case 13 tested it. **Confirmed — under "
+      "two conditions the prediction did not state**, and two of its four "
+      "measured configurations still sit at 1.")
+    w("")
+    w("| Configuration | Minimum tamper set |")
+    w("|---|---|")
+    w("| A — permission table only (case 12) | 1 |")
+    w("| A — + label policy, domain keyed on the **subject** | **1** |")
+    w("| A — + label policy, domain keyed on the **stage** | **2** |")
+    w("| C — binding + skill contract (case 12) | 1 |")
+    w("| C — + artifact declaration | **1** |")
+    w("| C — + artifact declaration + object-type policy | **2** |")
+    w("")
+    w("**Condition 1 — the premises must not be functions of the same "
+      "attacker-controlled key.** Arm A's label policy is a genuinely separate "
+      "record, genuinely consulted, and worth nothing when the domain is keyed "
+      "on the subject: reassigning which subject the stage runs as moves both "
+      "premises at once. Keyed on the stage instead — which is how SELinux "
+      "actually derives a domain — the identical attack fails. This is the "
+      "confused-deputy shape arriving in the authority model: the attacker "
+      "does not forge a permission, it changes which principal the question is "
+      "asked about.")
+    w("")
+    w("**Condition 2 — a premise raises the cost of the surface it covers and "
+      "no other.** Arm C's artifact declarations closed case 10's surviving "
+      "overwrite route completely and did nothing at all about the "
+      "skill-contract route, which still obtained at one edit. An arm with "
+      "more authority-bearing surfaces needs more premises to reach the same "
+      "minimum — which is the compounding cost of expressiveness, and it cost "
+      "the object model two premises where arm A needed one.")
+    w("")
+    w("So the principle is usable rather than merely true:")
+    w("")
+    w("> To raise the cost of forging authority, add a premise that is **(a)** "
+      "consulted at use time, **(b)** not a function of an index the attacker "
+      "can change, and **(c)** on the specific surface being defended. Missing "
+      "any of the three buys nothing. The subject-keyed variant is the one to "
+      "remember: it looks exactly like defence in depth and measures as no "
+      "defence at all.")
     w("")
 
     # -- 4. the adversary with no ladder row -------------------------------
@@ -421,18 +457,18 @@ def _review() -> list:
       "preventions and it covers one stage of four. The design rule above says "
       "this is the only move that has ever worked at Level 2; case 01 stays "
       "wholly open until it is finished.")
-    w("3. **Test the principle rather than the architectures.** Add a second "
-      "independent premise to arm A and to arm C and re-measure. The "
-      "prediction above says their minimum tamper set should rise to 2 "
-      "without either becoming a different model. It is the cheapest "
-      "experiment available — the three arms already exist — and it decides "
-      "whether the principle is architecture-neutral or a fact about workflow "
-      "configuration.")
-    w("4. **Name the adversary** cases 08, 10, 11 and 12 measured, in the "
-      "ladder, or record why it is not a level. Four cases now rest on a rung "
-      "that does not exist.")
-    w("5. **Decide what availability is** in §7 of the threat model, before a "
+    w(f"3. **Name the adversary** cases "
+      f"{', '.join(c.case_id.replace('case-', '') for c in persisted)} "
+      "measured, in the ladder, or record why it is not a level. "
+      f"{len(persisted)} cases now rest on a rung that does not exist, and "
+      "the number goes up every time this question is deferred.")
+    w("4. **Decide what availability is** in §7 of the threat model, before a "
       "further control spends more of it.")
+    w("5. **Where a premise cannot be pivoted.** Case 13's condition 1 is a "
+      "negative result with an obvious follow-up: it found a premise that "
+      "looks like defence in depth and is not, but it did not enumerate which "
+      "indices in each model an attacker can pivot. That enumeration is worth "
+      "more than another premise.")
     w("")
     w("Then the two families case 12 could not measure, each blocked on an "
       "instrument rather than on appetite: **data movement and fidelity**, "

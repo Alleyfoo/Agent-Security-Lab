@@ -22,8 +22,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-10](10-type-to-key-binding/README.md)<br>The type-to-key binding | Rebind an artifact type to a different key mid-workflow - through the API, appended past it, and by overwriting the record - plus pre-seeding a type before its producer runs, and tampering after completion to hit resume | 🔴 Undetected | 🟠 Detected after occurrence | Derive the map instead of storing it: a runner-owned append-only ProductionLedger records what each completed step produced, the binding is computed from it with first production winning, and an artifact type may be produced at most once per object | Overwriting an existing production record still works, with the same tamper set as the stored map - the sixth appearance of the cross-cutting finding. One forged append for a type not yet produced permanently blocks its legitimate producer, so the object cannot complete. The last clause - that conflicts_for() reported contradictions nothing acted on - was closed by case 11, which made the step lifecycle read it; the overwrite residual is untouched by that and is structurally invisible to it. |
 | [case-11](11-conflict-containment/README.md)<br>Contain a contradiction the moment it appears | Leave a contradiction in the production record - case 10's appended rebinding, measured there as inert - and let the object keep working; then retry, reload and resume it, then overwrite instead of appending | 🟠 Detected after occurrence | 🟢 Prevented | check_containment() in the step lifecycle: before validation and before any grant is derived, an object whose production record contradicts itself raises ObjectContainedError and runs no further step. No new record and no new state - the check reads the record the lifecycle already has | The one attack that works is invisible to the check. It is an availability trade, not a free improvement: the cheapest forgery in the model - one appended line - now guarantees an object never completes, and the check is object-scoped, so a contradiction about a type no step reads stops it as surely as a relevant one. check_containment is ordinary in-process code reading an ordinary in-process list, so the cross-cutting finding applies unchanged. And containment sits at the lifecycle, not at the derivation: derive_grant still answers on a contradicted record, deliberately, because case 10's published measurement is taken there. |
 | [case-12](12-three-models/README.md)<br>Three models, one workflow | Obtain a read of artifact.key_material at the schema step in three architectures running the same workload - authority following the subject, the configured workflow step, and the transformation of one object - attacking every stored authority-bearing record in each | 🔴 Undetected | 🔴 Undetected | None. This case is a comparison and changes nothing in the product or in object_model; all three arms are measured as they are. Version pinning is implemented once and shared, because the contract adjudicated it as not architecture-specific | One workflow position, one capability, one attacker - the same narrowness case 08 recorded, and a different target might rank the arms differently. Arm C's intake is a seed rather than a transition because object_model's workflow table is frozen at what cases 10 and 11 measured, so the arms are compared on artifacts produced and grant resolved rather than on step count. Nothing here measures ambient authority, process boundaries, data movement, provenance, replay, or availability under attack. |
+| [case-13](13-second-premise/README.md)<br>Does a second independent premise raise the cost? | The same read of artifact.key_material at the schema step, against case 12's arm A and arm C after one additional independent premise is layered onto each - a MAC-style label policy over the permission table, and artifacts that declare what they are | 🔴 Undetected | 🔴 Undetected | None in the product. An experiment on laboratory reference arms, testing a prediction pre-registered in the report before the code existed. object_model is untouched and case 12's arms are frozen; this case layers onto them | The premises are laboratory constructs layered onto laboratory arms, and none of them exists in the product. Arm A's label policy models the *structure* of MAC over DAC and not kernel enforcement, which is the dimension case 12 already recorded its identity arm cannot reproduce. Both of arm C's premises are in-process data the same attacker reaches. |
 
-**14 cases** — 11 with a control, 3 open by design. 10 moved to a better result class.
+**15 cases** — 11 with a control, 4 open by design. 10 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -112,11 +113,28 @@ Put beside the cross-cutting finding, the two compose into one statement the ser
 
 So multiplying premises inside one trust boundary buys a linear price increase, and moving one premise outside it is the only thing that has ever bought more than a price increase. The first is cheap to do and worth doing; it should not be mistaken for the second.
 
-**Falsifiable prediction, pre-registered here.** If the principle is architectural rather than incidental to arm B, then adding a second independent premise to arm A or arm C should raise that arm's minimum tamper set to 2 — without changing which model it is. If it does not, the principle is really a fact about workflow configuration and this section is wrong. No case has tested it yet.
+**The falsifiable prediction, and its result.** Pre-registered here before case 13 existed: *adding a second independent premise to arm A or arm C should raise that arm's minimum tamper set to 2, without changing which model it is.* Case 13 tested it. **Confirmed — under two conditions the prediction did not state**, and two of its four measured configurations still sit at 1.
 
-### 4 cases measure an adversary the ladder has no row for
+| Configuration | Minimum tamper set |
+|---|---|
+| A — permission table only (case 12) | 1 |
+| A — + label policy, domain keyed on the **subject** | **1** |
+| A — + label policy, domain keyed on the **stage** | **2** |
+| C — binding + skill contract (case 12) | 1 |
+| C — + artifact declaration | **1** |
+| C — + artifact declaration + object-type policy | **2** |
 
-Cases 08, 10, 11, 12 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** That is not a level. It is strictly stronger than Level 1 — it reaches records no agent interface exposes — and strictly weaker than Level 2, which would rewrite the derivation and make every arm lose identically.
+**Condition 1 — the premises must not be functions of the same attacker-controlled key.** Arm A's label policy is a genuinely separate record, genuinely consulted, and worth nothing when the domain is keyed on the subject: reassigning which subject the stage runs as moves both premises at once. Keyed on the stage instead — which is how SELinux actually derives a domain — the identical attack fails. This is the confused-deputy shape arriving in the authority model: the attacker does not forge a permission, it changes which principal the question is asked about.
+
+**Condition 2 — a premise raises the cost of the surface it covers and no other.** Arm C's artifact declarations closed case 10's surviving overwrite route completely and did nothing at all about the skill-contract route, which still obtained at one edit. An arm with more authority-bearing surfaces needs more premises to reach the same minimum — which is the compounding cost of expressiveness, and it cost the object model two premises where arm A needed one.
+
+So the principle is usable rather than merely true:
+
+> To raise the cost of forging authority, add a premise that is **(a)** consulted at use time, **(b)** not a function of an index the attacker can change, and **(c)** on the specific surface being defended. Missing any of the three buys nothing. The subject-keyed variant is the one to remember: it looks exactly like defence in depth and measures as no defence at all.
+
+### 5 cases measure an adversary the ladder has no row for
+
+Cases 08, 10, 11, 12, 13 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** That is not a level. It is strictly stronger than Level 1 — it reaches records no agent interface exposes — and strictly weaker than Level 2, which would rewrite the derivation and make every arm lose identically.
 
 | Case | Result |
 |---|---|
@@ -124,6 +142,7 @@ Cases 08, 10, 11, 12 share an attacker defined narrowly by case 08: **may alter 
 | case-10 — The type-to-key binding | 🟠 Detected after occurrence |
 | case-11 — Contain a contradiction the moment it appears | 🟢 Prevented |
 | case-12 — Three models, one workflow | 🔴 Undetected |
+| case-13 — Does a second independent premise raise the cost? | 🔴 Undetected |
 
 It is a realistic adversary — a compromised storage layer, a restored backup, a writable share — and it is *not the one the project's question is about*. The consequence has to be stated plainly, because the comparison table cannot say it: **the authority-model improvements measured in cases 10 and 11 have not been shown to hold against a fully captured agent.** They were measured against something else, for the good reason case 08 gives, and the ladder should either name that adversary or record why it is not a level.
 
@@ -192,9 +211,9 @@ Ordered by what the measurements support, not by appetite.
 
 1. **The metadata floor.** Every derived conclusion in the product bottoms out in metadata that agents wrote — case 05's derivation trusts `row_count`, case 07's compares column shape and not values, and the honest pipeline already turns the identifier `'1001'` into the number `1001` with no check noticing (case 07, measurement D). Two cases recorded this residual independently and no case has attacked it. It is the clearest unclosed finding in the set and it is a derivation control, which the table above says is the kind that degrades rather than collapses.
 2. **Finish the absence.** Case 06 is one of only two Level 2 preventions and it covers one stage of four. The design rule above says this is the only move that has ever worked at Level 2; case 01 stays wholly open until it is finished.
-3. **Test the principle rather than the architectures.** Add a second independent premise to arm A and to arm C and re-measure. The prediction above says their minimum tamper set should rise to 2 without either becoming a different model. It is the cheapest experiment available — the three arms already exist — and it decides whether the principle is architecture-neutral or a fact about workflow configuration.
-4. **Name the adversary** cases 08, 10, 11 and 12 measured, in the ladder, or record why it is not a level. Four cases now rest on a rung that does not exist.
-5. **Decide what availability is** in §7 of the threat model, before a further control spends more of it.
+3. **Name the adversary** cases 08, 10, 11, 12, 13 measured, in the ladder, or record why it is not a level. 5 cases now rest on a rung that does not exist, and the number goes up every time this question is deferred.
+4. **Decide what availability is** in §7 of the threat model, before a further control spends more of it.
+5. **Where a premise cannot be pivoted.** Case 13's condition 1 is a negative result with an obvious follow-up: it found a premise that looks like defence in depth and is not, but it did not enumerate which indices in each model an attacker can pivot. That enumeration is worth more than another premise.
 
 Then the two families case 12 could not measure, each blocked on an instrument rather than on appetite: **data movement and fidelity**, which needs observation of a running system rather than the whole-payload strawman `key_vs_paste.py` assumes; and **compromise and failure behaviour**, which is where real OS isolation, real workflow credentials and disposable workers actually differ, and where the identity arm would stop being a miniature.
 
@@ -655,6 +674,39 @@ Reproduce: `python cases/11-conflict-containment/attack.py` · Tests: `tests/adv
 **Notes.** Kills the project's easy story, and that is the value of it: 'the object model is safer than an identity model or a workflow model' is refuted for this property family. The result to keep is narrower and more useful - for fixed workflows, conventional workflow orchestration may be structurally better than the candidate object model at resisting single-record authority tampering. The principle that survives is architecture-neutral and belongs to no arm: authority is harder to forge when derived from independent premises than when read from one writable conclusion - with the bound that the premise count sets the cost, not the possibility, since both of arm B's records sit inside the same adversary's reach. Both pre-registered predictions were refuted, which is the point of pre-registering them. Minimum tamper set is not 1 everywhere: a competently configured workflow needs 2. And the object model is not narrowest at minimum cost - its skill-contract route is deployment-wide, wider than either other arm, so conclusion 4 cannot be claimed without naming the surface. Arm A's second route creates no new authority anywhere: it reassigns the stage to an identity that already holds it, and the audit record afterwards is correct and useless. A collision found while building this: case 08 owns the bare module name 'common', so case 12's helper is case12_common - a plain import bound case 08's module and the test file failed to collect.
 
 Reproduce: `python cases/12-three-models/attack.py` · Tests: `tests/adversarial/test_case_12_three_models.py`
+
+### ⚠️ case-13 — Does a second independent premise raise the cost?
+
+**Compromise level:** The case 08 attacker, unchanged from case 12: may alter persisted configuration or workflow records, may not modify executable code or the trust root  
+**Attack:** The same read of artifact.key_material at the schema step, against case 12's arm A and arm C after one additional independent premise is layered onto each - a MAC-style label policy over the permission table, and artifacts that declare what they are  
+**Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
+
+**Control.** None in the product. An experiment on laboratory reference arms, testing a prediction pre-registered in the report before the code existed. object_model is untouched and case 12's arms are frozen; this case layers onto them
+
+**Evidence**
+
+- arm A + label policy keyed on the stage: minimum tamper set rises 1 -> 2, prediction confirmed
+- arm A + the same policy keyed on the subject: stays 1, because reassigning the subject moves both premises at once
+- arm C + artifact declaration: closes case 10's surviving overwrite route completely, and the skill-contract route still obtains at one edit
+- arm C + a premise per surface: rises to 2
+- each added premise is asserted to be genuinely consulted and to leave the honest run intact
+- tests/adversarial/test_case_13_second_premise.py
+
+**What this proves.** That case 12's principle is architecture-neutral as claimed - it worked in an identity model and in an object model, neither of which had it before - and that it is conditional in two ways nobody had stated. A second premise buys nothing if it is a function of an index the attacker can pivot, which is the confused-deputy shape arriving in the authority model: the attacker does not forge a permission, it changes which principal the question is asked about. And a premise raises the cost only of the surface it covers, so an arm with more authority-bearing surfaces needs more premises to reach the same minimum - which cost the object model two where arm A needed one.
+
+**What this does not prove.** It does not show any arm is secure. Every premise here sits inside the same adversary's reach, so two edits is a price and not a wall, and the cross-cutting finding is untouched. It does not show the object model is worse - expressiveness is paid for in premises, which is a cost a designer may choose to pay. And it tests one capability at one workflow position; a surface no premise covers is unaffected by any of it.
+
+**Residual limitation.** The premises are laboratory constructs layered onto laboratory arms, and none of them exists in the product. Arm A's label policy models the *structure* of MAC over DAC and not kernel enforcement, which is the dimension case 12 already recorded its identity arm cannot reproduce. Both of arm C's premises are in-process data the same attacker reaches.
+
+**Containment.** None. Refusals here are ordinary authorization denials - the premise disagrees and the key is not in the grant. No arm records that a disagreement happened, so a tamper that fails is as silent as one that succeeds.
+
+**Recovery.** Not applicable - no control was applied. The finding that matters operationally is negative: an added premise keyed on an attacker-controlled index gives the appearance of defence in depth and none of the substance.
+
+**Blast radius.** Unchanged from case 12 in every configuration. Adding premises changes the price of a successful edit, not what a successful edit reaches.
+
+**Notes.** Written to test a prediction rather than to build a control, and the prediction survived in a more useful form than it was stated. The rule it produces is applicable rather than admirable: a premise must be consulted at use time, must not be a function of an index the attacker can change, and must sit on the surface being defended - missing any of the three buys nothing. The subject-keyed variant is the one to remember, because it looks exactly like defence in depth and measures as no defence at all.
+
+Reproduce: `python cases/13-second-premise/attack.py` · Tests: `tests/adversarial/test_case_13_second_premise.py`
 
 ## Where the boundary stands
 

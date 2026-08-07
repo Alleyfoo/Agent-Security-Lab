@@ -145,6 +145,7 @@ not claimed.
 | [`10-type-to-key-binding`](10-type-to-key-binding/README.md) ✅ | 3 | The shape of a record decides what tampering costs: an append-only produced-once ledger makes the cheap edits inert where a stored map makes them total |
 | [`11-conflict-containment`](11-conflict-containment/README.md) ✅ | 3 | A contradicted record contains the object before the next step — a control the stored map cannot have, because it keeps no contradiction to find |
 | [`12-three-models`](12-three-models/README.md) ⚠️ | 3 | Comparison: authority following the subject, the configured workflow step, and one object's transformation. What separates them is not how many authority records they hold but whether two must agree |
+| [`13-second-premise`](13-second-premise/README.md) ⚠️ | 3 | A second independent premise raises the tamper cost only if it is not keyed on something the attacker can pivot, and only on the surface it covers |
 
 Cases 08 and 12 are registered ⚠️ because they change nothing in the product.
 Both arms — all three, for case 12 — are measured as they are, and the named
