@@ -2215,6 +2215,87 @@ CASES: List[CaseResult] = [
               "store behind a protocol relocates the attack surface to the "
               "protocol's vocabulary rather than removing it.",
     ),
+    CaseResult(
+        case_id="case-24",
+        title="Gate 2: where does severity come from?",
+        compromise_level="Not an attack case - a measurement of an input the "
+                         "reachability view depends on",
+        attack="Supply the reachability ranking with three severity sources - "
+               "none, one computed from the graph, and one declared "
+               "independently about the authority - and measure needle recall, "
+               "the correlation between graph topology and declared severity, "
+               "and whether the engine reads severity at all",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None. A measurement, and the second of the two gates the "
+                "reachability hypothesis was given",
+        evidence=[
+            "absent: 0% of needles in the top 10 - case 17's failure mode",
+            "topological: 0%, identical to absent in every cell",
+            "declared: 100%",
+            "paths reaching an authority against its declared severity: "
+            "rho = -0.995, strongly inverted rather than merely uninformative",
+            "intermediaries holding it: rho = +0.000 - case 18's report "
+            "length, useful for sizing and useless for ranking",
+            "causes and findings identical under all three maps; a structural "
+            "test pins that ranking may consult severity and the reachability "
+            "computation may not",
+            "tests/adversarial/test_case_24_severity_source.py",
+        ],
+        what_this_proves=(
+            "That Gate 2 is answered and the answer is no: the graph cannot "
+            "supply its own severity. The finding is sharper than 'a derived "
+            "severity is weaker' - it is the SAME source, because path count "
+            "is what the fallback ordering already used, so supplying it as "
+            "severity looks like knowledge and moves no cell. A team that "
+            "built it would believe they had added prioritisation and would "
+            "have added a rename. And the reason is stronger than 'topology "
+            "is uninformative': under the scenario the reachability line "
+            "exists to address, topology is inverted against severity, so a "
+            "topological proxy is worse than none while looking like "
+            "progress."),
+        what_this_does_not_prove=(
+            "It does not produce a severity source - it shows what one must "
+            "not be derived from and models the alternative with a "
+            "hand-written registry. It does not establish the inversion as a "
+            "general property: it is conditional on rare-and-valuable, which "
+            "is the assumption case 17 identified, and a deployment whose "
+            "most-reachable authority is also its most valuable would give the "
+            "opposite correlation."),
+        residual_limitation=(
+            "The declared source is a stand-in that models asset inventory or "
+            "data classification, exactly as case 12's arms modelled "
+            "architectures; whether a real organisation can produce such a "
+            "map, keep it current and agree on it is the actual difficulty "
+            "and is untouched. Severity is a scalar per authority, with no "
+            "aggregation across the authorities one intermediary reaches "
+            "together."),
+        containment="Not applicable - the case measures an input rather than "
+                    "an attack. The operationally useful output is negative: "
+                    "do not let the ranking's severity come from the graph "
+                    "being ranked.",
+        recovery="Not applicable - nothing is compromised by measuring an "
+                 "input. The operator-facing consequence is a sourcing "
+                 "requirement rather than a remedy: the severity map has to "
+                 "come from asset inventory, data classification or policy, "
+                 "and may not be recomputed from the graph it ranks.",
+        status="open",
+        directory="cases/24-severity-source",
+        test_module="tests/adversarial/test_case_24_severity_source.py",
+        blast_radius="Not applicable to a measurement of an input. What it "
+                     "bounds is a claim rather than an effect: the "
+                     "reachability view may not be described as prioritised "
+                     "unless its severity came from outside the graph.",
+        evidence_status=MODELED,
+        notes="Built while case 23 was blocked, because Gate 2 is independent "
+              "of that blocker. The self-grading arm was built deliberately "
+              "rather than argued against, and it was worth it: the "
+              "prediction was that it would rank badly, and the measurement "
+              "was that it ranks identically to having nothing, which is a "
+              "different and more useful statement. A first draft of the "
+              "summary called the correlations weak; they are -0.995 and the "
+              "prose was corrected to match.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}

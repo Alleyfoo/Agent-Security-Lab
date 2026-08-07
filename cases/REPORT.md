@@ -32,8 +32,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-20](20-one-use-race/README.md)<br>Two executors racing one one-use approval | Race two executors against one one-use approval, then crash a process before the external effect and after it, across four gate orderings - case 19's as built, the tempting reorder, an atomic claim, and an atomic claim with an idempotent sink | 🔴 Undetected | 🟢 Prevented | An atomic claim: the state test and the write happen together under one lock, so exactly one executor acquires the approval and every other refuses | The lock is a threading.Lock in one process, so exclusivity says nothing about two processes or two hosts - the same boundary case 19 hit. A crash after the claim leaves the approval stuck with no reclaim path; a lease with an expiry is the obvious answer and introduces its own race, unmeasured. Crashes are simulated as an exception at a named point, which does not model partial writes or torn records. |
 | [case-21](21-gate-independence/README.md)<br>Process independence for the approval gate | Six probes against the approval gate from the worker's process - replace its code, write its approval state, forge reviewer membership, bypass the protocol, read its credential, manipulate its datastore - run against a gate sharing the worker's boundary and a gate in its own process | 🔴 Undetected | 🟢 Prevented | The gate runs in a separate interpreter under its own authority, reached only by line-delimited JSON. It holds its own approvals, its own reviewer list and its own credential, and the protocol is the entire surface. WORDING CORRECTED after first publication: this establishes process and code independence, not gate independence - see the residual | **Arm B does not achieve gate independence** and the case's title was corrected to say so. If the persisted approval store is part of the gate - and after cases 19 and 20 it holds security state rather than mere persistence - then complete gate state still crosses back into the worker's authority through the filesystem. The measured result is: process separation removes direct authority over gate code, credentials, protocol internals and volatile state, and does not establish gate independence while durable gate state remains writable from the worker boundary. Same uid, same filesystem, same host throughout. |
 | [case-22](22-durable-state/README.md)<br>Durable-state independence | Create, modify and DELETE durable gate authority - forge an approval, delete a consumption record to resurrect a spent approval, destroy the record entirely - against a store the worker can write, a store reachable only through the gate's protocol, and the same protocol with one maintenance operation | 🔴 Undetected | 🟢 Prevented | A durable store reachable only through a protocol whose vocabulary cannot forget: approve, execute and state, with no operation that removes a record | Unreachability is modelled rather than enforced, so the honest claim is conditional - given a store reachable only through the protocol, these four attacks behave as measured. Nothing notices a deletion: an append-only chain would make the gap visible and is not built, though case 10's ledger is the obvious model and case 11's containment the obvious response. Availability is outside the claim; D0's truncation is recorded because it happened. |
+| [case-24](24-severity-source/README.md)<br>Gate 2: where does severity come from? | Supply the reachability ranking with three severity sources - none, one computed from the graph, and one declared independently about the authority - and measure needle recall, the correlation between graph topology and declared severity, and whether the engine reads severity at all | 🔴 Undetected | 🔴 Undetected | None. A measurement, and the second of the two gates the reachability hypothesis was given | The declared source is a stand-in that models asset inventory or data classification, exactly as case 12's arms modelled architectures; whether a real organisation can produce such a map, keep it current and agree on it is the actual difficulty and is untouched. Severity is a scalar per authority, with no aggregation across the authorities one intermediary reaches together. |
 
-**24 cases** — 16 with a control, 8 open by design. 15 moved to a better result class.
+**25 cases** — 16 with a control, 9 open by design. 15 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -295,7 +296,7 @@ A distinction case 23 forced by being **blocked** rather than faked, and now a f
 | `blocked` | the experiment needs a boundary this environment cannot provide, and the blocker is recorded |
 | `measured` | a real external mechanism was exercised and it refused |
 
-Currently `modeled`: case-12, case-13, case-22. Everything else exercised real Python objects, real subprocesses or real threads.
+Currently `modeled`: case-12, case-13, case-22, case-24. Everything else exercised real Python objects, real subprocesses or real threads.
 
 The line that matters is between the middle two and the last, and case 23 states it as a pass condition: **the attack must fail for a reason the case did not implement.** If the repository's own code is what says no, the case has rebuilt the application claim with another coat of paint — which is why cases 21 and 22 are process and protocol results and not isolation results, and why they say so.
 
@@ -1152,6 +1153,41 @@ Reproduce: `python cases/21-gate-independence/attack.py` · Tests: `tests/advers
 **Notes.** Deletion was attacked because case 21's residual only named insertion, and it turned out to be the more interesting half - resurrection is invisible to both sign-off cases by construction. The D2 result is the transferable one: moving a store behind a protocol relocates the attack surface to the protocol's vocabulary rather than removing it.
 
 Reproduce: `python cases/22-durable-state/attack.py` · Tests: `tests/adversarial/test_case_22_durable_state.py`
+
+### ⚠️ case-24 — Gate 2: where does severity come from?
+
+**Compromise level:** Not an attack case - a measurement of an input the reachability view depends on  
+**Evidence:** `modeled` — the boundary this case relies on is drawn by its own code, not enforced by anything underneath it  
+**Attack:** Supply the reachability ranking with three severity sources - none, one computed from the graph, and one declared independently about the authority - and measure needle recall, the correlation between graph topology and declared severity, and whether the engine reads severity at all  
+**Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
+
+**Control.** None. A measurement, and the second of the two gates the reachability hypothesis was given
+
+**Evidence**
+
+- absent: 0% of needles in the top 10 - case 17's failure mode
+- topological: 0%, identical to absent in every cell
+- declared: 100%
+- paths reaching an authority against its declared severity: rho = -0.995, strongly inverted rather than merely uninformative
+- intermediaries holding it: rho = +0.000 - case 18's report length, useful for sizing and useless for ranking
+- causes and findings identical under all three maps; a structural test pins that ranking may consult severity and the reachability computation may not
+- tests/adversarial/test_case_24_severity_source.py
+
+**What this proves.** That Gate 2 is answered and the answer is no: the graph cannot supply its own severity. The finding is sharper than 'a derived severity is weaker' - it is the SAME source, because path count is what the fallback ordering already used, so supplying it as severity looks like knowledge and moves no cell. A team that built it would believe they had added prioritisation and would have added a rename. And the reason is stronger than 'topology is uninformative': under the scenario the reachability line exists to address, topology is inverted against severity, so a topological proxy is worse than none while looking like progress.
+
+**What this does not prove.** It does not produce a severity source - it shows what one must not be derived from and models the alternative with a hand-written registry. It does not establish the inversion as a general property: it is conditional on rare-and-valuable, which is the assumption case 17 identified, and a deployment whose most-reachable authority is also its most valuable would give the opposite correlation.
+
+**Residual limitation.** The declared source is a stand-in that models asset inventory or data classification, exactly as case 12's arms modelled architectures; whether a real organisation can produce such a map, keep it current and agree on it is the actual difficulty and is untouched. Severity is a scalar per authority, with no aggregation across the authorities one intermediary reaches together.
+
+**Containment.** Not applicable - the case measures an input rather than an attack. The operationally useful output is negative: do not let the ranking's severity come from the graph being ranked.
+
+**Recovery.** Not applicable - nothing is compromised by measuring an input. The operator-facing consequence is a sourcing requirement rather than a remedy: the severity map has to come from asset inventory, data classification or policy, and may not be recomputed from the graph it ranks.
+
+**Blast radius.** Not applicable to a measurement of an input. What it bounds is a claim rather than an effect: the reachability view may not be described as prioritised unless its severity came from outside the graph.
+
+**Notes.** Built while case 23 was blocked, because Gate 2 is independent of that blocker. The self-grading arm was built deliberately rather than argued against, and it was worth it: the prediction was that it would rank badly, and the measurement was that it ranks identically to having nothing, which is a different and more useful statement. A first draft of the summary called the correlations weak; they are -0.995 and the prose was corrected to match.
+
+Reproduce: `python cases/24-severity-source/attack.py` · Tests: `tests/adversarial/test_case_24_severity_source.py`
 
 ## Where the boundary stands
 

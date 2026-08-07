@@ -156,6 +156,7 @@ not claimed.
 | [`21-gate-independence`](21-gate-independence/README.md) ✅ | 5 | Moving the gate's code closes five of six probes; the persisted store closes none. Sign-off stays Level 1 until the store moves too |
 | [`22-durable-state`](22-durable-state/README.md) ✅ | 5 | Deleting a consumption record resurrects a spent approval. Moving the store behind a protocol relocates the attack to the protocol's vocabulary |
 | [`23-real-principals`](23-real-principals/README.md) 📋 | 5 | **Contract only, blocked on the environment.** Two real principals, so the six attacks fail because the OS refuses them rather than because a case modelled it |
+| [`24-severity-source`](24-severity-source/README.md) ⚠️ | 3 | Gate 2 answered, and the answer is no. A severity computed from the graph is not a weaker source than none — it is the same source |
 
 Cases 08 and 12 are registered ⚠️ because they change nothing in the product.
 Both arms — all three, for case 12 — are measured as they are, and the named

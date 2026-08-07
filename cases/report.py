@@ -31,6 +31,7 @@ LEVEL_1 = "Level 1"
 LEVEL_1_5 = "Level 1.5"
 LEVEL_2 = "Level 2"
 PERSISTED = "persisted-record"
+NOT_AN_ATTACK = "not an attack case"
 
 
 def _result(value: str) -> str:
@@ -56,6 +57,11 @@ def primary_level(case: CaseResult) -> str:
         return LEVEL_1
     if text.startswith(LEVEL_2):
         return LEVEL_2
+    # Some cases measure an input or a report rather than an adversary. They
+    # must not fall through into the configuration adversary's bucket, which
+    # would put them in three of this report's tables and one tripwire.
+    if text.startswith("Not an attack"):
+        return NOT_AN_ATTACK
     return PERSISTED
 
 
