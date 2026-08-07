@@ -163,6 +163,13 @@ the record contradicts itself; nothing calls it during a run. Making
 conflict-checking part of the step lifecycle is a further claim this case does
 not make.
 
+> Closed by [case 11](../11-conflict-containment/README.md), which made the
+> step lifecycle read it. That case also measured what it costs, and found the
+> control is blind to the overwrite residual above — a contradiction is what an
+> *append* leaves behind, and only appends leave one. This case's own
+> measurements are unchanged: they are taken at `derive_grant`, which has no
+> containment and deliberately did not grow one.
+
 **The ledger is not an independent authority**, for the same reason case 09's
 version pin is not. It records what happened in this process, and a Level 2
 adversary edits the record of what happened.
@@ -173,7 +180,7 @@ None automatic. The API refusal stops the ordinary path; past it, the
 derivation makes the tampering ineffective rather than detected-and-halted, and
 the conflict sits in the record until something looks. Reporting a conflict as
 an incident during the step lifecycle is the obvious next control and is
-deliberately not built here.
+deliberately not built here — it became case 11.
 
 ## Recovery requirement
 

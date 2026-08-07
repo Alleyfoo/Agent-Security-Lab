@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Dict, List, Mapping, Optional, Tuple
 
-from object_model.errors import AuthorizationError
+from object_model.errors import AuthorizationError, ObjectContainedError
 from object_model.ledger import ProductionLedger
 from object_model.objects import Grant, QueueItem, WorkObject, save_object
 from object_model.skills import REGISTRY, verify_pins
@@ -141,15 +141,50 @@ def resolve(item: QueueItem, obj: WorkObject,
 # than something an attack can be measured against (case 10).
 # ---------------------------------------------------------------------------
 
+def check_containment(obj: WorkObject,
+                      ledger: Optional[ProductionLedger]) -> None:
+    """Case 11: a contradicted production record stops the object.
+
+    No new record and no new state. The check reads the record the lifecycle
+    already has, and because the contradiction is persisted, the refusal
+    outlives a retry, a reload and a resume without anything having to
+    remember it.
+
+    Deliberately object-scoped rather than grant-scoped: a conflict on a type
+    this step never reads still stops the object. A record that cannot say
+    which key holds one type is not trustworthy evidence about the others,
+    and the cost of that choice is measured rather than argued.
+    """
+    if ledger is None:
+        return
+    conflicts = ledger.conflicts_for(obj.object_id)
+    if conflicts:
+        raise ObjectContainedError(
+            f"object {obj.object_id!r} is contained: its production record "
+            f"contradicts itself ({'; '.join(conflicts)}). no step runs "
+            "against a record that cannot say which key holds a type"
+        )
+
+
 def run_step(obj: WorkObject, item: QueueItem, store_dir: str,
              pinned: Optional[Mapping[str, str]] = None,
-             ledger: Optional[ProductionLedger] = None) -> StepRecord:
+             ledger: Optional[ProductionLedger] = None,
+             contain: bool = True) -> StepRecord:
     """Resolve, execute, record what was produced, advance, persist.
 
     Execution is a stand-in: a skill that declares it produces type ``T`` is
     taken to have produced the canonical key for ``T``. Case 10 is about where
     the *binding* is recorded, not about what a transformation computes.
+
+    Containment runs first, before validation and before any grant is derived,
+    so a contained object never resolves authority at all. ``contain=False``
+    exists so case 11's unsafe result stays reproducible - the same reason
+    case 09's ``pinned`` is optional. It is not a deployment switch, and an
+    adversary who can set it is already editing call sites, which is outside
+    the attacker model cases 08-11 define.
     """
+    if contain:
+        check_containment(obj, ledger)
     skill_name = validate(item, obj)
     grant = derive_grant(obj, skill_name, pinned, ledger)
     skill = REGISTRY[skill_name]
@@ -177,11 +212,12 @@ def run_step(obj: WorkObject, item: QueueItem, store_dir: str,
 def run_to_completion(obj: WorkObject, store_dir: str,
                       pinned: Optional[Mapping[str, str]] = None,
                       ledger: Optional[ProductionLedger] = None,
-                      max_steps: int = 8) -> List[StepRecord]:
+                      max_steps: int = 8,
+                      contain: bool = True) -> List[StepRecord]:
     steps: List[StepRecord] = []
     for _ in range(max_steps):
         if obj.state == TERMINAL_STATE:
             break
         item = QueueItem(obj.object_id, required_skill(obj))
-        steps.append(run_step(obj, item, store_dir, pinned, ledger))
+        steps.append(run_step(obj, item, store_dir, pinned, ledger, contain))
     return steps

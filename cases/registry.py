@@ -890,12 +890,16 @@ CASES: List[CaseResult] = [
             "same tamper set as the stored map - the sixth appearance of the "
             "cross-cutting finding. One forged append for a type not yet "
             "produced permanently blocks its legitimate producer, so the "
-            "object cannot complete. And conflicts_for() reports "
-            "contradictions but nothing calls it during a run."),
-        containment="None automatic. The API refusal stops the ordinary path; "
-                    "past it the derivation makes tampering ineffective rather "
-                    "than detected-and-halted, and the conflict sits in the "
-                    "record until something looks.",
+            "object cannot complete. The last clause - that conflicts_for() "
+            "reported contradictions nothing acted on - was closed by case 11, "
+            "which made the step lifecycle read it; the overwrite residual is "
+            "untouched by that and is structurally invisible to it."),
+        containment="Superseded by case 11 for appended conflicts, which now "
+                    "contain the object before the next step. As measured "
+                    "here: none automatic. The API refusal stops the ordinary "
+                    "path; past it the derivation makes tampering ineffective "
+                    "rather than detected-and-halted, and the conflict sits in "
+                    "the record until something looks.",
         recovery="Better than the stored map, and the derived arm's clearest "
                  "practical advantage: the original binding is still in the "
                  "record, so first-production-wins means recovery is already "
@@ -917,6 +921,94 @@ CASES: List[CaseResult] = [
               "records was falsy because __len__ was defined without "
               "__bool__, and the first harness run silently measured the "
               "stored arm twice; both the class and the test now pin it.",
+    ),
+    CaseResult(
+        case_id="case-11",
+        title="Contain a contradiction the moment it appears",
+        compromise_level="The case 08 attacker: may alter persisted policy or "
+                         "workflow records, may not modify evaluator code",
+        attack="Leave a contradiction in the production record - case 10's "
+               "appended rebinding, measured there as inert - and let the "
+               "object keep working; then retry, reload and resume it, then "
+               "overwrite instead of appending",
+        baseline_result=DETECTED_AFTER_OCCURRENCE,
+        controlled_result=PREVENTED,
+        control="check_containment() in the step lifecycle: before validation "
+                "and before any grant is derived, an object whose production "
+                "record contradicts itself raises ObjectContainedError and "
+                "runs no further step. No new record and no new state - the "
+                "check reads the record the lifecycle already has",
+        evidence=[
+            "uncontained: two more steps run and the object reaches "
+            "'validated' with its record contradicting itself",
+            "contained: stopped at 'profiled', no grant derived, nothing "
+            "produced, the refusal naming both bindings",
+            "3/3 retries refused, and a reloaded ledger contains a resumed "
+            "object again with no flag anywhere",
+            "an overwritten record leaves no conflict: the read is OBTAINED "
+            "and containment never fires",
+            "cost: one forged append is now a permanent object-level denial "
+            "of service; a conflict about a type no step reads stops it too",
+            "tests/adversarial/test_case_11_conflict_containment.py",
+        ],
+        what_this_proves=(
+            "That the derived model can hold a control the stored model cannot "
+            "have at all. Containment needs a contradiction to find, and a "
+            "stored map keeps none - a write is total, the previous binding is "
+            "gone, and the object is left with a map that is internally "
+            "consistent and wrong. Case 10 showed the two records behave "
+            "differently under tampering; this shows the difference is usable "
+            "rather than merely observable. It also shows quarantine did not "
+            "need new state here: the corrupt record is its own marker, so the "
+            "refusal survives reload and resume with nothing added to remember "
+            "it."),
+        what_this_does_not_prove=(
+            "It does not close case 10's residual - overwriting still works "
+            "and containment is structurally blind to it, because a "
+            "contradiction is what an append leaves behind and only appends "
+            "leave one. It moves no confidentiality result: the rebinding it "
+            "now stops was already inert. It does not come free, and the cost "
+            "runs opposite to the benefit. And it says nothing about the skill "
+            "registry, case 09's half of the trust root."),
+        residual_limitation=(
+            "The one attack that works is invisible to the check. It is an "
+            "availability trade, not a free improvement: the cheapest forgery "
+            "in the model - one appended line - now guarantees an object never "
+            "completes, and the check is object-scoped, so a contradiction "
+            "about a type no step reads stops it as surely as a relevant one. "
+            "check_containment is ordinary in-process code reading an ordinary "
+            "in-process list, so the cross-cutting finding applies unchanged. "
+            "And containment sits at the lifecycle, not at the derivation: "
+            "derive_grant still answers on a contradicted record, deliberately, "
+            "because case 10's published measurement is taken there."),
+        containment="ObjectContainedError, a subclass of LedgerIntegrityError - "
+                    "the same corruption, a different response: the ledger "
+                    "refusing to write versus the lifecycle refusing to run. "
+                    "Fails closed, and scoped to one object; others in the same "
+                    "ledger complete, which is asserted rather than assumed.",
+        recovery="Not implemented, and it is the honest gap. Deleting the "
+                 "forged record is indistinguishable from the attack: the "
+                 "ledger holds no independent account of which of two "
+                 "contradicting entries is legitimate, even though "
+                 "first-production-wins makes the derivation behave as though "
+                 "it does. An operator must reconstruct outside the model - "
+                 "the same wall case 09 hit with the registry.",
+        status="closed",
+        directory="cases/11-conflict-containment",
+        test_module="tests/adversarial/test_case_11_conflict_containment.py",
+        blast_radius="One object, permanently, including retries and resume. "
+                     "Not the run, not other objects, not later deployments. "
+                     "Wider than case 10 in duration and narrower in effect: "
+                     "the object stops instead of finishing on a corrupt "
+                     "record.",
+        notes="Closes the last clause of case 10's residual and nothing else, "
+              "under an explicit instruction not to expand the model again. "
+              "The finding that made that possible was not planned: quarantine "
+              "needed no flag, because unlike case 02 the corruption lives in "
+              "the record the lifecycle already reads. The blind spot is the "
+              "case's most useful output - containment stops the attack that "
+              "was already inert and cannot see the attack that works, which "
+              "is one fact stated twice rather than two limitations.",
     ),
 ]
 

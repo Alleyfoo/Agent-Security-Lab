@@ -13,14 +13,19 @@ redistributes stored authority rather than removing it".
 
     objects.py     the work object: type, state, artifact map, persistence
     skills.py      the registry: approved transformations, versions, digests
+    ledger.py      the append-only record of what completed steps produced
     evaluator.py   the manager: validate ready work, derive a grant at use time
     errors.py      refusals, kept distinct so a caller can tell them apart
 """
 
 from __future__ import annotations
 
-from object_model.errors import AuthorizationError, SkillRegistryError
-from object_model.evaluator import derive_grant, required_skill, resolve, validate
+from object_model.errors import (
+    AuthorizationError, ObjectContainedError, SkillRegistryError,
+)
+from object_model.evaluator import (
+    check_containment, derive_grant, required_skill, resolve, validate,
+)
 from object_model.objects import Grant, QueueItem, WorkObject, load_object, save_object
 from object_model.skills import (
     REGISTRY, Skill, digest_of, manifest, pin_versions, reset_registry,
@@ -28,8 +33,9 @@ from object_model.skills import (
 )
 
 __all__ = [
-    "AuthorizationError", "SkillRegistryError",
-    "derive_grant", "required_skill", "resolve", "validate",
+    "AuthorizationError", "ObjectContainedError", "SkillRegistryError",
+    "check_containment", "derive_grant", "required_skill", "resolve",
+    "validate",
     "Grant", "QueueItem", "WorkObject", "load_object", "save_object",
     "REGISTRY", "Skill", "digest_of", "manifest", "pin_versions",
     "reset_registry", "verify_pins",

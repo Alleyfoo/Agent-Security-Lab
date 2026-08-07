@@ -6,6 +6,8 @@ which is the mistake case 04 exists to prevent on the audit plane.
 
 from __future__ import annotations
 
+from object_model.ledger import LedgerIntegrityError
+
 
 class AuthorizationError(RuntimeError):
     """No grant could be resolved for this work.
@@ -21,4 +23,16 @@ class SkillRegistryError(RuntimeError):
     Distinct from AuthorizationError: the request may be entirely legitimate
     and the *vocabulary* has changed underneath it. See
     cases/09-skill-registry/README.md.
+    """
+
+
+class ObjectContainedError(LedgerIntegrityError):
+    """This object's production record contradicts itself; it runs no further.
+
+    A subclass of LedgerIntegrityError because the incident is the same
+    corruption, and a caller that already catches integrity failures should
+    keep catching this one. Distinct as a class because the *response* is
+    different: LedgerIntegrityError is the ledger refusing to write, and this
+    is the step lifecycle refusing to run. See
+    cases/11-conflict-containment/README.md.
     """
