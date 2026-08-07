@@ -17,10 +17,10 @@ from dataclasses import dataclass
 from typing import Callable, Dict, Tuple
 
 from demo_reservation.objects import (
-    BOOKED, CANCELLED, CONFIRMED, PENDING, REFUSED, Reservation,
+    BOOKED, CANCELLED, CONFIRMED, PENDING, REFUSED, UNRESOLVED, Reservation,
     ReservationRequest, Result, Store,
 )
-from demo_reservation.world import World
+from demo_reservation.world import DAYS, SLOT_MINUTES, World
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,9 @@ CHECK_AVAILABILITY = "check_availability"
 CREATE_RESERVATION = "create_reservation"
 CANCEL_RESERVATION = "cancel_reservation"
 QUERY_SCHEDULE = "query_schedule"
+# Step C, and these two are the whole of the new authority.
+FIND_ALTERNATIVE = "find_alternative"
+MOVE_RESERVATION = "move_reservation"
 
 
 _REGISTRY: Dict[str, Skill] = {
@@ -44,6 +47,8 @@ _REGISTRY: Dict[str, Skill] = {
     CANCEL_RESERVATION: Skill(CANCEL_RESERVATION, (BOOKED,), mutates=True),
     QUERY_SCHEDULE: Skill(QUERY_SCHEDULE, (PENDING, BOOKED, REFUSED),
                           mutates=False),
+    FIND_ALTERNATIVE: Skill(FIND_ALTERNATIVE, (BOOKED,), mutates=False),
+    MOVE_RESERVATION: Skill(MOVE_RESERVATION, (BOOKED,), mutates=True),
 }
 
 REGISTRY: Dict[str, Skill] = dict(_REGISTRY)
@@ -141,9 +146,104 @@ def query_schedule(request: ReservationRequest, store: Store,
                   detail=f"{len(same_day)} reservation(s) that day")
 
 
+def _slot_free(facility_id: str, day: int, start: int, end: int,
+               store: Store, ignoring: str) -> bool:
+    return not any(
+        r.facility_id == facility_id and r.day == day
+        and r.start < end and start < r.end
+        and r.reservation_id != ignoring
+        for r in store.schedule())
+
+
+def find_alternative(request: ReservationRequest, store: Store,
+                     world: World) -> Result:
+    """The agent's own search. Greedy first fit, and deliberately so.
+
+    It shares no code with `oracle.feasible`, which searches jointly with
+    backtracking. If the two were the same routine, the false-escalation
+    metric would be the agent grading its own homework.
+
+    First fit is not a strawman - it is what a worker with no view of its
+    neighbours' needs can do. Whether that is good enough is exactly what step
+    C measures, and nothing here is tuned after seeing the answer.
+    """
+    reservation = store.reservations.get(request.reservation_id or "")
+    if reservation is None:
+        return Result(FIND_ALTERNATIVE, request.request_id, ok=False,
+                      detail="no reservation to relocate")
+
+    duration = reservation.end - reservation.start
+    for facility_id in world.ids():
+        if not set(reservation.requires) <= world.features_of(facility_id):
+            continue
+        if world.capacity_of(facility_id) < reservation.participants:
+            continue
+        for day in range(DAYS):
+            window = world.window(facility_id, day)
+            if window is None:
+                continue
+            opens, closes = window
+            for start in range(opens, closes - duration + 1, SLOT_MINUTES):
+                if _slot_free(facility_id, day, start, start + duration,
+                              store, reservation.reservation_id):
+                    request.candidate = (facility_id, day, start)
+                    return Result(FIND_ALTERNATIVE, request.request_id,
+                                  ok=True,
+                                  detail=f"{facility_id} d{day} {start}")
+
+    request.candidate = None
+    request.state = UNRESOLVED
+    return Result(FIND_ALTERNATIVE, request.request_id, ok=False,
+                  detail="no candidate slot found")
+
+
+def move_reservation(request: ReservationRequest, store: Store,
+                     world: World) -> Result:
+    """Re-derives the candidate's validity rather than trusting it.
+
+    `candidate` is advisory in exactly the way `last_check` is. The world may
+    have moved between the search and the move - another worker may have taken
+    the slot - and a queue that could force a stale move would be
+    authoritative about the outcome.
+    """
+    if request.candidate is None:
+        return Result(MOVE_RESERVATION, request.request_id, ok=False,
+                      detail="no candidate to move to")
+    reservation = store.reservations.get(request.reservation_id or "")
+    if reservation is None:
+        return Result(MOVE_RESERVATION, request.request_id, ok=False,
+                      detail="no reservation to move")
+
+    facility_id, day, start = request.candidate
+    duration = reservation.end - reservation.start
+    end = start + duration
+
+    if not world.is_open(facility_id, day, start, end):
+        return Result(MOVE_RESERVATION, request.request_id, ok=False,
+                      detail="candidate is outside opening hours")
+    if world.capacity_of(facility_id) < reservation.participants:
+        return Result(MOVE_RESERVATION, request.request_id, ok=False,
+                      detail="candidate capacity too small")
+    if not set(reservation.requires) <= world.features_of(facility_id):
+        return Result(MOVE_RESERVATION, request.request_id, ok=False,
+                      detail="candidate lacks required features")
+    if not _slot_free(facility_id, day, start, end, store,
+                      reservation.reservation_id):
+        return Result(MOVE_RESERVATION, request.request_id, ok=False,
+                      detail="candidate was taken since the search")
+
+    reservation.facility_id, reservation.day = facility_id, day
+    reservation.start, reservation.end = start, end
+    request.candidate = None
+    return Result(MOVE_RESERVATION, request.request_id, ok=True,
+                  detail=f"moved to {facility_id} d{day} {start}")
+
+
 HANDLERS: Dict[str, Callable[[ReservationRequest, Store, World], Result]] = {
     CHECK_AVAILABILITY: check_availability,
     CREATE_RESERVATION: create_reservation,
     CANCEL_RESERVATION: cancel_reservation,
     QUERY_SCHEDULE: query_schedule,
+    FIND_ALTERNATIVE: find_alternative,
+    MOVE_RESERVATION: move_reservation,
 }

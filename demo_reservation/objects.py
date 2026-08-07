@@ -18,13 +18,17 @@ not.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, FrozenSet, List, Optional
+from typing import Dict, FrozenSet, List, Optional, Tuple
 
 
 # -- request lifecycle ------------------------------------------------------
 PENDING = "pending"
 BOOKED = "booked"
 REFUSED = "refused"
+# Step C: the agent looked for somewhere else to put this and found nothing.
+# It is a state, not a decision about who should look at it - the escalation
+# taxonomy is an output of the simulation, not an input.
+UNRESOLVED = "unresolved"
 
 # -- reservation lifecycle --------------------------------------------------
 CONFIRMED = "confirmed"
@@ -50,6 +54,10 @@ class ReservationRequest:
     # authoritative.
     last_check: Optional[bool] = None
     reservation_id: Optional[str] = None
+    # Filled in by find_alternative. Advisory, exactly like last_check:
+    # move_reservation re-derives the slot's availability rather than
+    # trusting it.
+    candidate: Optional[Tuple[str, int, int]] = None
 
     def describe(self) -> str:
         return (f"{self.activity} in {self.facility_id} "

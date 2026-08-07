@@ -122,9 +122,12 @@ def test_the_refused_transition_changes_nothing(loaded):
 
 
 def test_an_unapproved_skill_is_absent_rather_than_denied(loaded):
+    """`find_alternative` was the example here until step C approved it, which
+    is the guard doing its job rather than failing. The claim is unchanged:
+    a name that is not in the registry produces an absence, not a denial."""
     rt, _requests = loaded
     with pytest.raises(runtime_mod.UnknownSkill):
-        rt.run(QueueItem("req_00000", "find_alternative"))
+        rt.run(QueueItem("req_00000", "delete_everything"))
 
 
 def test_an_unknown_object_is_refused(loaded):
@@ -220,18 +223,44 @@ def test_an_empty_schedule_is_valid(world):
 # Scope guards. Step A must not drift into step C.
 # ---------------------------------------------------------------------------
 
-def test_the_skill_set_is_exactly_the_four_step_a_allows():
-    assert set(skills.REGISTRY) == {
-        "check_availability", "create_reservation", "cancel_reservation",
-        "query_schedule",
+STEP_A_SKILLS = {
+    "check_availability": ("pending",),
+    "create_reservation": ("pending",),
+    "cancel_reservation": ("booked",),
+    "query_schedule": ("pending", "booked", "refused"),
+}
+
+
+def test_step_as_four_skills_are_present_and_unchanged():
+    """Step C added two skills, which is legitimate and is asserted in that
+    step's own file. What must not drift is step A's four: the same names with
+    the same permitted states, so a later step cannot quietly widen when a
+    worker may create or cancel a booking."""
+    for name, states in STEP_A_SKILLS.items():
+        assert name in skills.REGISTRY, name
+        assert skills.REGISTRY[name].permitted_states == states, name
+
+
+def test_no_step_beyond_c_has_added_a_skill_without_saying_so():
+    """The registry is shared, so this is where an unannounced seventh skill
+    would show up first."""
+    assert set(skills.REGISTRY) == set(STEP_A_SKILLS) | {
+        "find_alternative", "move_reservation",
     }
 
 
-def test_nothing_in_step_a_searches_for_an_alternative():
-    """`find_alternative`, escalation and exceptions belong to step C. If they
-    appear here, the eventual local-resolution rate measures code written
-    before the disruption generator existed."""
-    for module in (skills, runtime_mod, invariants):
+def test_the_resolution_logic_arrived_after_the_disruption_generator():
+    """Step A's version of this guard forbade `find_alternative` outright, and
+    step C approved it - so the guard is rewritten rather than deleted.
+
+    What it protects is unchanged and is the reason the ordering mattered:
+    `disrupt.py` was written before any resolution logic existed, so the
+    disruption set cannot have been chosen to be survivable. The guard is now
+    on the generator rather than on the skills, and lives in step B's file.
+    Here it remains true that the *checker* and the *runtime* search for
+    nothing.
+    """
+    for module in (runtime_mod, invariants):
         source = open(module.__file__, encoding="utf-8").read().lower()
         for forbidden in ("def find_alternative", "def escalate",
                           "def raise_exception", "class exception"):

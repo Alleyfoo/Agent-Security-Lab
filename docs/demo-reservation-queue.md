@@ -155,6 +155,86 @@ agents' resolution logic and sharing no code with it. If the agents' own
 metrics are self-graded and worth nothing — case 24 measured exactly that
 failure in another guise.
 
+### The oracle solves jointly, not one reservation at a time
+
+Frozen before any step-C code, because per-reservation answers are not merely
+imprecise — they are wrong in both directions.
+
+```text
+A needs relocation, B needs relocation
+one suitable 19:00 slot, one suitable 20:00 slot
+
+oracle(A) -> yes      oracle(B) -> yes
+```
+
+Both true, neither simultaneously satisfiable. And the reverse:
+
+```text
+A can use 19:00 or 20:00
+B can use only 19:00
+
+a greedy agent moves A to 19:00; B now escalates
+```
+
+Yet a complete recovery existed — `A -> 20:00, B -> 19:00`. Every individual
+action was legitimate and the strategy was rubbish, which is a different
+finding from "no solution existed" and must not be filed with it.
+
+So the oracle answers three things, and a single `unresolved` counter is
+replaced by three outcomes:
+
+```text
+initial_recovery_possible    was there a complete assignment for the whole
+                             damaged set, immediately after the disruption?
+current_recovery_possible    is there one now, from the schedule as it stands
+                             at the moment the agent gave up?
+complete_assignment          the witness - EVALUATOR ONLY
+```
+
+| Both | Verdict |
+|---|---|
+| initial ✗ | **genuinely impossible** — escalation justified |
+| initial ✓, current ✓ | **false escalation** — a solution still existed |
+| initial ✓, current ✗ | **self-created dead end** — the agent's own valid choices consumed the solution space |
+
+The third is the interesting one and it is invisible to any per-reservation
+oracle.
+
+### The oracle is not trusted either
+
+Joint feasibility is a constraint problem and exhaustive search has no
+guaranteed budget, so the oracle is **three-valued**: `yes` / `no` / `unknown`,
+and `unknown` is counted rather than rounded to either side.
+
+* a `yes` always carries a **witness assignment**, and the witness is validated
+  by the same independent invariant checker the schedule is — so the oracle's
+  positive claims are verified rather than believed;
+* a `no` is only sound if the search completed within budget; if it did not,
+  the answer is `unknown`.
+
+**The witness is never visible to the agents**, and a structural test enforces
+it. An agent that could read the evaluator's solution would be measuring the
+oracle rather than itself.
+
+### Step C stays simple
+
+Two new skills and nothing more:
+
+```text
+find_alternative(reservation)
+move_reservation(reservation, candidate)
+```
+
+No escalation intelligence beyond *no candidate found → emit an unresolved
+object*. The agents process the damaged set; the independent checker decides
+whether the resulting schedule is valid; the oracle decides whether the
+unresolved ones had to be.
+
+**And nothing is optimised after the first run.** If the agents produce a pile
+of self-created dead ends, that is the result, and it is evidence about what
+coordination mechanism is actually needed rather than an invitation to imagine
+one.
+
 Two more rules, inherited:
 
 * **correctness before rate.** A resolution counts only if the resulting
