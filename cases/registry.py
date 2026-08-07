@@ -50,6 +50,30 @@ RESULT_LABELS = {
 RESULT_SEVERITY = {UNDETECTED: 0, DETECTED_AFTER_OCCURRENCE: 1,
                    REJECTED_BEFORE_COMMITMENT: 2, PREVENTED: 3}
 
+# ---------------------------------------------------------------------------
+# Measurement unit for tamper cost. One convention, stated once, for the same
+# reason the result vocabulary is closed.
+#
+# Case 14 found that counting *fields* and counting *records* give different
+# answers for the same attack - arm B's input list and connection name are two
+# fields of one record, so field-counting says 2 and record-counting says 1 -
+# and case 12 had counted fields without saying so. Left unsettled this
+# poisons every later comparison.
+#
+# The primary unit is what an attacker actually has to do:
+#
+#     the minimum number of state changes that must be committed independently
+#
+# One commit is one write the adversary must perform as a separate act.
+# Setting two fields of one record in one write is 1. Writing two records that
+# cannot be written together is 2. Adding a record is 1.
+#
+# Fields and records touched are reported alongside as *descriptive* data.
+# They describe the shape of the edit; they are not the cost.
+# ---------------------------------------------------------------------------
+
+TAMPER_UNIT = "minimum independently committed state changes"
+
 
 @dataclass(frozen=True)
 class CaseResult:
@@ -1120,7 +1144,24 @@ CASES: List[CaseResult] = [
               "useless. A collision found while building this: case 08 owns "
               "the bare module name 'common', so case 12's helper is "
               "case12_common - a plain import bound case 08's module and the "
-              "test file failed to collect.",
+              "test file failed to collect. The minimum tamper sets here were "
+              "originally counted in fields; case 14 found the unit was "
+              "ambiguous and they are now restated in committed state changes, "
+              "which leaves every number unchanged and arm B's for a better "
+              "reason - its two commits are two records that cannot be "
+              "written together.",
+        extra={
+            "tamper_unit": TAMPER_UNIT,
+            "minimum_commits": {"A": 1, "B": 2, "C": 1},
+            "commits": {
+                "A": ["the permission table"],
+                "B": ["the workflow definition record",
+                      "the connection scope record"],
+                "C": ["the production ledger record"],
+            },
+            "records_touched": {"A": 1, "B": 2, "C": 1},
+            "fields_touched": {"A": 1, "B": 2, "C": 1},
+        },
     ),
     CaseResult(
         case_id="case-13",
@@ -1203,6 +1244,24 @@ CASES: List[CaseResult] = [
               "nothing. The subject-keyed variant is the one to remember, "
               "because it looks exactly like defence in depth and measures as "
               "no defence at all.",
+        extra={
+            "tamper_unit": TAMPER_UNIT,
+            "minimum_commits": {
+                "A + label policy (subject-keyed)": 1,
+                "A + label policy (stage-keyed)": 2,
+                "C + artifact declaration": 1,
+                "C + declaration + type policy": 2,
+            },
+            "commits": {
+                "A + label policy (subject-keyed)":
+                    ["the stage-to-subject assignment"],
+                "A + label policy (stage-keyed)":
+                    ["the permission table", "the label policy"],
+                "C + artifact declaration": ["the skill contract"],
+                "C + declaration + type policy":
+                    ["the skill contract", "the object-type read policy"],
+            },
+        },
     ),
     CaseResult(
         case_id="case-14",
@@ -1288,7 +1347,28 @@ CASES: List[CaseResult] = [
               "move. The unit-of-measurement finding is the one most likely to "
               "matter elsewhere: counting fields and counting records give "
               "different tamper sets for the same attack, and case 12 counted "
-              "fields.",
+              "fields. That is now settled: the primary unit is committed "
+              "state changes, defined once at the top of this module, and "
+              "fields and records are reported alongside as descriptive data.",
+        extra={
+            "tamper_unit": TAMPER_UNIT,
+            "minimum_commits": {
+                "A: subject pivot": 1,
+                "B: step record, ordinary tenant": 1,
+                "B: step record, over-scoped tenant": 1,
+                "C: object type pivot": 1,
+            },
+            "commits": {
+                "A: subject pivot": ["the stage-to-subject assignment"],
+                "B: step record, ordinary tenant": ["the step record"],
+                "B: step record, over-scoped tenant": ["the step record"],
+                "C: object type pivot": ["the object record"],
+            },
+            "note": "every pivot is one commit by construction - that is what "
+                    "makes it a pivot. What differs is whether it yields, and "
+                    "arm B's two rows differ only in what the deployment "
+                    "already contained.",
+        },
     ),
 ]
 

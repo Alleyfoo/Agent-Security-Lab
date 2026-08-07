@@ -94,6 +94,45 @@ def test_case_readme_states_both_framings(case: CaseResult):
     assert "what this does not prove" in text
 
 
+def test_tamper_costs_use_the_settled_unit():
+    """One convention, stated once, for the same reason the result vocabulary
+    is closed. Case 14 found that fields and records give different answers
+    for the same attack and that case 12 had counted fields without saying so.
+
+    Any case reporting a tamper cost must declare the unit and decompose the
+    number into the commits that make it up, so a reader can check the count
+    rather than trust it.
+    """
+    from cases.registry import TAMPER_UNIT
+
+    annotated = [c for c in ALL if c.extra.get("minimum_commits")]
+    assert annotated, "at least the comparison cases must declare their unit"
+
+    for case in annotated:
+        assert case.extra.get("tamper_unit") == TAMPER_UNIT, (
+            f"{case.case_id} reports a tamper cost in an undeclared unit"
+        )
+        commits = case.extra["commits"]
+        for arm, count in case.extra["minimum_commits"].items():
+            assert arm in commits, f"{case.case_id}: {arm} has no decomposition"
+            assert len(commits[arm]) == count, (
+                f"{case.case_id}: {arm} claims {count} commits but lists "
+                f"{len(commits[arm])}"
+            )
+
+
+def test_a_commit_decomposition_never_lists_the_same_record_twice():
+    """Two writes to one record are one commit. If a decomposition lists a
+    record twice the case is counting fields again, which is the mistake this
+    unit exists to prevent."""
+    for case in ALL:
+        for arm, records in case.extra.get("commits", {}).items():
+            assert len(records) == len(set(records)), (
+                f"{case.case_id}: {arm} lists a record twice - that is "
+                "field-counting, not commit-counting"
+            )
+
+
 def test_case_ids_are_unique():
     assert len(IDS) == len(set(IDS))
 

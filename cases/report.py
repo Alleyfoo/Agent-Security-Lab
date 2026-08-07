@@ -409,6 +409,29 @@ def _review() -> list:
       "with. §7 should say which of the two meanings it excludes.")
     w("")
 
+    # -- 5b. the unit ------------------------------------------------------
+    w("### The unit tamper cost is measured in")
+    w("")
+    w("Settled after case 14 found it ambiguous, and stated once in "
+      "`cases/registry.py` beside the result vocabulary, for the same reason.")
+    w("")
+    w("> **Primary unit: the minimum number of state changes that must be "
+      "committed independently.** One commit is one write the adversary must "
+      "perform as a separate act. Two fields of one record set in one write "
+      "are 1. Two records that cannot be written together are 2.")
+    w("")
+    w("Fields and records touched are reported alongside as *descriptive* "
+      "data. They describe the shape of an edit; they are not its cost.")
+    w("")
+    w("This mattered: case 12 counted fields without saying so, and arm B's "
+      "input list and connection name are two fields of one record. Restated "
+      "in commits, **every published number is unchanged** — and arm B's 2 is "
+      "now true for a better reason. Its two commits are the workflow "
+      "definition and the connection scope, which are separate stores that "
+      "cannot be written together; a test asserts they are distinct objects, "
+      "so if they ever merged the table would have to be re-measured.")
+    w("")
+
     # -- 6b. what the thesis cannot be --------------------------------------
     w("### What the eventual thesis cannot be")
     w("")

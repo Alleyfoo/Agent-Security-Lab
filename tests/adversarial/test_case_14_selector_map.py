@@ -125,6 +125,33 @@ def test_arm_b_one_overscoped_credential_collapses_it_to_one_edit(pivots):
     assert "one record write" in pivot.moved
 
 
+def test_arm_bs_working_path_commits_to_two_distinct_records():
+    """Grounds the registry's commit decomposition for case 12, arm B.
+
+    The settled unit is *independently committed state changes*. Arm B's
+    working attack writes the workflow definition and the connection scope,
+    which are two records that cannot be written together - so 2 is 2 under
+    the settled unit and not an artefact of counting fields.
+    """
+    s.arm_b.reset()
+    before_workflow = s.arm_b.WORKFLOW[STAGE]
+    before_scope = set(s.arm_b.CONNECTIONS[s.arm_b.CONN_ORDERS])
+
+    s.arm_b.mutate_step_configuration(TARGET)
+    s.arm_b.mutate_connection_scope(TARGET)
+
+    assert s.arm_b.resolve(STAGE).permits_read(TARGET), "the attack works"
+    assert s.arm_b.WORKFLOW[STAGE] != before_workflow, "record 1 changed"
+    assert s.arm_b.CONNECTIONS[s.arm_b.CONN_ORDERS] != before_scope, (
+        "record 2 changed, and it is a different record"
+    )
+    assert s.arm_b.WORKFLOW is not s.arm_b.CONNECTIONS, (
+        "if these ever became one store, arm B's 2 would collapse to 1 and "
+        "case 12's table would need re-measuring"
+    )
+    s.arm_b.reset()
+
+
 def test_the_overscoped_credential_would_fail_case_12s_checklist():
     """Stated so the previous test cannot be read as arm B being incompetent.
     The over-scoped credential is exactly what case 12's checklist forbids;
