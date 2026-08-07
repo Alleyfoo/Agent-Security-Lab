@@ -7,6 +7,106 @@ where the mapping is *partial*.
 
 ---
 
+## 0. The layer model, and a framing error it corrects
+
+Cases 12–15 compared an identity model, a workflow model and an object model.
+The framing implied they compete. **They do not — they sit at different
+layers**, and a workflow engine can perfectly well run on top of conventional
+OS security while an object/skill system runs on top of both:
+
+```text
+Application authority model      object / skill / artifact relationships
+        ↓
+Workflow / orchestration model   steps / connectors / credentials / state
+        ↓
+Execution isolation              process / container / service boundaries
+        ↓
+Operating-system enforcement     users / ACLs / MAC / capabilities / kernel
+        ↓
+Hardware / physical trust
+```
+
+**The measurements stand; the framing was wrong.** Cases 12–15 are recorded
+here as three *idioms for expressing the same protection principles*, not three
+competitors, and no result in them should be read as "model X beats model Y".
+Case 12's own registry entry already refused that reading; this states the
+reason structurally. The useful question is not which layer wins but:
+
+> How does each layer implement the same underlying protection principles, and
+> what happens when the layer below or above it is compromised?
+
+A corollary worth keeping: **if one layer is the only thing keeping the system
+safe, the system is brittle.** The layers are supposed to reinforce each other —
+the OS stops the worker escaping its process, the workflow layer controls
+credentials, the object layer controls which transformation is valid, and the
+artifact layer controls what data resolves.
+
+## 0.1 Principles matrix
+
+The comparison this project should be running is not architecture against
+architecture. It is **one principle across layers**, asking whether the higher
+layer preserves it, weakens it, or expresses it differently.
+
+| Principle | OS layer | Workflow layer | Object/agent layer |
+|---|---|---|---|
+| Least privilege | process and user rights | connector credentials | task-scoped skill + artifacts |
+| Complete mediation | kernel reference monitor | workflow runtime | artifact resolver / manager |
+| Separation of privilege | DAC + MAC, separate credentials | independent connection + step policy | skill + object/artifact premises |
+| Fail-safe defaults | deny by default | a failed step stops the run | unresolved or conflicting transition rejected |
+| Isolation | processes and users | separate services and connections | disposable workers |
+| Provenance / integrity | filesystem and audit mechanisms | run history | artifact lineage and receipts |
+| Authority scope | subject and resource | workflow and action | object and transformation |
+
+## 0.2 Where the cases landed on established principles
+
+The findings were reached by measurement and then recognised, which is worth
+saying plainly: this project did not set out to re-derive Saltzer & Schroeder.
+
+| Measured finding | Established principle |
+|---|---|
+| Workers should get only what the task needs | least privilege |
+| Resolving a reference must go through enforcement | complete mediation |
+| Two genuinely independent premises raise tamper cost (case 13) | separation of privilege |
+| Unknown or conflicting state stops or quarantines (cases 09, 11) | fail-safe defaults |
+| Shared mutable structures become pivots (cases 03, 13, 14) | least common mechanism |
+| Removing authority beats adding another colocated check (the review's design rule) | economy of mechanism, least privilege |
+| Security cannot rest on hiding worker names or internals (case 01) | open design |
+
+**Two refinements this project can claim**, both measured rather than asserted,
+and both stated as implementation conditions on classic principles rather than
+as replacements for them:
+
+> **On separation of privilege.** Multiple premises only buy independence if no
+> single attacker-controlled selector can move them all together. (Case 13,
+> mapped in case 14.)
+
+> **On the reference monitor.** The classic requirements are *always invoked*,
+> *tamper-resistant*, and *small enough to analyse*. Every Level 2 residual in
+> this repository is the same failure of the second one: an enforcement point
+> that shares a writable boundary with the adversary is not tamper-resistant,
+> which is why adding another checksum inside that boundary keeps failing. It
+> is not that hashes are bad; it is that the enforcement point has to sit
+> somewhere the attacker cannot rewrite.
+
+**Relatives worth naming so the model is not oversold as novel:**
+
+* deciding access from subject, object, requested operation, state and policy
+  is close to **ABAC**, and the object model is a constrained instance of it;
+* **capability security** — an unforgeable reference binding an object to
+  permitted operations — is where target-bound grants would eventually lead.
+  The current grants are deliberately *not* capabilities and §3 below keeps the
+  weaker word.
+
+So the honest description of what is being investigated is not a new
+architecture with a new name:
+
+> How established principles — least privilege, complete mediation, separation
+> of privilege, fail-safe defaults, and attribute/object-based authorization —
+> behave when applied to agent workflows with canonical artifacts and
+> disposable workers.
+
+---
+
 ## 1. Concept map
 
 | Standard concept | Realized here as | Fidelity |
