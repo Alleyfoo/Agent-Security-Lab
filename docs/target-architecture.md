@@ -431,3 +431,34 @@ it should become an executable test: **no security-relevant decision may read
 model-authored text.** Case 04b measured the closest existing instance — the
 decision plane never reads the narrative event log — and that was found by
 measurement rather than by design.
+
+## 7. Standing rule, added at step F
+
+> A structural guard must be shown to be capable of failing. A guard that has
+> never fired, and cannot be made to fire, is decorative.
+
+Every guard in this repo is an assertion that something *does not* happen, and
+that is exactly the shape that passes for the wrong reason. Step E's diagnosis
+guard — the monitor must never claim a worker crashed — was green while
+matching nothing at all, because a literal backspace byte had turned `\b` into
+a pattern that checked bugger all. It would have stayed green through any
+amount of subsequent drift.
+
+The same trap sits under every metric phrased as an absence. *Zero collateral
+effects*, *zero false recoveries*, *zero unauthorised operations* are all
+satisfied perfectly by a system that never does anything.
+
+So the requirement is:
+
+* a guard asserting a forbidden string, name or import carries a **positive
+  control** proving the matcher fires on a genuine violation;
+* a metric counting a bad outcome carries a test that **drives it above zero**
+  by committing the violation deliberately;
+* the tempting shortcut stays *implemented and working* rather than deleted —
+  `Transport.restart_all()` genuinely clears every fault and would score 100%
+  recovered. It is refused because it is outside the vocabulary, and it exists
+  so the collateral metric has something real to catch.
+
+This is the measurement-side counterpart of the absence rule. The absence rule
+says remove the thing rather than guard it; this says that when you must guard,
+prove the guard has teeth before believing what it reports.
