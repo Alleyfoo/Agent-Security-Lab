@@ -14,8 +14,8 @@ The governing idea the showcase must communicate:
 **Baseline status column:** `survives` = the tagged baseline already holds this
 line; `open` = the laboratory must build it.
 
-> **Gap, raised by the review in `cases/REPORT.md`.** Cases 08, 10 and 11 are
-> measured against an adversary this ladder has no row for: *may alter
+> **Gap, raised by the review in `cases/REPORT.md`.** Cases 08, 10, 11 and 12
+> are measured against an adversary this ladder has no row for: *may alter
 > persisted policy or workflow records, may not modify evaluator code.* It is
 > strictly stronger than Level 1 — it reaches records no agent interface
 > exposes — and strictly weaker than Level 2, which would rewrite the
@@ -29,6 +29,13 @@ line; `open` = the laboratory must build it.
 > against a fully captured agent** — they were measured against something else.
 > Naming it as a level, or recording why it is not one, is an open direction
 > decision.
+>
+> Case 12 raised the stakes on that decision. Fixing this adversary is what
+> made a three-architecture comparison possible at all: under Level 2 an
+> identity model, a configured-workflow model and the object model all lose
+> identically, and the comparison would measure process isolation rather than
+> where authority is attached. Four cases now rest on a rung that does not
+> exist.
 
 ---
 

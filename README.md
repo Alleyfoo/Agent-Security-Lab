@@ -59,6 +59,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [09 — can the execution plane mint a transformation?](cases/09-skill-registry/README.md) | 🔴 Undetected | 🟢 Prevented — for a worker; the registry is not trustworthy |
 | [10 — the type-to-key binding](cases/10-type-to-key-binding/README.md) | 🔴 Undetected | 🟠 Detected after occurrence |
 | [11 — contain a contradiction the moment it appears](cases/11-conflict-containment/README.md) | 🟠 Detected after occurrence | 🟢 Prevented — the object stops; the read the overwrite obtains is untouched |
+| [12 — three models, one workflow](cases/12-three-models/README.md) | 🔴 Undetected | 🔴 Undetected — a comparison, no control applied |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",

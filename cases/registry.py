@@ -1010,6 +1010,101 @@ CASES: List[CaseResult] = [
               "was already inert and cannot see the attack that works, which "
               "is one fact stated twice rather than two limitations.",
     ),
+    CaseResult(
+        case_id="case-12",
+        title="Three models, one workflow",
+        compromise_level="The case 08 attacker, generalized per arm: may alter "
+                         "persisted configuration or workflow records, may not "
+                         "modify executable code or the trust root",
+        attack="Obtain a read of artifact.key_material at the schema step in "
+               "three architectures running the same workload - authority "
+               "following the subject, the configured workflow step, and the "
+               "transformation of one object - attacking every stored "
+               "authority-bearing record in each",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None. This case is a comparison and changes nothing in the "
+                "product or in object_model; all three arms are measured as "
+                "they are. Version pinning is implemented once and shared, "
+                "because the contract adjudicated it as not "
+                "architecture-specific",
+        evidence=[
+            "equivalence asserted first: same artifacts, same schema-step "
+            "grant, in all three arms before any tampering",
+            "arm A identity: 2 stored records, both yield, minimum tamper "
+            "set 1, scope every future run by that subject",
+            "arm B workflow: 3 stored records, none yields alone, minimum "
+            "tamper set 2, scope every run of the definition",
+            "arm C object: 5 stored records, 2 yield, minimum tamper set 1, "
+            "scope one object or the whole deployment by surface",
+            "pinning detects a mid-run edit in all three arms and a pre-run "
+            "edit in none",
+            "tests/adversarial/test_case_12_three_models.py",
+        ],
+        what_this_proves=(
+            "That the three models put authority in measurably different "
+            "places, and that the difference which mattered was not the one "
+            "predicted. What separates the arms is not how many "
+            "authority-bearing records they hold - the object model has the "
+            "most and is among the cheapest to attack - but whether two "
+            "independent records must agree. Arm B is the only arm where they "
+            "must, and the only one where a single edit is not enough. It also "
+            "shows the comparison can be run fairly: the arms do the same "
+            "work, resolve the same grant untampered, and each carries an "
+            "executable competence checklist whose violation voids its own "
+            "numbers."),
+        what_this_does_not_prove=(
+            "It does not show the object model is better or worse overall: one "
+            "property family of three was measured, and data flow and failure "
+            "behaviour were not. It does not show arm B is a better "
+            "architecture - its authority is the least specific of the three, "
+            "scoped to every run of the definition with no notion of which "
+            "object is being worked on. Arm A is not Unix and arm B is not "
+            "Power Automate; they are reference models, and arm A in "
+            "particular models permission checks and not ambient authority or "
+            "kernel enforcement, which is where a real Unix arm would be "
+            "strongest."),
+        residual_limitation=(
+            "One workflow position, one capability, one attacker - the same "
+            "narrowness case 08 recorded, and a different target might rank "
+            "the arms differently. Arm C's intake is a seed rather than a "
+            "transition because object_model's workflow table is frozen at "
+            "what cases 10 and 11 measured, so the arms are compared on "
+            "artifacts produced and grant resolved rather than on step count. "
+            "Nothing here measures ambient authority, process boundaries, data "
+            "movement, provenance, replay, or availability under attack."),
+        containment="None in any arm. Arm B refuses at use time when the two "
+                    "records disagree, but the message is identical to a "
+                    "misconfiguration - refusal, not detection of tampering. "
+                    "No arm has an independent account of what its own "
+                    "authority records should contain.",
+        recovery="Not applicable - no control was applied. Operationally none "
+                 "of the three arms can distinguish a tampered authority "
+                 "record from a legitimate administrative change, which is the "
+                 "same wall cases 09 and 11 hit from inside one model.",
+        status="open",
+        directory="cases/12-three-models",
+        test_module="tests/adversarial/test_case_12_three_models.py",
+        blast_radius="Recorded per arm on the shared scope scale rather than "
+                     "per case. Arm A: every future run by that subject and "
+                     "every resource it may touch. Arm B: every run of that "
+                     "workflow definition. Arm C: one object for the artifact "
+                     "binding, every object until redeployment for the skill "
+                     "contract - the same one-edit cost for both.",
+        notes="Both pre-registered predictions were refuted, which is the "
+              "point of pre-registering them. Minimum tamper set is not 1 "
+              "everywhere: a competently configured workflow needs 2. And the "
+              "object model is not narrowest at minimum cost - its "
+              "skill-contract route is deployment-wide, wider than either "
+              "other arm, so conclusion 4 cannot be claimed without naming the "
+              "surface. Arm A's second route creates no new authority "
+              "anywhere: it reassigns the stage to an identity that already "
+              "holds it, and the audit record afterwards is correct and "
+              "useless. A collision found while building this: case 08 owns "
+              "the bare module name 'common', so case 12's helper is "
+              "case12_common - a plain import bound case 08's module and the "
+              "test file failed to collect.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}

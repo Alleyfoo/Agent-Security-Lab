@@ -21,8 +21,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-09](09-skill-registry/README.md)<br>Can the execution plane mint a transformation? | Create, modify, replace and select an unapproved skill definition - four verbs measured separately - then rewrite the private registry in three placements: before the run pins, mid-run, and mid-run with the pin updated | 🔴 Undetected | 🟢 Prevented | A read-only MappingProxyType registry over frozen Skill records with no mutation operation on the execution path (C1), plus per-run version pinning: each skill carries a content digest, a run pins the digests it may use at start and re-verifies before deriving any grant (C2) | Replacement before the run pins is undetected - the pin records what was there, not what should have been. Updating the pin alongside the registry passes, the fifth instance of the cross-cutting finding. MappingProxyType is a view, not a freeze. And removal mid-run is misreported as a selection failure, because validate runs before verify_pins and shadows the message that would name the real incident. |
 | [case-10](10-type-to-key-binding/README.md)<br>The type-to-key binding | Rebind an artifact type to a different key mid-workflow - through the API, appended past it, and by overwriting the record - plus pre-seeding a type before its producer runs, and tampering after completion to hit resume | 🔴 Undetected | 🟠 Detected after occurrence | Derive the map instead of storing it: a runner-owned append-only ProductionLedger records what each completed step produced, the binding is computed from it with first production winning, and an artifact type may be produced at most once per object | Overwriting an existing production record still works, with the same tamper set as the stored map - the sixth appearance of the cross-cutting finding. One forged append for a type not yet produced permanently blocks its legitimate producer, so the object cannot complete. The last clause - that conflicts_for() reported contradictions nothing acted on - was closed by case 11, which made the step lifecycle read it; the overwrite residual is untouched by that and is structurally invisible to it. |
 | [case-11](11-conflict-containment/README.md)<br>Contain a contradiction the moment it appears | Leave a contradiction in the production record - case 10's appended rebinding, measured there as inert - and let the object keep working; then retry, reload and resume it, then overwrite instead of appending | 🟠 Detected after occurrence | 🟢 Prevented | check_containment() in the step lifecycle: before validation and before any grant is derived, an object whose production record contradicts itself raises ObjectContainedError and runs no further step. No new record and no new state - the check reads the record the lifecycle already has | The one attack that works is invisible to the check. It is an availability trade, not a free improvement: the cheapest forgery in the model - one appended line - now guarantees an object never completes, and the check is object-scoped, so a contradiction about a type no step reads stops it as surely as a relevant one. check_containment is ordinary in-process code reading an ordinary in-process list, so the cross-cutting finding applies unchanged. And containment sits at the lifecycle, not at the derivation: derive_grant still answers on a contradicted record, deliberately, because case 10's published measurement is taken there. |
+| [case-12](12-three-models/README.md)<br>Three models, one workflow | Obtain a read of artifact.key_material at the schema step in three architectures running the same workload - authority following the subject, the configured workflow step, and the transformation of one object - attacking every stored authority-bearing record in each | 🔴 Undetected | 🔴 Undetected | None. This case is a comparison and changes nothing in the product or in object_model; all three arms are measured as they are. Version pinning is implemented once and shared, because the contract adjudicated it as not architecture-specific | One workflow position, one capability, one attacker - the same narrowness case 08 recorded, and a different target might rank the arms differently. Arm C's intake is a seed rather than a transition because object_model's workflow table is frozen at what cases 10 and 11 measured, so the arms are compared on artifacts produced and grant resolved rather than on step count. Nothing here measures ambient authority, process boundaries, data movement, provenance, replay, or availability under attack. |
 
-**13 cases** — 11 with a control, 2 open by design. 10 moved to a better result class.
+**14 cases** — 11 with a control, 3 open by design. 10 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -88,21 +89,24 @@ The ordering is the review's practical output. A boundary control fails complete
 
 The repository has been keeping one undifferentiated list of controls. These four behave differently under the same adversary, and a control should be argued for by which kind it is before it is argued for by what it catches.
 
-### Three cases measure an adversary the ladder has no row for
+### 4 cases measure an adversary the ladder has no row for
 
-Cases 08, 10, 11 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** That is not a level. It is strictly stronger than Level 1 — it reaches records no agent interface exposes — and strictly weaker than Level 2, which would rewrite the derivation and make every arm lose identically.
+Cases 08, 10, 11, 12 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** That is not a level. It is strictly stronger than Level 1 — it reaches records no agent interface exposes — and strictly weaker than Level 2, which would rewrite the derivation and make every arm lose identically.
 
 | Case | Result |
 |---|---|
 | case-08 — Stored grant versus grant derived at use time | 🔴 Undetected |
 | case-10 — The type-to-key binding | 🟠 Detected after occurrence |
 | case-11 — Contain a contradiction the moment it appears | 🟢 Prevented |
+| case-12 — Three models, one workflow | 🔴 Undetected |
 
 It is a realistic adversary — a compromised storage layer, a restored backup, a writable share — and it is *not the one the project's question is about*. The consequence has to be stated plainly, because the comparison table cannot say it: **the authority-model improvements measured in cases 10 and 11 have not been shown to hold against a fully captured agent.** They were measured against something else, for the good reason case 08 gives, and the ladder should either name that adversary or record why it is not a level.
 
+Case 12 turned this from a gap into an asset. Fixing the adversary *first* is what let three architectures be compared at all — an identity model, a configured-workflow model and the object model, each attacked with the same power. Under Level 2 all three lose identically and the comparison measures process isolation instead of authority placement. So the unnamed adversary is now load-bearing for four cases and naming it is overdue rather than optional.
+
 ### What deriving authority actually bought
 
-Both comparisons (08, 10) measured a **minimum tamper set of 1 in every arm**. Deriving the grant never made the attack cost more. Read together with case 11, what it did instead:
+The two single-model comparisons (08, 10) both measured a **minimum tamper set of 1 in every arm**. Deriving the grant never made the attack cost more. Read together with case 11, what it did instead:
 
 | | stored authority | derived authority |
 |---|---|---|
@@ -114,6 +118,10 @@ Both comparisons (08, 10) measured a **minimum tamper set of 1 in every arm**. D
 So the honest summary of the series is neither "derived authority is better" nor "it is the same". It is: **derivation does not raise the cost of the attack; it removes the cheap versions of the attack and makes their failure mode recoverable, and an adversary who reads the code simply chooses the destructive edit.** Case 11's blind spot is that statement in miniature.
 
 One thing the stored model cannot do at all, which is the strongest single point in favour of the derived one: a stored map keeps no contradiction, so case 11's control cannot exist there. A write is total, the prior binding is gone, and the object is left holding a map that is internally consistent and wrong.
+
+**Case 12 found the counterexample the first two comparisons could not.** Widening to three architectures produced an arm where one edit is *not* enough — a competently configured workflow needs two, because what a step names and what its credential may reach are separate records and both must permit. So the constant that had survived two comparisons was a property of the two things being compared, not a law: both were single-record models.
+
+That reframes what the series has been measuring. The question is not *stored versus derived* — it is **how many independent records must agree**, and on that axis the object model and the route table are the same answer (one) while the workflow model is a different one (two). Neither is safe against an adversary who reaches both records; the cost doubles rather than becoming impossible. It is the same shape as the cross-cutting finding, arrived at from outside.
 
 ### Availability became the currency, and it is out of scope
 
@@ -561,6 +569,39 @@ Reproduce: `python cases/10-type-to-key-binding/attack.py` · Tests: `tests/adve
 **Notes.** Closes the last clause of case 10's residual and nothing else, under an explicit instruction not to expand the model again. The finding that made that possible was not planned: quarantine needed no flag, because unlike case 02 the corruption lives in the record the lifecycle already reads. The blind spot is the case's most useful output - containment stops the attack that was already inert and cannot see the attack that works, which is one fact stated twice rather than two limitations.
 
 Reproduce: `python cases/11-conflict-containment/attack.py` · Tests: `tests/adversarial/test_case_11_conflict_containment.py`
+
+### ⚠️ case-12 — Three models, one workflow
+
+**Compromise level:** The case 08 attacker, generalized per arm: may alter persisted configuration or workflow records, may not modify executable code or the trust root  
+**Attack:** Obtain a read of artifact.key_material at the schema step in three architectures running the same workload - authority following the subject, the configured workflow step, and the transformation of one object - attacking every stored authority-bearing record in each  
+**Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
+
+**Control.** None. This case is a comparison and changes nothing in the product or in object_model; all three arms are measured as they are. Version pinning is implemented once and shared, because the contract adjudicated it as not architecture-specific
+
+**Evidence**
+
+- equivalence asserted first: same artifacts, same schema-step grant, in all three arms before any tampering
+- arm A identity: 2 stored records, both yield, minimum tamper set 1, scope every future run by that subject
+- arm B workflow: 3 stored records, none yields alone, minimum tamper set 2, scope every run of the definition
+- arm C object: 5 stored records, 2 yield, minimum tamper set 1, scope one object or the whole deployment by surface
+- pinning detects a mid-run edit in all three arms and a pre-run edit in none
+- tests/adversarial/test_case_12_three_models.py
+
+**What this proves.** That the three models put authority in measurably different places, and that the difference which mattered was not the one predicted. What separates the arms is not how many authority-bearing records they hold - the object model has the most and is among the cheapest to attack - but whether two independent records must agree. Arm B is the only arm where they must, and the only one where a single edit is not enough. It also shows the comparison can be run fairly: the arms do the same work, resolve the same grant untampered, and each carries an executable competence checklist whose violation voids its own numbers.
+
+**What this does not prove.** It does not show the object model is better or worse overall: one property family of three was measured, and data flow and failure behaviour were not. It does not show arm B is a better architecture - its authority is the least specific of the three, scoped to every run of the definition with no notion of which object is being worked on. Arm A is not Unix and arm B is not Power Automate; they are reference models, and arm A in particular models permission checks and not ambient authority or kernel enforcement, which is where a real Unix arm would be strongest.
+
+**Residual limitation.** One workflow position, one capability, one attacker - the same narrowness case 08 recorded, and a different target might rank the arms differently. Arm C's intake is a seed rather than a transition because object_model's workflow table is frozen at what cases 10 and 11 measured, so the arms are compared on artifacts produced and grant resolved rather than on step count. Nothing here measures ambient authority, process boundaries, data movement, provenance, replay, or availability under attack.
+
+**Containment.** None in any arm. Arm B refuses at use time when the two records disagree, but the message is identical to a misconfiguration - refusal, not detection of tampering. No arm has an independent account of what its own authority records should contain.
+
+**Recovery.** Not applicable - no control was applied. Operationally none of the three arms can distinguish a tampered authority record from a legitimate administrative change, which is the same wall cases 09 and 11 hit from inside one model.
+
+**Blast radius.** Recorded per arm on the shared scope scale rather than per case. Arm A: every future run by that subject and every resource it may touch. Arm B: every run of that workflow definition. Arm C: one object for the artifact binding, every object until redeployment for the skill contract - the same one-edit cost for both.
+
+**Notes.** Both pre-registered predictions were refuted, which is the point of pre-registering them. Minimum tamper set is not 1 everywhere: a competently configured workflow needs 2. And the object model is not narrowest at minimum cost - its skill-contract route is deployment-wide, wider than either other arm, so conclusion 4 cannot be claimed without naming the surface. Arm A's second route creates no new authority anywhere: it reassigns the stage to an identity that already holds it, and the audit record afterwards is correct and useless. A collision found while building this: case 08 owns the bare module name 'common', so case 12's helper is case12_common - a plain import bound case 08's module and the test file failed to collect.
+
+Reproduce: `python cases/12-three-models/attack.py` · Tests: `tests/adversarial/test_case_12_three_models.py`
 
 ## Where the boundary stands
 

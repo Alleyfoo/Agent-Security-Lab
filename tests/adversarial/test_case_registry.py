@@ -185,17 +185,22 @@ def test_review_exactly_one_level_1_case_ends_in_detection():
 def test_review_the_persisted_record_adversary_is_still_unnamed():
     """TRIPWIRE for the review's recommendation.
 
-    Cases 08, 10 and 11 share case 08's narrow attacker - may alter persisted
-    policy or workflow records, may not modify evaluator code - which is not a
-    row on the compromise ladder. The review recommends naming it or recording
-    why it is not a level. When that happens these compromise_level strings
-    change, and this test is the reminder that the review's section has to
-    change with them.
+    Cases 08, 10, 11 and 12 share case 08's narrow attacker - may alter
+    persisted policy or workflow records, may not modify evaluator code - which
+    is not a row on the compromise ladder. The review recommends naming it or
+    recording why it is not a level. When that happens these compromise_level
+    strings change, and this test is the reminder that the review's section has
+    to change with them.
+
+    It has already fired once, when case 12 joined the set, and the review
+    prose was rewritten rather than the assertion relaxed - which is what a
+    tripwire is for.
     """
     persisted = _by_level("persisted-record")
-    assert persisted == {"case-08", "case-10", "case-11"}, (
+    assert persisted == {"case-08", "case-10", "case-11", "case-12"}, (
         "the set of cases using case 08's attacker changed. update the review "
-        "section 'Three cases measure an adversary the ladder has no row for'"
+        "section 'N cases measure an adversary the ladder has no row for' "
+        "before changing this assertion"
     )
 
 

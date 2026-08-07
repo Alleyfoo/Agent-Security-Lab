@@ -1,9 +1,11 @@
 # Case 12 — Three models, one workflow
 
 **Phase:** 3 (authority model)
-**Status:** **contract only — nothing built, nothing measured.**
-**Not yet registered** in `cases/registry.py`, because it has no results and a
-registered case must ship a runnable attack.
+**Status:** measured. Three arms built, equivalence asserted, both
+pre-registered predictions refuted.
+**Baseline result:** `undetected`
+**Controlled result:** `undetected` — a comparison applies no control, and
+registers ⚠️ for the same reason case 08 does
 
 ---
 
@@ -275,17 +277,157 @@ A result confirming it is a good result.
 
 ---
 
+## Results
+
+```bash
+python cases/12-three-models/attack.py
+```
+
+Equivalence holds first: all three arms produce the same artifacts and resolve
+the same schema-step grant (`['artifact.raw_input']`) before any tampering.
+
+| Arm | Authority | Stored records | Records that yield | Minimum tamper set | Widest scope at that cost |
+|---|---|---|---|---|---|
+| **A** identity | standing | 2 | **2 of 2** | **1** | every future run by that subject |
+| **B** workflow | configured | 3 | **0 of 3 alone** | **2** | every run of this workflow definition |
+| **C** object | task-specific | 5 | **2 of 5** | **1** | every object until redeployment |
+
+### Both pre-registered predictions were refuted
+
+**"Minimum tamper set will be 1 in all three arms."** False. A competently
+configured workflow needs **two** edits, because what a step names and what its
+credential may reach are separate records and both must permit. Every single
+edit fails on its own:
+
+```text
+step configuration alone   REFUSED: step 'schema' references
+                           ['artifact.key_material'] which connection
+                           'conn_orders' cannot reach
+connection scope alone     inert - no step references the key
+connection binding alone   REFUSED: the step's own inputs become unreachable
+```
+
+**"Arm C will have the narrowest blast radius."** False *at minimum cost*. Arm
+C has two one-edit routes, and they differ by two full steps of the scope
+scale: the artifact binding reaches one object, the skill contract reaches
+every object until redeployment. Reporting the narrower one would flatter the
+arm this laboratory is investigating, so the table reports the wider.
+
+### What actually separates the arms
+
+Not the number of stored authority records — arm C has the most (5) and is
+among the cheapest to attack. **What separates them is whether two independent
+records must agree.**
+
+Arm B is the only arm where they must, and it is the only arm where one edit is
+not enough. That is the review's finding arriving from a new direction: a check
+needs two values, and it is worth something exactly when the adversary cannot
+reach both. Here the adversary *can* reach both, so the cost doubles rather
+than becoming impossible — defence in depth, measured rather than asserted.
+
+### Arm A's second route is the interesting one
+
+Widening a permission is the obvious attack. The other one is not: **reassign
+the stage to run as an identity that already holds the authority.** No
+permission is edited anywhere, no new authority is created, and the audit
+record afterwards is *correct* — the work really was done by `svc_keys`. It is
+a true record and a useless one for noticing that it should not have been.
+
+This is the structural cost of attaching authority to a subject: the attacker
+does not need to invent authority, only to reach an identity that already has
+it, and every such identity in the deployment is a route.
+
+### Arm B's cheapest attack is availability, not capability
+
+Rebinding the schema step's connection takes one edit and obtains nothing — it
+breaks the step, because its legitimate inputs become unreachable. Recorded
+because it is the third arm-independent instance of the availability finding
+the review raised: the cheapest thing an attacker can do to a workflow model is
+stop it working.
+
+### Version pinning equalized rather than differentiated
+
+The contract adjudicated pinning as not architecture-specific and gave it to
+all three arms, implemented once in `case12_common.digest_of`. The result is
+symmetrical: **all three arms detect the same mid-run edit, and none detects
+the same edit made before the run pins.** Pinning is worth the same in an
+identity model, a workflow model and an object model — continuity across one
+window, not legitimacy, exactly as case 09 measured.
+
+## Which of the permitted conclusions applies
+
+From the contract's list, supported by the measurements:
+
+* **6 — the object model merely relocates stored authority.** Supported, and
+  now from a third direction. It has the most authority-bearing records and the
+  same minimum tamper set as the identity model.
+* **2 — the conventional model is simpler and better for fixed workflows.**
+  Supported *for this property*. Arm B is the only arm that required two edits,
+  and it got there with an ordinary competent configuration rather than a
+  control invented for the comparison.
+* **4 — the object model narrows compromise to one object.** Supported only
+  for the artifact-binding surface, and refuted for the skill-contract surface
+  at the same cost. It cannot be claimed without naming the surface.
+
+## Residual limitation
+
+**One property family of three.** Data flow and failure behaviour are cases 13
+and 14 and their instruments do not exist. Nothing here measures how much
+source data each worker receives, whether canonical values are copied, what
+stays visible after corruption, or whether work replays from trusted state.
+
+**One workflow position, one capability, one attacker.** The same narrowness
+case 08 recorded. A different target might rank the arms differently.
+
+**Arm A is not Unix and arm B is not Power Automate.** They are minimal
+reference models of two architectural ideas, and no result here is evidence
+about any product or operating system. Arm A in particular models permission
+checks and *not* ambient authority, process isolation, or kernel enforcement —
+which is the dimension case 06 measured and where a real Unix arm would be
+strongest. That gap is recorded, not closed.
+
+**The intake asymmetry.** Arm C's intake is a seed rather than a transition,
+because `object_model`'s workflow table is frozen at what cases 10 and 11
+measured. The arms are compared on the artifacts they end with and the grant
+the schema step resolves, not on step count.
+
+---
+
 ## What this proves
 
-Nothing yet. This is a contract.
+That the three models put authority in measurably different places, and that
+the difference which mattered was not the one predicted. Standing authority
+(arm A) is reachable by two independent one-edit routes and its scope is every
+future run by that subject. Configured authority (arm B) is the only one of the
+three that requires two edits, because two records must agree. Derived
+authority (arm C) has the most stored records and the same minimum tamper set
+as the identity model, with a scope that depends entirely on which surface is
+attacked.
+
+It also shows the comparison can be run fairly at all: the arms do the same
+work, resolve the same grant untampered, and each carries an executable
+competence checklist whose violation voids that arm's numbers.
 
 ## What this does not prove
 
-Nothing yet, and in particular the readiness assessment above is an argument
-about instruments, not a measurement of the three models.
+It does not show the object model is better or worse overall — one property
+family was measured and two were not.
+
+It does not show arm B is a better architecture. It shows that a competently
+configured workflow, under this attacker and for this capability, costs twice
+as much to subvert. Arm B's authority is also the least *specific* of the
+three: its scope is every run of the definition, and it has no notion of which
+object is being worked on.
+
+It does not measure ambient authority, process boundaries, data movement,
+provenance, replay, or availability under attack, and no conclusion here should
+be read as covering them.
 
 ---
 
 ## Tests
 
-None yet. When built: `tests/adversarial/test_case_12_three_models.py`.
+`tests/adversarial/test_case_12_three_models.py` — every cell above, plus the
+per-arm competence checklists. **Do not fix a failing competence assertion by
+weakening the arm it protects**; an arm that stops being competent makes its
+own numbers void.

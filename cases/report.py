@@ -187,7 +187,8 @@ def _review() -> list:
     w("")
 
     # -- 4. the adversary with no ladder row -------------------------------
-    w("### Three cases measure an adversary the ladder has no row for")
+    w(f"### {len(persisted)} cases measure an adversary the ladder has no row "
+      "for")
     w("")
     w(f"Cases {', '.join(c.case_id.replace('case-', '') for c in persisted)} "
       "share an attacker defined narrowly by case 08: **may alter persisted "
@@ -210,13 +211,21 @@ def _review() -> list:
       "the good reason case 08 gives, and the ladder should either name that "
       "adversary or record why it is not a level.")
     w("")
+    w("Case 12 turned this from a gap into an asset. Fixing the adversary "
+      "*first* is what let three architectures be compared at all — an "
+      "identity model, a configured-workflow model and the object model, each "
+      "attacked with the same power. Under Level 2 all three lose identically "
+      "and the comparison measures process isolation instead of authority "
+      "placement. So the unnamed adversary is now load-bearing for four cases "
+      "and naming it is overdue rather than optional.")
+    w("")
 
     # -- 5. what deriving authority actually bought ------------------------
     w("### What deriving authority actually bought")
     w("")
-    w("Both comparisons (08, 10) measured a **minimum tamper set of 1 in every "
-      "arm**. Deriving the grant never made the attack cost more. Read "
-      "together with case 11, what it did instead:")
+    w("The two single-model comparisons (08, 10) both measured a **minimum "
+      "tamper set of 1 in every arm**. Deriving the grant never made the "
+      "attack cost more. Read together with case 11, what it did instead:")
     w("")
     w("| | stored authority | derived authority |")
     w("|---|---|---|")
@@ -241,6 +250,22 @@ def _review() -> list:
       "contradiction, so case 11's control cannot exist there. A write is "
       "total, the prior binding is gone, and the object is left holding a map "
       "that is internally consistent and wrong.")
+    w("")
+    w("**Case 12 found the counterexample the first two comparisons could "
+      "not.** Widening to three architectures produced an arm where one edit "
+      "is *not* enough — a competently configured workflow needs two, because "
+      "what a step names and what its credential may reach are separate "
+      "records and both must permit. So the constant that had survived two "
+      "comparisons was a property of the two things being compared, not a law: "
+      "both were single-record models.")
+    w("")
+    w("That reframes what the series has been measuring. The question is not "
+      "*stored versus derived* — it is **how many independent records must "
+      "agree**, and on that axis the object model and the route table are the "
+      "same answer (one) while the workflow model is a different one (two). "
+      "Neither is safe against an adversary who reaches both records; the cost "
+      "doubles rather than becoming impossible. It is the same shape as the "
+      "cross-cutting finding, arrived at from outside.")
     w("")
 
     # -- 6. the unpriced currency ------------------------------------------

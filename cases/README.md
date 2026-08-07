@@ -144,6 +144,7 @@ not claimed.
 | [`09-skill-registry`](09-skill-registry/README.md) ✅ | 3 | An allowlist of names is not an allowlist of transformations; a version pin buys continuity within a run, not legitimacy |
 | [`10-type-to-key-binding`](10-type-to-key-binding/README.md) ✅ | 3 | The shape of a record decides what tampering costs: an append-only produced-once ledger makes the cheap edits inert where a stored map makes them total |
 | [`11-conflict-containment`](11-conflict-containment/README.md) ✅ | 3 | A contradicted record contains the object before the next step — a control the stored map cannot have, because it keeps no contradiction to find |
+| [`12-three-models`](12-three-models/README.md) ⚠️ | 3 | Comparison: authority following the subject, the configured workflow step, and one object's transformation. What separates them is not how many authority records they hold but whether two must agree |
 
 Case 08 is registered ⚠️ because it changes nothing in the product. Both arms
 are measured as they are, and the named capability is obtainable in both — so
