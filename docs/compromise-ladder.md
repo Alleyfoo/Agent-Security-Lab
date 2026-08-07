@@ -14,28 +14,63 @@ The governing idea the showcase must communicate:
 **Baseline status column:** `survives` = the tagged baseline already holds this
 line; `open` = the laboratory must build it.
 
-> **Gap, raised by the review in `cases/REPORT.md`.** Cases 08, 10, 11, 12 and 13
-> are measured against an adversary this ladder has no row for: *may alter
-> persisted policy or workflow records, may not modify evaluator code.* It is
-> strictly stronger than Level 1 — it reaches records no agent interface
-> exposes — and strictly weaker than Level 2, which would rewrite the
-> derivation and make every arm of a comparison lose identically. Case 08
-> defines it and explains why the narrowing is necessary for the comparison to
-> measure anything.
->
-> It is a realistic adversary: a compromised storage layer, a restored backup,
-> a writable share. The consequence to keep in view is that **the
-> authority-model results in cases 10 and 11 have not been shown to hold
-> against a fully captured agent** — they were measured against something else.
-> Naming it as a level, or recording why it is not one, is an open direction
-> decision.
->
-> Case 12 raised the stakes on that decision. Fixing this adversary is what
-> made a three-architecture comparison possible at all: under Level 2 an
-> identity model, a configured-workflow model and the object model all lose
-> identically, and the comparison would measure process isolation rather than
-> where authority is attached. Five cases now rest on a rung that does not
-> exist, and the set has grown twice since this note was written.
+---
+
+## Level 1.5 — Persisted configuration and policy state — *open; measured five times*
+
+**Short name: the configuration adversary.**
+
+Added after five cases turned out to be measuring it without it having a name
+(08, 10, 11, 12, 13). Numbered `1.5` deliberately: inserting a whole level
+would renumber Levels 2–7 and every case README that cites them, and the
+existing numbers are load-bearing.
+
+```text
+Gained    Write access to persisted workflow, policy and authority records
+          before or between steps: permission tables, workflow definitions,
+          connection scopes, skill contracts, object state, artifact bindings.
+Denied    Executable code, the running interpreter's memory, and the
+          administrative trust root.
+```
+
+**It is defined by reach, not by which component is captured.** This adversary
+need not control any agent at all — it is a compromised storage layer, a
+restored backup, a writable config share, a CI/CD pipeline with deploy rights,
+or an over-privileged admin console. That is why it is not simply "Level 1 plus
+a bit": it can be present when no worker is hostile, and a hostile worker can
+be present without it.
+
+Why it sits between the two rungs it sits between:
+
+* **stronger than Level 1** — it reaches records no agent interface exposes,
+  which is exactly why cases 08 and 12 could measure anything at all;
+* **weaker than Level 2** — it cannot rewrite the evaluator. Case 08 records
+  why that restriction is necessary rather than convenient: an adversary who
+  rewrites the decision procedure defeats every architecture identically, and a
+  comparison under Level 2 measures process isolation instead of where
+  authority is attached.
+
+| | |
+|---|---|
+| **Blast radius** | Whatever the edited record governs, which is measured per record rather than per level — see *Where authority is stored* in [`cases/REPORT.md`](../cases/REPORT.md). Measured range: one object, through one workflow definition, up to every object in the deployment until redeployment. |
+| **Detection** | Version pinning detects an edit made *during* a run and not one made before it (case 09, and case 12 measured the same result in all three architectures). No architecture measured so far holds an independent account of what its own authority records should contain. |
+| **Containment** | Case 11's, for the one record shape that can express a contradiction. Otherwise none: a widened permission is indistinguishable from an administrative decision. |
+| **Recovery** | Not implemented anywhere. Deleting the forged record is indistinguishable from the attack, because nothing holds the legitimate value independently. |
+
+**What raises the cost against this adversary** — cases 12 and 13, and it is
+the only thing measured to work so far:
+
+> Authority is safer when it must be reconstructed from multiple premises that
+> are **independently selected**, **independently stored**, and **specific to
+> the authority surface** being exercised.
+
+The emphasis on *independently selected* is case 13's finding and is not
+decorative: two separately stored records that are looked up by the same
+attacker-alterable selector move together under one edit, and buy nothing.
+
+**What it does not do:** raising the premise count raises price, not
+possibility. Every premise measured so far sits inside this adversary's reach,
+so a determined Level 1.5 attacker edits both. See the cross-cutting finding.
 
 ---
 

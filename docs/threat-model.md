@@ -82,6 +82,7 @@ brief, the adversary is assumed to control, at each level:
 | Level | Adversary controls | Baseline survives? |
 |---|---|---|
 | 1 | What an agent *requests* (injection, poisoned input, bad planning) | **Yes** — the routine design case |
+| 1.5 | Persisted configuration and policy state, before or between steps — *the configuration adversary* | **No** — and it need not control any agent to do it |
 | 2 | Arbitrary code inside one agent process | **No** — same process as the runner |
 | 3 | The agent's host or container | No — not modelled yet |
 | 4 | Capability issuance / artifact authorization | No — not separated yet |
@@ -91,6 +92,13 @@ brief, the adversary is assumed to control, at each level:
 
 Level 1 is the minimum the architecture must survive routinely, and the
 baseline does survive it. Levels 2–7 are the laboratory's work programme.
+
+**Level 1.5 was added after the fact**, because five cases (08, 10, 11, 12, 13)
+turned out to be measuring it without it having a name. It is defined by reach
+rather than by which component is captured: a compromised storage layer, a
+restored backup, a writable config share, or a deploy pipeline can all be
+Level 1.5 while every agent is honest. It is numbered `.5` so Levels 2–7 and
+the case READMEs citing them keep their numbers.
 
 ## 6. Assets
 

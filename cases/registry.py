@@ -685,9 +685,10 @@ CASES: List[CaseResult] = [
     CaseResult(
         case_id="case-08",
         title="Stored grant versus grant derived at use time",
-        compromise_level="Narrow by design: may alter persisted policy or "
-                         "workflow records before execution; may not modify "
-                         "evaluator code or the administrative trust root",
+        compromise_level="Level 1.5: the configuration adversary - may alter "
+                         "persisted policy or workflow records before "
+                         "execution; may not modify evaluator code or the "
+                         "administrative trust root",
         attack="Obtain a named unauthorized read at the schema step in each of "
                "two authority models, attacking every stored "
                "authority-bearing record independently: a future artifact "
@@ -845,8 +846,9 @@ CASES: List[CaseResult] = [
     CaseResult(
         case_id="case-10",
         title="The type-to-key binding",
-        compromise_level="The case 08 attacker: may alter persisted policy or "
-                         "workflow records, may not modify evaluator code",
+        compromise_level="Level 1.5: the configuration adversary - may alter "
+                         "persisted policy or workflow records, may not "
+                         "modify evaluator code",
         attack="Rebind an artifact type to a different key mid-workflow - "
                "through the API, appended past it, and by overwriting the "
                "record - plus pre-seeding a type before its producer runs, and "
@@ -925,8 +927,9 @@ CASES: List[CaseResult] = [
     CaseResult(
         case_id="case-11",
         title="Contain a contradiction the moment it appears",
-        compromise_level="The case 08 attacker: may alter persisted policy or "
-                         "workflow records, may not modify evaluator code",
+        compromise_level="Level 1.5: the configuration adversary - may alter "
+                         "persisted policy or workflow records, may not "
+                         "modify evaluator code",
         attack="Leave a contradiction in the production record - case 10's "
                "appended rebinding, measured there as inert - and let the "
                "object keep working; then retry, reload and resume it, then "
@@ -1013,9 +1016,10 @@ CASES: List[CaseResult] = [
     CaseResult(
         case_id="case-12",
         title="Three models, one workflow",
-        compromise_level="The case 08 attacker, generalized per arm: may alter "
-                         "persisted configuration or workflow records, may not "
-                         "modify executable code or the trust root",
+        compromise_level="Level 1.5: the configuration adversary, generalized per "
+                         "arm - may alter persisted configuration or workflow "
+                         "records, may not modify executable code or the "
+                         "trust root",
         attack="Obtain a read of artifact.key_material at the schema step in "
                "three architectures running the same workload - authority "
                "following the subject, the configured workflow step, and the "
@@ -1121,9 +1125,10 @@ CASES: List[CaseResult] = [
     CaseResult(
         case_id="case-13",
         title="Does a second independent premise raise the cost?",
-        compromise_level="The case 08 attacker, unchanged from case 12: may "
-                         "alter persisted configuration or workflow records, "
-                         "may not modify executable code or the trust root",
+        compromise_level="Level 1.5: the configuration adversary, unchanged from "
+                         "case 12 - may alter persisted configuration or "
+                         "workflow records, may not modify executable code or "
+                         "the trust root",
         attack="The same read of artifact.key_material at the schema step, "
                "against case 12's arm A and arm C after one additional "
                "independent premise is layered onto each - a MAC-style label "
@@ -1198,6 +1203,92 @@ CASES: List[CaseResult] = [
               "nothing. The subject-keyed variant is the one to remember, "
               "because it looks exactly like defence in depth and measures as "
               "no defence at all.",
+    ),
+    CaseResult(
+        case_id="case-14",
+        title="The selector map",
+        compromise_level="Level 1.5: the configuration adversary - named in "
+                         "this slice after five cases had measured it "
+                         "unnamed",
+        attack="Enumerate what selects every authority premise in all three "
+               "arms, mark which selectors this adversary can alter, and "
+               "execute every pivot the map implies - one edit to a shared "
+               "selector, measured for whether it moved a premise and "
+               "separately for whether it obtained the capability",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None. An enumeration, not a control: no arm is changed and "
+                "no product code is touched. The map's completeness is "
+                "enforced by a test requiring every shared alterable selector "
+                "to carry an executed pivot",
+        evidence=[
+            "10 premises mapped across 3 arms, each with its store and its "
+            "selectors",
+            "7 shared-selector pivots executed; 2 yield in one edit",
+            "arm A: both premises keyed on the subject, so one reassignment "
+            "moves both - stage-keyed, the identical edit yields nothing",
+            "arm B: the input list and the connection name are fields of the "
+            "same step record, so case 12's 2 fields are 1 record write",
+            "arm B: one ordinary over-scoped credential, pre-existing and not "
+            "counted as an edit, collapses it to one write",
+            "arm C: retyping the object moves the read policy and obtains "
+            "nothing, because the skill contract is keyed on the skill name",
+            "tests/adversarial/test_case_14_selector_map.py",
+        ],
+        what_this_proves=(
+            "That independent records and independent premises are different "
+            "things, and that the difference is measurable rather than "
+            "rhetorical. Seven shared selectors were executed; two collapse "
+            "two premises into one edit, and the five that do not fail for "
+            "four distinguishable reasons - an unalterable selector, an absent "
+            "target in the deployment, an empty lookup, and a third premise "
+            "keyed on something else. It also converts case 12's arm B result "
+            "from an architectural claim into a conditional one: two premises, "
+            "one record, and an advantage that depends on the credential "
+            "inventory rather than on the architecture."),
+        what_this_does_not_prove=(
+            "It does not show arm C is secure: it has no yielding pivot on "
+            "this path for this capability, which is narrower than it sounds, "
+            "and case 12 measured its minimum tamper set at 1 by two routes "
+            "that need no pivot at all. It does not close anything - every "
+            "premise remains inside the adversary's reach, and this case adds "
+            "no control, no detection and no containment. And it does not "
+            "establish that the premise list is complete for any arm."),
+        residual_limitation=(
+            "The map is hand-built and its completeness is asserted rather "
+            "than derived: a test requires every shared alterable selector to "
+            "carry an executed pivot, which caught one missing pivot while the "
+            "case was being written, but a premise nobody wrote down has no "
+            "selector on the map. Whether a selector is alterable is a "
+            "judgement recorded as data so it can be argued with - the "
+            "artifact key and the skill name are classified as not directly "
+            "writable, and both are derived from records that are."),
+        containment="None, and the case records why that is the honest answer: "
+                    "a pivot is an ordinary configuration change. Nothing in "
+                    "any arm distinguishes retyping an object or reassigning a "
+                    "subject from an administrative decision to do exactly "
+                    "that.",
+        recovery="Not applicable - no control was applied. The operationally "
+                 "useful output is a checklist rather than a remedy: for each "
+                 "premise, name its selector, and check whether any other "
+                 "premise shares it.",
+        status="open",
+        directory="cases/14-selector-map",
+        test_module="tests/adversarial/test_case_14_selector_map.py",
+        blast_radius="Unchanged - the case measures reachability, not effect. "
+                     "What it adds is that a pivot's radius is the radius of "
+                     "the widest premise the selector reaches, which is not "
+                     "visible from any single record.",
+        notes="Produced an inversion worth keeping: on selector hygiene the "
+              "ordering of the three models reverses. The simplest "
+              "architecture has the most yielding pivots and the most "
+              "expressive has none, while case 12 measured the reverse on "
+              "record count and tamper set. Not a contradiction - how many "
+              "records hold authority is not how many of them one edit can "
+              "move. The unit-of-measurement finding is the one most likely to "
+              "matter elsewhere: counting fields and counting records give "
+              "different tamper sets for the same attack, and case 12 counted "
+              "fields.",
     ),
 ]
 

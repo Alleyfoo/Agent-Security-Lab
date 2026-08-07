@@ -61,6 +61,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [11 — contain a contradiction the moment it appears](cases/11-conflict-containment/README.md) | 🟠 Detected after occurrence | 🟢 Prevented — the object stops; the read the overwrite obtains is untouched |
 | [12 — three models, one workflow](cases/12-three-models/README.md) | 🔴 Undetected | 🔴 Undetected — a comparison, no control applied |
 | [13 — does a second independent premise raise the cost?](cases/13-second-premise/README.md) | 🔴 Undetected | 🔴 Undetected — an experiment on laboratory arms |
+| [14 — the selector map](cases/14-selector-map/README.md) | 🔴 Undetected | 🔴 Undetected — an enumeration, not a control |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",

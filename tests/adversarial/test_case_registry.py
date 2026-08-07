@@ -182,28 +182,33 @@ def test_review_exactly_one_level_1_case_ends_in_detection():
     )
 
 
-def test_review_the_persisted_record_adversary_is_still_unnamed():
-    """TRIPWIRE for the review's recommendation.
+def test_review_the_configuration_adversary_is_named_consistently():
+    """The tripwire that fired three times and then got what it was asking for.
 
-    Cases 08, 10, 11 and 12 share case 08's narrow attacker - may alter
-    persisted policy or workflow records, may not modify evaluator code - which
-    is not a row on the compromise ladder. The review recommends naming it or
-    recording why it is not a level. When that happens these compromise_level
-    strings change, and this test is the reminder that the review's section has
-    to change with them.
+    It was written as `..._is_still_unnamed`, guarding the review's claim that
+    a growing set of cases measured an adversary the compromise ladder had no
+    row for. It fired when case 12 joined, again when case 13 joined, and both
+    times the prose was rewritten rather than the assertion relaxed. On the
+    third firing the adversary was given a rung: **Level 1.5, the
+    configuration adversary**.
 
-    It has fired twice, when cases 12 and 13 joined the set, and both times
-    the review prose was rewritten rather than the assertion relaxed - which
-    is what a tripwire is for. That it keeps firing is itself the argument for
-    naming the adversary: the set only grows.
+    What it guards now is the thing that can still rot - that every case
+    measuring this adversary says so in the same words, since `primary_level`
+    reads the string and three tables in the report are built from it.
     """
     persisted = _by_level("persisted-record")
     assert persisted == {"case-08", "case-10", "case-11", "case-12",
-                         "case-13"}, (
-        "the set of cases using case 08's attacker changed. update the review "
-        "section 'N cases measure an adversary the ladder has no row for' "
-        "before changing this assertion"
+                         "case-13", "case-14"}, (
+        "the set of cases measuring the configuration adversary changed. "
+        "update the review section in cases/report.py before changing this"
     )
+    for case in ALL:
+        if case.case_id in persisted:
+            assert case.compromise_level.startswith("Level 1.5"), (
+                f"{case.case_id} measures the configuration adversary but does "
+                "not name it - primary_level() reads this string and the "
+                "report's tables are built from it"
+            )
 
 
 @pytest.mark.parametrize("case", ALL, ids=IDS)

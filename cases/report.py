@@ -28,6 +28,7 @@ BADGE = {
 }
 
 LEVEL_1 = "Level 1"
+LEVEL_1_5 = "Level 1.5"
 LEVEL_2 = "Level 2"
 PERSISTED = "persisted-record"
 
@@ -46,6 +47,11 @@ def primary_level(case: CaseResult) -> str:
     see the review section below.
     """
     text = case.compromise_level
+    # 1.5 must be tested first - it startswith "Level 1" too, and getting that
+    # ordering wrong silently files the configuration adversary's cases under
+    # Level 1 and rewrites three tables in this report.
+    if text.startswith(LEVEL_1_5):
+        return PERSISTED
     if text.startswith(LEVEL_1):
         return LEVEL_1
     if text.startswith(LEVEL_2):
@@ -275,15 +281,23 @@ def _review() -> list:
     w("")
 
     # -- 4. the adversary with no ladder row -------------------------------
-    w(f"### {len(persisted)} cases measure an adversary the ladder has no row "
-      "for")
+    w(f"### Level 1.5, the configuration adversary — named after "
+      f"{len(persisted)} cases had measured it")
     w("")
     w(f"Cases {', '.join(c.case_id.replace('case-', '') for c in persisted)} "
       "share an attacker defined narrowly by case 08: **may alter persisted "
-      "policy or workflow records, may not modify evaluator code.** That is "
-      "not a level. It is strictly stronger than Level 1 — it reaches records "
-      "no agent interface exposes — and strictly weaker than Level 2, which "
-      "would rewrite the derivation and make every arm lose identically.")
+      "policy or workflow records, may not modify evaluator code.** For most "
+      "of that time it had no rung on the compromise ladder. It has one now — "
+      "`Level 1.5`, numbered so Levels 2–7 and every case README citing them "
+      "keep their numbers.")
+    w("")
+    w("It is defined by **reach, not by which component is captured**, which "
+      "is why it was awkward to place: it need not control any agent at all. "
+      "A compromised storage layer, a restored backup, a writable config "
+      "share or a deploy pipeline is Level 1.5 while every worker is honest. "
+      "It is stronger than Level 1 — it reaches records no agent interface "
+      "exposes — and weaker than Level 2, which would rewrite the derivation "
+      "and make every arm of a comparison lose identically.")
     w("")
     w("| Case | Result |")
     w("|---|---|")
@@ -304,8 +318,15 @@ def _review() -> list:
       "identity model, a configured-workflow model and the object model, each "
       "attacked with the same power. Under Level 2 all three lose identically "
       "and the comparison measures process isolation instead of authority "
-      "placement. So the unnamed adversary is now load-bearing for four cases "
-      "and naming it is overdue rather than optional.")
+      "placement.")
+    w("")
+    w("Full definition, blast radius, detection and containment: "
+      "`docs/compromise-ladder.md`. The honest summary of what is known about "
+      "defending against it is short — version pinning detects an edit made "
+      "during a run and not one made before it, in all three architectures; "
+      "no architecture measured holds an independent account of what its own "
+      "authority records should contain; and raising the premise count raises "
+      "price, not possibility.")
     w("")
 
     # -- 5. what deriving authority actually bought ------------------------
@@ -457,18 +478,23 @@ def _review() -> list:
       "preventions and it covers one stage of four. The design rule above says "
       "this is the only move that has ever worked at Level 2; case 01 stays "
       "wholly open until it is finished.")
-    w(f"3. **Name the adversary** cases "
-      f"{', '.join(c.case_id.replace('case-', '') for c in persisted)} "
-      "measured, in the ladder, or record why it is not a level. "
-      f"{len(persisted)} cases now rest on a rung that does not exist, and "
-      "the number goes up every time this question is deferred.")
-    w("4. **Decide what availability is** in §7 of the threat model, before a "
-      "further control spends more of it.")
-    w("5. **Where a premise cannot be pivoted.** Case 13's condition 1 is a "
-      "negative result with an obvious follow-up: it found a premise that "
-      "looks like defence in depth and is not, but it did not enumerate which "
-      "indices in each model an attacker can pivot. That enumeration is worth "
-      "more than another premise.")
+    w("3. **Decide what availability is** in §7 of the threat model, before a "
+      "further control spends more of it. The last open direction question "
+      "from this review's first pass — naming the adversary and enumerating "
+      "the pivots are both done, in the ladder and in case 14.")
+    w("4. **Audit the deployment, not the architecture.** Case 14's two "
+      "yielding pivots both depend on something the *deployment* contains "
+      "rather than on how it is built — an identity that already holds the "
+      "authority (arm A), and a credential scoped across two boundaries "
+      "(arm B). Case 08 saw the same shape and called it \"a "
+      "dangerous-if-misapplied skill already existing\". Three cases have now "
+      "found it independently, which makes an inventory audit a better next "
+      "control than another premise.")
+    w("5. **Settle the unit of measurement.** Case 14 found that counting "
+      "*fields* and counting *records* give different tamper sets for the same "
+      "attack, and case 12 counted fields. Every minimum-tamper-set number in "
+      "this report needs one convention, stated once. This is cheap and it "
+      "affects published tables.")
     w("")
     w("Then the two families case 12 could not measure, each blocked on an "
       "instrument rather than on appetite: **data movement and fidelity**, "

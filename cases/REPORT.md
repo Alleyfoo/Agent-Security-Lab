@@ -23,8 +23,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-11](11-conflict-containment/README.md)<br>Contain a contradiction the moment it appears | Leave a contradiction in the production record - case 10's appended rebinding, measured there as inert - and let the object keep working; then retry, reload and resume it, then overwrite instead of appending | 🟠 Detected after occurrence | 🟢 Prevented | check_containment() in the step lifecycle: before validation and before any grant is derived, an object whose production record contradicts itself raises ObjectContainedError and runs no further step. No new record and no new state - the check reads the record the lifecycle already has | The one attack that works is invisible to the check. It is an availability trade, not a free improvement: the cheapest forgery in the model - one appended line - now guarantees an object never completes, and the check is object-scoped, so a contradiction about a type no step reads stops it as surely as a relevant one. check_containment is ordinary in-process code reading an ordinary in-process list, so the cross-cutting finding applies unchanged. And containment sits at the lifecycle, not at the derivation: derive_grant still answers on a contradicted record, deliberately, because case 10's published measurement is taken there. |
 | [case-12](12-three-models/README.md)<br>Three models, one workflow | Obtain a read of artifact.key_material at the schema step in three architectures running the same workload - authority following the subject, the configured workflow step, and the transformation of one object - attacking every stored authority-bearing record in each | 🔴 Undetected | 🔴 Undetected | None. This case is a comparison and changes nothing in the product or in object_model; all three arms are measured as they are. Version pinning is implemented once and shared, because the contract adjudicated it as not architecture-specific | One workflow position, one capability, one attacker - the same narrowness case 08 recorded, and a different target might rank the arms differently. Arm C's intake is a seed rather than a transition because object_model's workflow table is frozen at what cases 10 and 11 measured, so the arms are compared on artifacts produced and grant resolved rather than on step count. Nothing here measures ambient authority, process boundaries, data movement, provenance, replay, or availability under attack. |
 | [case-13](13-second-premise/README.md)<br>Does a second independent premise raise the cost? | The same read of artifact.key_material at the schema step, against case 12's arm A and arm C after one additional independent premise is layered onto each - a MAC-style label policy over the permission table, and artifacts that declare what they are | 🔴 Undetected | 🔴 Undetected | None in the product. An experiment on laboratory reference arms, testing a prediction pre-registered in the report before the code existed. object_model is untouched and case 12's arms are frozen; this case layers onto them | The premises are laboratory constructs layered onto laboratory arms, and none of them exists in the product. Arm A's label policy models the *structure* of MAC over DAC and not kernel enforcement, which is the dimension case 12 already recorded its identity arm cannot reproduce. Both of arm C's premises are in-process data the same attacker reaches. |
+| [case-14](14-selector-map/README.md)<br>The selector map | Enumerate what selects every authority premise in all three arms, mark which selectors this adversary can alter, and execute every pivot the map implies - one edit to a shared selector, measured for whether it moved a premise and separately for whether it obtained the capability | 🔴 Undetected | 🔴 Undetected | None. An enumeration, not a control: no arm is changed and no product code is touched. The map's completeness is enforced by a test requiring every shared alterable selector to carry an executed pivot | The map is hand-built and its completeness is asserted rather than derived: a test requires every shared alterable selector to carry an executed pivot, which caught one missing pivot while the case was being written, but a premise nobody wrote down has no selector on the map. Whether a selector is alterable is a judgement recorded as data so it can be argued with - the artifact key and the skill name are classified as not directly writable, and both are derived from records that are. |
 
-**15 cases** — 11 with a control, 4 open by design. 10 moved to a better result class.
+**16 cases** — 11 with a control, 5 open by design. 10 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -132,9 +133,11 @@ So the principle is usable rather than merely true:
 
 > To raise the cost of forging authority, add a premise that is **(a)** consulted at use time, **(b)** not a function of an index the attacker can change, and **(c)** on the specific surface being defended. Missing any of the three buys nothing. The subject-keyed variant is the one to remember: it looks exactly like defence in depth and measures as no defence at all.
 
-### 5 cases measure an adversary the ladder has no row for
+### Level 1.5, the configuration adversary — named after 6 cases had measured it
 
-Cases 08, 10, 11, 12, 13 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** That is not a level. It is strictly stronger than Level 1 — it reaches records no agent interface exposes — and strictly weaker than Level 2, which would rewrite the derivation and make every arm lose identically.
+Cases 08, 10, 11, 12, 13, 14 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** For most of that time it had no rung on the compromise ladder. It has one now — `Level 1.5`, numbered so Levels 2–7 and every case README citing them keep their numbers.
+
+It is defined by **reach, not by which component is captured**, which is why it was awkward to place: it need not control any agent at all. A compromised storage layer, a restored backup, a writable config share or a deploy pipeline is Level 1.5 while every worker is honest. It is stronger than Level 1 — it reaches records no agent interface exposes — and weaker than Level 2, which would rewrite the derivation and make every arm of a comparison lose identically.
 
 | Case | Result |
 |---|---|
@@ -143,10 +146,13 @@ Cases 08, 10, 11, 12, 13 share an attacker defined narrowly by case 08: **may al
 | case-11 — Contain a contradiction the moment it appears | 🟢 Prevented |
 | case-12 — Three models, one workflow | 🔴 Undetected |
 | case-13 — Does a second independent premise raise the cost? | 🔴 Undetected |
+| case-14 — The selector map | 🔴 Undetected |
 
 It is a realistic adversary — a compromised storage layer, a restored backup, a writable share — and it is *not the one the project's question is about*. The consequence has to be stated plainly, because the comparison table cannot say it: **the authority-model improvements measured in cases 10 and 11 have not been shown to hold against a fully captured agent.** They were measured against something else, for the good reason case 08 gives, and the ladder should either name that adversary or record why it is not a level.
 
-Case 12 turned this from a gap into an asset. Fixing the adversary *first* is what let three architectures be compared at all — an identity model, a configured-workflow model and the object model, each attacked with the same power. Under Level 2 all three lose identically and the comparison measures process isolation instead of authority placement. So the unnamed adversary is now load-bearing for four cases and naming it is overdue rather than optional.
+Case 12 turned this from a gap into an asset. Fixing the adversary *first* is what let three architectures be compared at all — an identity model, a configured-workflow model and the object model, each attacked with the same power. Under Level 2 all three lose identically and the comparison measures process isolation instead of authority placement.
+
+Full definition, blast radius, detection and containment: `docs/compromise-ladder.md`. The honest summary of what is known about defending against it is short — version pinning detects an edit made during a run and not one made before it, in all three architectures; no architecture measured holds an independent account of what its own authority records should contain; and raising the premise count raises price, not possibility.
 
 ### What deriving authority actually bought
 
@@ -211,9 +217,9 @@ Ordered by what the measurements support, not by appetite.
 
 1. **The metadata floor.** Every derived conclusion in the product bottoms out in metadata that agents wrote — case 05's derivation trusts `row_count`, case 07's compares column shape and not values, and the honest pipeline already turns the identifier `'1001'` into the number `1001` with no check noticing (case 07, measurement D). Two cases recorded this residual independently and no case has attacked it. It is the clearest unclosed finding in the set and it is a derivation control, which the table above says is the kind that degrades rather than collapses.
 2. **Finish the absence.** Case 06 is one of only two Level 2 preventions and it covers one stage of four. The design rule above says this is the only move that has ever worked at Level 2; case 01 stays wholly open until it is finished.
-3. **Name the adversary** cases 08, 10, 11, 12, 13 measured, in the ladder, or record why it is not a level. 5 cases now rest on a rung that does not exist, and the number goes up every time this question is deferred.
-4. **Decide what availability is** in §7 of the threat model, before a further control spends more of it.
-5. **Where a premise cannot be pivoted.** Case 13's condition 1 is a negative result with an obvious follow-up: it found a premise that looks like defence in depth and is not, but it did not enumerate which indices in each model an attacker can pivot. That enumeration is worth more than another premise.
+3. **Decide what availability is** in §7 of the threat model, before a further control spends more of it. The last open direction question from this review's first pass — naming the adversary and enumerating the pivots are both done, in the ladder and in case 14.
+4. **Audit the deployment, not the architecture.** Case 14's two yielding pivots both depend on something the *deployment* contains rather than on how it is built — an identity that already holds the authority (arm A), and a credential scoped across two boundaries (arm B). Case 08 saw the same shape and called it "a dangerous-if-misapplied skill already existing". Three cases have now found it independently, which makes an inventory audit a better next control than another premise.
+5. **Settle the unit of measurement.** Case 14 found that counting *fields* and counting *records* give different tamper sets for the same attack, and case 12 counted fields. Every minimum-tamper-set number in this report needs one convention, stated once. This is cheap and it affects published tables.
 
 Then the two families case 12 could not measure, each blocked on an instrument rather than on appetite: **data movement and fidelity**, which needs observation of a running system rather than the whole-payload strawman `key_vs_paste.py` assumes; and **compromise and failure behaviour**, which is where real OS isolation, real workflow credentials and disposable workers actually differ, and where the identity arm would stop being a miniature.
 
@@ -512,7 +518,7 @@ Reproduce: `python cases/07-poisoned-chain/attack.py` · Tests: `tests/adversari
 
 ### ⚠️ case-08 — Stored grant versus grant derived at use time
 
-**Compromise level:** Narrow by design: may alter persisted policy or workflow records before execution; may not modify evaluator code or the administrative trust root  
+**Compromise level:** Level 1.5: the configuration adversary - may alter persisted policy or workflow records before execution; may not modify evaluator code or the administrative trust root  
 **Attack:** Obtain a named unauthorized read at the schema step in each of two authority models, attacking every stored authority-bearing record independently: a future artifact (cleaned_output) and an existing unrelated one (key_material)  
 **Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
 
@@ -578,7 +584,7 @@ Reproduce: `python cases/09-skill-registry/attack.py` · Tests: `tests/adversari
 
 ### ✅ case-10 — The type-to-key binding
 
-**Compromise level:** The case 08 attacker: may alter persisted policy or workflow records, may not modify evaluator code  
+**Compromise level:** Level 1.5: the configuration adversary - may alter persisted policy or workflow records, may not modify evaluator code  
 **Attack:** Rebind an artifact type to a different key mid-workflow - through the API, appended past it, and by overwriting the record - plus pre-seeding a type before its producer runs, and tampering after completion to hit resume  
 **Baseline:** 🔴 Undetected → **Controlled:** 🟠 Detected after occurrence
 
@@ -611,7 +617,7 @@ Reproduce: `python cases/10-type-to-key-binding/attack.py` · Tests: `tests/adve
 
 ### ✅ case-11 — Contain a contradiction the moment it appears
 
-**Compromise level:** The case 08 attacker: may alter persisted policy or workflow records, may not modify evaluator code  
+**Compromise level:** Level 1.5: the configuration adversary - may alter persisted policy or workflow records, may not modify evaluator code  
 **Attack:** Leave a contradiction in the production record - case 10's appended rebinding, measured there as inert - and let the object keep working; then retry, reload and resume it, then overwrite instead of appending  
 **Baseline:** 🟠 Detected after occurrence → **Controlled:** 🟢 Prevented
 
@@ -644,7 +650,7 @@ Reproduce: `python cases/11-conflict-containment/attack.py` · Tests: `tests/adv
 
 ### ⚠️ case-12 — Three models, one workflow
 
-**Compromise level:** The case 08 attacker, generalized per arm: may alter persisted configuration or workflow records, may not modify executable code or the trust root  
+**Compromise level:** Level 1.5: the configuration adversary, generalized per arm - may alter persisted configuration or workflow records, may not modify executable code or the trust root  
 **Attack:** Obtain a read of artifact.key_material at the schema step in three architectures running the same workload - authority following the subject, the configured workflow step, and the transformation of one object - attacking every stored authority-bearing record in each  
 **Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
 
@@ -677,7 +683,7 @@ Reproduce: `python cases/12-three-models/attack.py` · Tests: `tests/adversarial
 
 ### ⚠️ case-13 — Does a second independent premise raise the cost?
 
-**Compromise level:** The case 08 attacker, unchanged from case 12: may alter persisted configuration or workflow records, may not modify executable code or the trust root  
+**Compromise level:** Level 1.5: the configuration adversary, unchanged from case 12 - may alter persisted configuration or workflow records, may not modify executable code or the trust root  
 **Attack:** The same read of artifact.key_material at the schema step, against case 12's arm A and arm C after one additional independent premise is layered onto each - a MAC-style label policy over the permission table, and artifacts that declare what they are  
 **Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
 
@@ -707,6 +713,40 @@ Reproduce: `python cases/12-three-models/attack.py` · Tests: `tests/adversarial
 **Notes.** Written to test a prediction rather than to build a control, and the prediction survived in a more useful form than it was stated. The rule it produces is applicable rather than admirable: a premise must be consulted at use time, must not be a function of an index the attacker can change, and must sit on the surface being defended - missing any of the three buys nothing. The subject-keyed variant is the one to remember, because it looks exactly like defence in depth and measures as no defence at all.
 
 Reproduce: `python cases/13-second-premise/attack.py` · Tests: `tests/adversarial/test_case_13_second_premise.py`
+
+### ⚠️ case-14 — The selector map
+
+**Compromise level:** Level 1.5: the configuration adversary - named in this slice after five cases had measured it unnamed  
+**Attack:** Enumerate what selects every authority premise in all three arms, mark which selectors this adversary can alter, and execute every pivot the map implies - one edit to a shared selector, measured for whether it moved a premise and separately for whether it obtained the capability  
+**Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
+
+**Control.** None. An enumeration, not a control: no arm is changed and no product code is touched. The map's completeness is enforced by a test requiring every shared alterable selector to carry an executed pivot
+
+**Evidence**
+
+- 10 premises mapped across 3 arms, each with its store and its selectors
+- 7 shared-selector pivots executed; 2 yield in one edit
+- arm A: both premises keyed on the subject, so one reassignment moves both - stage-keyed, the identical edit yields nothing
+- arm B: the input list and the connection name are fields of the same step record, so case 12's 2 fields are 1 record write
+- arm B: one ordinary over-scoped credential, pre-existing and not counted as an edit, collapses it to one write
+- arm C: retyping the object moves the read policy and obtains nothing, because the skill contract is keyed on the skill name
+- tests/adversarial/test_case_14_selector_map.py
+
+**What this proves.** That independent records and independent premises are different things, and that the difference is measurable rather than rhetorical. Seven shared selectors were executed; two collapse two premises into one edit, and the five that do not fail for four distinguishable reasons - an unalterable selector, an absent target in the deployment, an empty lookup, and a third premise keyed on something else. It also converts case 12's arm B result from an architectural claim into a conditional one: two premises, one record, and an advantage that depends on the credential inventory rather than on the architecture.
+
+**What this does not prove.** It does not show arm C is secure: it has no yielding pivot on this path for this capability, which is narrower than it sounds, and case 12 measured its minimum tamper set at 1 by two routes that need no pivot at all. It does not close anything - every premise remains inside the adversary's reach, and this case adds no control, no detection and no containment. And it does not establish that the premise list is complete for any arm.
+
+**Residual limitation.** The map is hand-built and its completeness is asserted rather than derived: a test requires every shared alterable selector to carry an executed pivot, which caught one missing pivot while the case was being written, but a premise nobody wrote down has no selector on the map. Whether a selector is alterable is a judgement recorded as data so it can be argued with - the artifact key and the skill name are classified as not directly writable, and both are derived from records that are.
+
+**Containment.** None, and the case records why that is the honest answer: a pivot is an ordinary configuration change. Nothing in any arm distinguishes retyping an object or reassigning a subject from an administrative decision to do exactly that.
+
+**Recovery.** Not applicable - no control was applied. The operationally useful output is a checklist rather than a remedy: for each premise, name its selector, and check whether any other premise shares it.
+
+**Blast radius.** Unchanged - the case measures reachability, not effect. What it adds is that a pivot's radius is the radius of the widest premise the selector reaches, which is not visible from any single record.
+
+**Notes.** Produced an inversion worth keeping: on selector hygiene the ordering of the three models reverses. The simplest architecture has the most yielding pivots and the most expressive has none, while case 12 measured the reverse on record count and tamper set. Not a contradiction - how many records hold authority is not how many of them one edit can move. The unit-of-measurement finding is the one most likely to matter elsewhere: counting fields and counting records give different tamper sets for the same attack, and case 12 counted fields.
+
+Reproduce: `python cases/14-selector-map/attack.py` · Tests: `tests/adversarial/test_case_14_selector_map.py`
 
 ## Where the boundary stands
 
