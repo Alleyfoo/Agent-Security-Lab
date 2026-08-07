@@ -1,4 +1,4 @@
-# Case 21 — Gate independence
+# Case 21 — Process independence for the approval gate
 
 **Phase:** 5 (isolation) applied to the approval plane
 **Baseline finding:** cases 19 and 20 both ended on "this is a Level 1 control
@@ -9,6 +9,19 @@ process
 **Controlled result:** `prevented` — for the claim as written, and no further
 
 ---
+
+> **Wording corrected after first publication.** This case was titled *gate
+> independence*. It does not establish that. Six green probes visually
+> overpower the seventh, and "separate process = independent gate" must not
+> creep into the architecture on the strength of a table. What was measured:
+>
+> **Process separation removes direct authority over gate code, credentials,
+> protocol internals and volatile state. It does not establish gate
+> independence while durable gate state remains writable from the worker
+> boundary.**
+>
+> That is a partial-independence result rather than a failed arm — six
+> capabilities genuinely disappeared — and case 22 tests the part that did not.
 
 ## The claim, kept small on purpose
 
@@ -22,9 +35,13 @@ this is exactly where overclaiming starts.
 ## Two arms, six probes
 
 ```text
-Arm A   worker and gate share a writable, executable boundary
-Arm B   gate in its own process under its own authority, reached only by
-        line-delimited JSON
+Arm A   worker + gate code + gate state, one authority boundary
+        -> no meaningful independence
+
+Arm B   gate code and process   outside the worker boundary
+        gate volatile state     outside the worker boundary
+        persisted gate state    INSIDE the worker's filesystem authority
+        -> partial independence
 ```
 
 The probes attack the boundary rather than the model.

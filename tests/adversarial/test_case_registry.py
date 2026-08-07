@@ -210,7 +210,11 @@ def test_review_every_level_2_prevention_is_an_absence():
     process, so five of its six probes land on nothing. It is the first
     absence this repository built on purpose instead of discovering.
 
-    A fourth entry that is a CHECK rather than an absence would break the
+    Case 22 joined them the same way and states the pattern most cleanly:
+    asked to compact its store, the gate answers "no such operation" rather
+    than "you may not". The verb is absent, and that is the whole control.
+
+    A further entry that is a CHECK rather than an absence would break the
     review's design rule and the cross-cutting finding, and both need
     rewriting before this test is changed.
     """
@@ -218,7 +222,7 @@ def test_review_every_level_2_prevention_is_an_absence():
     prevented = {c.case_id for c in ALL
                  if c.case_id in _by_level("Level 2")
                  and c.controlled_result == PREVENTED}
-    assert prevented == {"case-04b", "case-06", "case-21"}, (
+    assert prevented == {"case-04b", "case-06", "case-21", "case-22"}, (
         "the set of Level 2 preventions changed. rewrite 'Every Level 2 "
         "prevention here is an absence, not a check' in cases/report.py "
         "against the new evidence - do not edit this assertion first"

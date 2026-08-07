@@ -101,16 +101,26 @@ authority path. Naming the layers separately so a future case cannot claim
 independence it did not measure:
 
 ```text
-decision independence     a different actor and reasoning context
-credential independence   the worker cannot exercise reviewer authority
-state independence        the worker cannot mutate the record that makes
-                          the reviewer appear to have approved
-gate independence         neither worker nor reviewer can bypass or rewrite
-                          the gate itself
+decision independence       a different actor and reasoning context
+credential independence     the worker cannot exercise reviewer authority
+volatile state independence the worker cannot mutate the in-memory record
+                            that makes the reviewer appear to have approved
+process independence        the gate's code, credentials and protocol
+                            internals are not addressable from the worker
+durable state independence  the worker cannot create, modify or DELETE the
+                            gate's persisted authority except through the
+                            protocol
 ```
 
+Five, not four. Case 21 split the last one in half by measuring it: process
+separation delivered the fourth and left the fifth entirely open, because the
+gate's persisted store sat on a filesystem the worker's own uid could write.
+
+Every time "independent" sounds like one property, a case splits another piece
+off it. That is the shape of the work rather than a failure of the taxonomy.
+
 Two model instances sharing one writable approval store and one service
-credential have **decision** independence and none of the other three. That is
+credential have **decision** independence and none of the other four. That is
 the shorthand this taxonomy exists to prevent.
 
 A first case need not implement all four. It must say which ones it has.

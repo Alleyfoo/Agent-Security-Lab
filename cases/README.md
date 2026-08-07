@@ -154,6 +154,7 @@ not claimed.
 | [`19-two-sided-signoff`](19-two-sided-signoff/README.md) ✅ | 3 | Built naively first: binding to action content closes swapping and opens replay, and only a lifecycle rule moves the result. A Level 1 control |
 | [`20-one-use-race`](20-one-use-race/README.md) ✅ | 3 | One-use was not one-use under concurrency. The obvious reorder narrows the window without closing it; exactly-once lives in the sink, not the approval |
 | [`21-gate-independence`](21-gate-independence/README.md) ✅ | 5 | Moving the gate's code closes five of six probes; the persisted store closes none. Sign-off stays Level 1 until the store moves too |
+| [`22-durable-state`](22-durable-state/README.md) ✅ | 5 | Deleting a consumption record resurrects a spent approval. Moving the store behind a protocol relocates the attack to the protocol's vocabulary |
 
 Cases 08 and 12 are registered ⚠️ because they change nothing in the product.
 Both arms — all three, for case 12 — are measured as they are, and the named

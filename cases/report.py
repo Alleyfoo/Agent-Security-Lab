@@ -134,6 +134,13 @@ def _review() -> list:
       "absence |")
     w("| case-21 | the approval gate's code, state and credential are not in "
       "the worker's process | an absence |")
+    w("| case-22 | the gate's protocol has no operation that removes a record "
+      "| an absence |")
+    w("")
+    w("Case 22's refusal is the cleanest statement of the pattern in the "
+      "whole set. Asked to compact its store, the gate answers **no such "
+      "operation** - not *you may not*. The verb is absent, and that is the "
+      "entire control.")
     w("")
     w("**Case 21 is the first one the rule predicted rather than explained.** "
       "The design rule below was written after cases 04b and 06; case 21 was "
