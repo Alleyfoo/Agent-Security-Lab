@@ -282,8 +282,10 @@ def test_move_rederives_rather_than_trusting_the_candidate(one_damaged):
     assert "taken since the search" in result.detail
 
 
-def test_the_step_c_skill_set_is_exactly_six():
-    assert set(skills_mod.REGISTRY) == {
+def test_step_cs_six_skills_are_still_present():
+    """Step D added two more, which its own file asserts. What must not drift
+    is that step C's six are all still here."""
+    assert {
         "check_availability", "create_reservation", "cancel_reservation",
         "query_schedule", "find_alternative", "move_reservation",
-    }
+    } <= set(skills_mod.REGISTRY)

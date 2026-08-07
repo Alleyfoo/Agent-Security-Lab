@@ -58,6 +58,10 @@ class ReservationRequest:
     # move_reservation re-derives the slot's availability rather than
     # trusting it.
     candidate: Optional[Tuple[str, int, int]] = None
+    # Step D. Bumped whenever the reservation actually moves, so an approval
+    # for the slot a reservation used to be in cannot authorise a move from
+    # the slot it is in now.
+    version: int = 0
 
     def describe(self) -> str:
         return (f"{self.activity} in {self.facility_id} "

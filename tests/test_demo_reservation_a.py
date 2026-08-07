@@ -241,11 +241,13 @@ def test_step_as_four_skills_are_present_and_unchanged():
         assert skills.REGISTRY[name].permitted_states == states, name
 
 
-def test_no_step_beyond_c_has_added_a_skill_without_saying_so():
-    """The registry is shared, so this is where an unannounced seventh skill
-    would show up first."""
+def test_no_step_has_added_a_skill_without_saying_so():
+    """The registry is shared, so this is where an unannounced skill shows up
+    first. It has fired twice - once for step C's two and once for step D's -
+    and both times the guard was updated to name them rather than loosened."""
     assert set(skills.REGISTRY) == set(STEP_A_SKILLS) | {
-        "find_alternative", "move_reservation",
+        "find_alternative", "move_reservation",          # step C
+        "propose_displacement", "execute_displacement",  # step D
     }
 
 

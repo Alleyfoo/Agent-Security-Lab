@@ -26,7 +26,7 @@ registry and workflow table; the idioms are shared, the code is not.
 
 from __future__ import annotations
 
-from demo_reservation import disrupt, oracle
+from demo_reservation import disrupt, oracle, signoff
 from demo_reservation.disrupt import Disruption, claimed_damage
 from demo_reservation.generate import generate_requests
 from demo_reservation.invariants import check
@@ -38,7 +38,7 @@ from demo_reservation.world import World, default_world
 
 __all__ = [
     "generate_requests", "check", "Disruption", "claimed_damage",
-    "disrupt", "oracle",
+    "disrupt", "oracle", "signoff",
     "QueueItem", "Receipt", "Reservation", "ReservationRequest", "Result",
     "Store", "Runtime", "straight_through", "World", "default_world",
 ]

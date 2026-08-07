@@ -39,6 +39,12 @@ QUERY_SCHEDULE = "query_schedule"
 # Step C, and these two are the whole of the new authority.
 FIND_ALTERNATIVE = "find_alternative"
 MOVE_RESERVATION = "move_reservation"
+# Step D. Displacing a confirmed reservation is a protected transformation:
+# the worker may propose it and may not perform it. The protection is attached
+# to the KIND of transformation, not to a risk score - creating a new booking
+# stays local, modifying somebody's existing one does not.
+PROPOSE_DISPLACEMENT = "propose_displacement"
+EXECUTE_DISPLACEMENT = "execute_displacement"
 
 
 _REGISTRY: Dict[str, Skill] = {
@@ -49,6 +55,9 @@ _REGISTRY: Dict[str, Skill] = {
                           mutates=False),
     FIND_ALTERNATIVE: Skill(FIND_ALTERNATIVE, (BOOKED,), mutates=False),
     MOVE_RESERVATION: Skill(MOVE_RESERVATION, (BOOKED,), mutates=True),
+    PROPOSE_DISPLACEMENT: Skill(PROPOSE_DISPLACEMENT, (BOOKED,),
+                                mutates=False),
+    EXECUTE_DISPLACEMENT: Skill(EXECUTE_DISPLACEMENT, (BOOKED,), mutates=True),
 }
 
 REGISTRY: Dict[str, Skill] = dict(_REGISTRY)
@@ -90,7 +99,7 @@ def _blockers(request: ReservationRequest, store: Store,
 # ---------------------------------------------------------------------------
 
 def check_availability(request: ReservationRequest, store: Store,
-                       world: World) -> Result:
+                       world: World, runtime=None) -> Result:
     blockers = _blockers(request, store, world)
     request.last_check = not blockers
     return Result(CHECK_AVAILABILITY, request.request_id, ok=not blockers,
@@ -98,7 +107,7 @@ def check_availability(request: ReservationRequest, store: Store,
 
 
 def create_reservation(request: ReservationRequest, store: Store,
-                       world: World) -> Result:
+                       world: World, runtime=None) -> Result:
     """Re-checks rather than trusting `last_check`.
 
     The queue may have said this was available three steps ago and the world
@@ -125,7 +134,7 @@ def create_reservation(request: ReservationRequest, store: Store,
 
 
 def cancel_reservation(request: ReservationRequest, store: Store,
-                       world: World) -> Result:
+                       world: World, runtime=None) -> Result:
     reservation = store.reservations.get(request.reservation_id or "")
     if reservation is None or reservation.state != CONFIRMED:
         return Result(CANCEL_RESERVATION, request.request_id, ok=False,
@@ -137,7 +146,7 @@ def cancel_reservation(request: ReservationRequest, store: Store,
 
 
 def query_schedule(request: ReservationRequest, store: Store,
-                   world: World) -> Result:
+                   world: World, runtime=None) -> Result:
     """Read-only. Reports what is already booked in the facility on that day."""
     same_day = [r for r in store.schedule()
                 if r.facility_id == request.facility_id
@@ -155,8 +164,40 @@ def _slot_free(facility_id: str, day: int, start: int, end: int,
         for r in store.schedule())
 
 
+def _move_checks(reservation, candidate, store: Store, world: World) -> str:
+    """The physical reasons a move cannot happen. One definition, shared by
+    the unprotected verb and the gated one - case 05's rule about a single
+    derivation, so the two cannot drift and let a gated move do something the
+    ungated one would refuse.
+    """
+    facility_id, day, start = candidate
+    end = start + (reservation.end - reservation.start)
+
+    if not world.is_open(facility_id, day, start, end):
+        return "candidate is outside opening hours"
+    if world.capacity_of(facility_id) < reservation.participants:
+        return "candidate capacity too small"
+    if not set(reservation.requires) <= world.features_of(facility_id):
+        return "candidate lacks required features"
+    if not _slot_free(facility_id, day, start, end, store,
+                      reservation.reservation_id):
+        return "candidate was taken since the search"
+    return ""
+
+
+def _apply_move(reservation, request) -> None:
+    facility_id, day, start = request.candidate
+    duration = reservation.end - reservation.start      # before start moves
+    reservation.facility_id, reservation.day = facility_id, day
+    reservation.start, reservation.end = start, start + duration
+    request.candidate = None
+    # The version moves with the reservation, so an approval naming the slot
+    # it used to be in can never authorise a move from where it is now.
+    request.version += 1
+
+
 def find_alternative(request: ReservationRequest, store: Store,
-                     world: World) -> Result:
+                     world: World, runtime=None) -> Result:
     """The agent's own search. Greedy first fit, and deliberately so.
 
     It shares no code with `oracle.feasible`, which searches jointly with
@@ -198,7 +239,7 @@ def find_alternative(request: ReservationRequest, store: Store,
 
 
 def move_reservation(request: ReservationRequest, store: Store,
-                     world: World) -> Result:
+                     world: World, runtime=None) -> Result:
     """Re-derives the candidate's validity rather than trusting it.
 
     `candidate` is advisory in exactly the way `last_check` is. The world may
@@ -214,36 +255,85 @@ def move_reservation(request: ReservationRequest, store: Store,
         return Result(MOVE_RESERVATION, request.request_id, ok=False,
                       detail="no reservation to move")
 
+    physical = _move_checks(reservation, request.candidate, store, world)
+    if physical:
+        return Result(MOVE_RESERVATION, request.request_id, ok=False,
+                      detail=physical)
+
     facility_id, day, start = request.candidate
-    duration = reservation.end - reservation.start
-    end = start + duration
-
-    if not world.is_open(facility_id, day, start, end):
-        return Result(MOVE_RESERVATION, request.request_id, ok=False,
-                      detail="candidate is outside opening hours")
-    if world.capacity_of(facility_id) < reservation.participants:
-        return Result(MOVE_RESERVATION, request.request_id, ok=False,
-                      detail="candidate capacity too small")
-    if not set(reservation.requires) <= world.features_of(facility_id):
-        return Result(MOVE_RESERVATION, request.request_id, ok=False,
-                      detail="candidate lacks required features")
-    if not _slot_free(facility_id, day, start, end, store,
-                      reservation.reservation_id):
-        return Result(MOVE_RESERVATION, request.request_id, ok=False,
-                      detail="candidate was taken since the search")
-
-    reservation.facility_id, reservation.day = facility_id, day
-    reservation.start, reservation.end = start, end
-    request.candidate = None
+    _apply_move(reservation, request)
     return Result(MOVE_RESERVATION, request.request_id, ok=True,
                   detail=f"moved to {facility_id} d{day} {start}")
 
 
-HANDLERS: Dict[str, Callable[[ReservationRequest, Store, World], Result]] = {
+def propose_displacement(request: ReservationRequest, store: Store,
+                         world: World, runtime=None) -> Result:
+    """The worker's half. It writes an attestation and moves nothing."""
+    from demo_reservation.signoff import WORKER, displacement_for
+
+    if runtime is None or runtime.signoff is None:
+        return Result(PROPOSE_DISPLACEMENT, request.request_id, ok=False,
+                      detail="no sign-off store configured")
+    if request.candidate is None:
+        return Result(PROPOSE_DISPLACEMENT, request.request_id, ok=False,
+                      detail="no candidate to propose")
+    reservation = store.reservations.get(request.reservation_id or "")
+    if reservation is None:
+        return Result(PROPOSE_DISPLACEMENT, request.request_id, ok=False,
+                      detail="no reservation to displace")
+
+    action = displacement_for(reservation, request.candidate, request.version)
+    runtime.signoff.propose(WORKER, action)
+    return Result(PROPOSE_DISPLACEMENT, request.request_id, ok=True,
+                  detail=f"proposed {action.describe()}")
+
+
+def execute_displacement(request: ReservationRequest, store: Store,
+                         world: World, runtime=None) -> Result:
+    """The gate. It re-derives the action it is about to perform and requires
+    a proposal and an unspent approval for *that* action.
+
+    The physical re-checks from `move_reservation` still apply: an approved
+    displacement into a slot somebody has since taken is refused, because an
+    approval authorises an action and cannot conjure a free room.
+    """
+    from demo_reservation.signoff import SignoffRefused, displacement_for
+
+    if runtime is None or runtime.signoff is None:
+        return Result(EXECUTE_DISPLACEMENT, request.request_id, ok=False,
+                      detail="no sign-off store configured")
+    if request.candidate is None:
+        return Result(EXECUTE_DISPLACEMENT, request.request_id, ok=False,
+                      detail="no candidate to move to")
+    reservation = store.reservations.get(request.reservation_id or "")
+    if reservation is None:
+        return Result(EXECUTE_DISPLACEMENT, request.request_id, ok=False,
+                      detail="no reservation to move")
+
+    action = displacement_for(reservation, request.candidate, request.version)
+    try:
+        runtime.signoff.verify_and_spend(action)
+    except SignoffRefused as exc:
+        return Result(EXECUTE_DISPLACEMENT, request.request_id, ok=False,
+                      detail=f"REFUSED: {exc}")
+
+    physical = _move_checks(reservation, request.candidate, store, world)
+    if physical:
+        return Result(EXECUTE_DISPLACEMENT, request.request_id, ok=False,
+                      detail=physical)
+
+    _apply_move(reservation, request)
+    return Result(EXECUTE_DISPLACEMENT, request.request_id, ok=True,
+                  detail=f"displaced to {action.to_slot}")
+
+
+HANDLERS: Dict[str, Callable[..., Result]] = {
     CHECK_AVAILABILITY: check_availability,
     CREATE_RESERVATION: create_reservation,
     CANCEL_RESERVATION: cancel_reservation,
     QUERY_SCHEDULE: query_schedule,
     FIND_ALTERNATIVE: find_alternative,
     MOVE_RESERVATION: move_reservation,
+    PROPOSE_DISPLACEMENT: propose_displacement,
+    EXECUTE_DISPLACEMENT: execute_displacement,
 }
