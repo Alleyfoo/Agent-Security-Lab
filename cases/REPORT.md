@@ -205,6 +205,15 @@ Settled after case 14 found it ambiguous, and stated once in `cases/registry.py`
 
 Fields and records touched are reported alongside as *descriptive* data. They describe the shape of an edit; they are not its cost.
 
+**And the number is never reported alone.** Case 19 measured two consecutive rungs at 1, which a scalar would have called no improvement — while mechanically R1 closed the swap-after-approval route and *opened* the replay route, because approvals began matching by content. The count did not move; the routes changed, and it was a different system.
+
+| | Tells you |
+|---|---|
+| minimum tamper set | how **hard** the remaining attack is |
+| route enumeration | what **kind** of failure remains |
+
+Both are required, and a test enforces it: a case declaring a tamper cost must name the routes that achieve it. That test immediately caught case 14 claiming a cost of 1 for two pivots that obtained nothing — one commit *spent* is not one commit *sufficing*.
+
 This mattered: case 12 counted fields without saying so, and arm B's input list and connection name are two fields of one record. Restated in commits, **every published number is unchanged** — and arm B's 2 is now true for a better reason. Its two commits are the workflow definition and the connection scope, which are separate stores that cannot be written together; a test asserts they are distinct objects, so if they ever merged the table would have to be re-measured.
 
 ### What the eventual thesis cannot be

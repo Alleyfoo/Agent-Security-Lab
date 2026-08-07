@@ -121,6 +121,31 @@ def test_tamper_costs_use_the_settled_unit():
             )
 
 
+def test_a_tamper_cost_is_never_reported_without_its_routes():
+    """The methodological lesson case 19 forced.
+
+    Two consecutive rungs measured 1 and a scalar would have called that no
+    improvement. Mechanically R1 closed one route and opened another - the
+    count did not move, the system changed. The number says how hard; the
+    routes say what kind of failure remains, and reporting the first without
+    the second is the security score this project exists to distrust.
+    """
+    for case in ALL:
+        if not case.extra.get("minimum_commits"):
+            continue
+        routes = case.extra.get("routes")
+        assert routes, (
+            f"{case.case_id} reports a tamper cost with no route enumeration"
+        )
+        for arm, count in case.extra["minimum_commits"].items():
+            assert arm in routes, f"{case.case_id}: {arm} has no routes listed"
+            if count is not None:
+                assert routes[arm] or count is None, (
+                    f"{case.case_id}: {arm} claims a cost of {count} but "
+                    "names no route that achieves it"
+                )
+
+
 def test_a_commit_decomposition_never_lists_the_same_record_twice():
     """Two writes to one record are one commit. If a decomposition lists a
     record twice the case is counting fields again, which is the mistake this

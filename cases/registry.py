@@ -74,6 +74,29 @@ RESULT_SEVERITY = {UNDETECTED: 0, DETECTED_AFTER_OCCURRENCE: 1,
 
 TAMPER_UNIT = "minimum independently committed state changes"
 
+# ---------------------------------------------------------------------------
+# And the number is never reported alone.
+#
+# Case 19 measured two consecutive rungs at a minimum tamper set of 1 and a
+# scalar would have called that no improvement:
+#
+#     R0 = 1, R1 = 1  ->  "no change"
+#
+# Mechanically it was a different system. R1 closed the swap-after-approval
+# route and opened the replay route, because approvals began matching by
+# content. The route count did not move; the routes changed.
+#
+#     minimum tamper set  tells you how HARD
+#     route enumeration   tells you WHAT KIND of failure remains
+#
+# Both are required. A case that declares a tamper cost must also enumerate the
+# routes that achieve it, and a test enforces that - because the scalar alone
+# is exactly the kind of security score this project exists to distrust.
+# ---------------------------------------------------------------------------
+
+ROUTE_ENUMERATION = ("routes that achieve the minimum, named individually - "
+                     "the scalar says how hard, the routes say what kind")
+
 
 @dataclass(frozen=True)
 class CaseResult:
@@ -1152,6 +1175,13 @@ CASES: List[CaseResult] = [
               "written together.",
         extra={
             "tamper_unit": TAMPER_UNIT,
+            "routes": {
+                "A": ["widen the permission table",
+                      "reassign the stage to an identity that already holds it"],
+                "B": ["name the key in the step AND widen the connection scope"],
+                "C": ["overwrite the production record",
+                      "widen the skill contract before the run pins"],
+            },
             "minimum_commits": {"A": 1, "B": 2, "C": 1},
             "commits": {
                 "A": ["the permission table"],
@@ -1246,6 +1276,17 @@ CASES: List[CaseResult] = [
               "no defence at all.",
         extra={
             "tamper_unit": TAMPER_UNIT,
+            "routes": {
+                "A + label policy (subject-keyed)":
+                    ["reassign the subject - both premises are keyed on it"],
+                "A + label policy (stage-keyed)":
+                    ["widen the permission table AND the label policy"],
+                "C + artifact declaration":
+                    ["widen the skill contract - the declaration does not "
+                     "cover that route"],
+                "C + declaration + type policy":
+                    ["widen the skill contract AND the object-type policy"],
+            },
             "minimum_commits": {
                 "A + label policy (subject-keyed)": 1,
                 "A + label policy (stage-keyed)": 2,
@@ -1352,17 +1393,30 @@ CASES: List[CaseResult] = [
               "fields and records are reported alongside as descriptive data.",
         extra={
             "tamper_unit": TAMPER_UNIT,
+            "routes": {
+                "A: subject pivot": ["reassign the stage to svc_keys"],
+                "B: step record, over-scoped tenant":
+                    ["one write naming the key and the over-scoped credential"],
+            },
+            # Only the pivots that OBTAIN the capability. An earlier version
+            # listed all four at a cost of 1, which confused "one commit was
+            # spent" with "one commit sufficed" - the route-enumeration test
+            # caught it, which is what that test is for.
             "minimum_commits": {
                 "A: subject pivot": 1,
-                "B: step record, ordinary tenant": 1,
                 "B: step record, over-scoped tenant": 1,
-                "C: object type pivot": 1,
+            },
+            "non_yielding_pivots": {
+                "B: step record, ordinary tenant":
+                    "one commit spent, obtained nothing - no credential "
+                    "carries both the step's inputs and the target",
+                "C: object type pivot":
+                    "one commit spent, moved the type policy, obtained "
+                    "nothing - the skill contract is keyed elsewhere",
             },
             "commits": {
                 "A: subject pivot": ["the stage-to-subject assignment"],
-                "B: step record, ordinary tenant": ["the step record"],
                 "B: step record, over-scoped tenant": ["the step record"],
-                "C: object type pivot": ["the object record"],
             },
             "note": "every pivot is one commit by construction - that is what "
                     "makes it a pivot. What differs is whether it yields, and "
@@ -1453,6 +1507,19 @@ CASES: List[CaseResult] = [
               "have reported arm A's noisy route and hidden its quiet one.",
         extra={
             "tamper_unit": TAMPER_UNIT,
+            "routes": {
+                "A: authority absent": ["widen the permission table (visible)"],
+                "A: authority present":
+                    ["reassign to the existing identity (invisible)"],
+                "B: authority absent":
+                    ["name the key in the step", "widen the connection scope"],
+                "B: authority present":
+                    ["one write pointing at the existing credential"],
+                "C: authority absent":
+                    ["widen the skill contract (deployment-wide, visible)"],
+                "C: authority present":
+                    ["retype the object (one object, invisible)"],
+            },
             "minimum_commits": {
                 "A: authority absent": 1, "A: authority present": 1,
                 "B: authority absent": 2, "B: authority present": 1,
@@ -1801,6 +1868,18 @@ CASES: List[CaseResult] = [
               "rung, is the deliverable.",
         extra={
             "tamper_unit": TAMPER_UNIT,
+            "routes": {
+                "R0 Level 1": ["worker signs its own approval",
+                               "action swapped after approval"],
+                "R1 Level 1": ["worker signs its own approval",
+                               "old approval replayed - OPENED by R1"],
+                "R2 Level 1": ["old approval replayed"],
+                "R3 Level 1": ["old approval replayed"],
+                "R0 Level 1.5": ["approval forged in the store",
+                                 "worker added as a reviewer"],
+                "R4 Level 1.5": ["approval forged in the store",
+                                 "worker added as a reviewer"],
+            },
             "minimum_commits": {
                 "R0 Level 1": 1, "R1 Level 1": 1, "R2 Level 1": 1,
                 "R3 Level 1": 1,

@@ -168,6 +168,78 @@ together.
    of two records — otherwise an approval for action A executes action B, which
    is case 05's false-verdict shape moved to the approval plane.
 
+### The sign-off contract — three separate properties
+
+Frozen after case 19 measured them behaving differently. They are not one
+requirement and must not be collapsed:
+
+```text
+CONTENT BINDING
+    The approval applies to this exact action.
+
+AUTHORITY INDEPENDENCE
+    The worker cannot manufacture reviewer approval.
+
+CONSUMPTION / FRESHNESS
+    The approval authorises one specific execution occurrence.
+```
+
+**Content binding is necessary for integrity and insufficient for freshness.**
+That is case 19's correction to the earlier draft of this document, which
+implied binding the action was most of the job. R1 gives:
+
+```text
+the approval says exactly WHAT may happen
+```
+
+and not:
+
+```text
+the approval says WHICH OCCURRENCE may happen
+```
+
+So identical action content collapses distinct executions into one authority
+object — and the rung that closed swapping opened replay by construction.
+
+### An approval is a consumable, not a fact
+
+The shift that made the difference. Not:
+
+```text
+reviewer approved X
+```
+
+but:
+
+```text
+reviewer grants one execution of X
+```
+
+Which implies state, and therefore a state transition the gate performs:
+
+```text
+approval = { action_digest, approval_id, state = unused }
+
+gate, atomically:
+    verify action_digest
+    verify reviewer authority
+    verify state == unused
+    consume the approval
+    execute the action
+```
+
+**Atomicity is load-bearing and case 19 does not measure it.** The obvious
+failure is the classic one:
+
+```text
+check unused | check unused | execute | execute | mark used
+```
+
+Two executors racing one valid one-use approval. **Pre-registered as the next
+sign-off case**, with the prediction that the current implementation loses the
+race: `execute()` marks `consumed` only after the checks, with nothing between
+them, so any concurrent caller passing the check first also executes.
+
 ### What authority should actually bind to
 
 Not the request. **`request_id` must not be security-sensitive at all** — it may
@@ -194,6 +266,38 @@ object moved. Replay needs a nonce or lifecycle rule on top; the digest alone
 does not close it.
 
 This is what the first case must measure rather than assume.
+
+### The hierarchy case 19 measured, and what is still missing
+
+```text
+R0   two records ≠ two-sided authority
+R1   content integrity
+R2   credential separation
+R3   record integrity        (zero measured effect against the tested attacker)
+R4   execution freshness / one-use
+
+still missing:
+     gate isolation
+     store isolation
+     ambient-authority removal
+```
+
+R3 measuring zero against this attacker does **not** mean append-only is
+useless. It means its security contribution is threat-specific — it was
+decisive in cases 10 and 11 on the artifact plane and did nothing here. Keeping
+that distinction visible is one of the things this laboratory is for.
+
+### The claim, stated as precisely as the measurements now allow
+
+> Important actions require two independently authorised parties to attest to
+> the exact action, and the resulting approval must be bound to a single
+> execution lifecycle. The gate must enforce that binding. **This control
+> applies only within the boundary in which the approval store and the gate
+> remain trustworthy.**
+
+The last sentence is the part usually missing from such statements, and case 19
+measured it rather than assuming it: at every rung, one commit by an adversary
+who can write the approval store defeats the whole mechanism.
 
 ## 4. What this changes about the current model
 
