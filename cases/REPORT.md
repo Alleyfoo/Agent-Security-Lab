@@ -24,8 +24,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-12](12-three-models/README.md)<br>Three models, one workflow | Obtain a read of artifact.key_material at the schema step in three architectures running the same workload - authority following the subject, the configured workflow step, and the transformation of one object - attacking every stored authority-bearing record in each | 🔴 Undetected | 🔴 Undetected | None. This case is a comparison and changes nothing in the product or in object_model; all three arms are measured as they are. Version pinning is implemented once and shared, because the contract adjudicated it as not architecture-specific | One workflow position, one capability, one attacker - the same narrowness case 08 recorded, and a different target might rank the arms differently. Arm C's intake is a seed rather than a transition because object_model's workflow table is frozen at what cases 10 and 11 measured, so the arms are compared on artifacts produced and grant resolved rather than on step count. Nothing here measures ambient authority, process boundaries, data movement, provenance, replay, or availability under attack. |
 | [case-13](13-second-premise/README.md)<br>Does a second independent premise raise the cost? | The same read of artifact.key_material at the schema step, against case 12's arm A and arm C after one additional independent premise is layered onto each - a MAC-style label policy over the permission table, and artifacts that declare what they are | 🔴 Undetected | 🔴 Undetected | None in the product. An experiment on laboratory reference arms, testing a prediction pre-registered in the report before the code existed. object_model is untouched and case 12's arms are frozen; this case layers onto them | The premises are laboratory constructs layered onto laboratory arms, and none of them exists in the product. Arm A's label policy models the *structure* of MAC over DAC and not kernel enforcement, which is the dimension case 12 already recorded its identity arm cannot reproduce. Both of arm C's premises are in-process data the same attacker reaches. |
 | [case-14](14-selector-map/README.md)<br>The selector map | Enumerate what selects every authority premise in all three arms, mark which selectors this adversary can alter, and execute every pivot the map implies - one edit to a shared selector, measured for whether it moved a premise and separately for whether it obtained the capability | 🔴 Undetected | 🔴 Undetected | None. An enumeration, not a control: no arm is changed and no product code is touched. The map's completeness is enforced by a test requiring every shared alterable selector to carry an executed pivot | The map is hand-built and its completeness is asserted rather than derived: a test requires every shared alterable selector to carry an executed pivot, which caught one missing pivot while the case was being written, but a premise nobody wrote down has no selector on the map. Whether a selector is alterable is a judgement recorded as data so it can be argued with - the artifact key and the skill name are classified as not directly writable, and both are derived from records that are. |
+| [case-15](15-authority-inventory/README.md)<br>The authority inventory | The same read of artifact.key_material, against deployments that differ only in what authority they already contain: an identity that already holds it (arm A), a credential scoped across both sides (arm B), an approved skill that legitimately reads it (arm C) - each measured present and absent | 🔴 Undetected | 🔴 Undetected | None. An audit rather than a control. What it adds is an instrument: the standing authority inventory - what an auditor would list if asked who or what may reach this today - and whether the attack changes it | One item per model, argued for in prose rather than drawn from a survey of real installations - 'normal deployment' is a judgement and it is the soft part of the case. The inventories are the ones this case defined, so a different auditor listing different things would get different visibility answers; a test asserts each inventory can at least see the target authority, so 'unchanged' is a real result rather than an artefact of listing the wrong thing. |
 
-**16 cases** — 11 with a control, 5 open by design. 10 moved to a better result class.
+**17 cases** — 11 with a control, 6 open by design. 10 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -133,9 +134,9 @@ So the principle is usable rather than merely true:
 
 > To raise the cost of forging authority, add a premise that is **(a)** consulted at use time, **(b)** not a function of an index the attacker can change, and **(c)** on the specific surface being defended. Missing any of the three buys nothing. The subject-keyed variant is the one to remember: it looks exactly like defence in depth and measures as no defence at all.
 
-### Level 1.5, the configuration adversary — named after 6 cases had measured it
+### Level 1.5, the configuration adversary — named after 7 cases had measured it
 
-Cases 08, 10, 11, 12, 13, 14 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** For most of that time it had no rung on the compromise ladder. It has one now — `Level 1.5`, numbered so Levels 2–7 and every case README citing them keep their numbers.
+Cases 08, 10, 11, 12, 13, 14, 15 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** For most of that time it had no rung on the compromise ladder. It has one now — `Level 1.5`, numbered so Levels 2–7 and every case README citing them keep their numbers.
 
 It is defined by **reach, not by which component is captured**, which is why it was awkward to place: it need not control any agent at all. A compromised storage layer, a restored backup, a writable config share or a deploy pipeline is Level 1.5 while every worker is honest. It is stronger than Level 1 — it reaches records no agent interface exposes — and weaker than Level 2, which would rewrite the derivation and make every arm of a comparison lose identically.
 
@@ -147,6 +148,7 @@ It is defined by **reach, not by which component is captured**, which is why it 
 | case-12 — Three models, one workflow | 🔴 Undetected |
 | case-13 — Does a second independent premise raise the cost? | 🔴 Undetected |
 | case-14 — The selector map | 🔴 Undetected |
+| case-15 — The authority inventory | 🔴 Undetected |
 
 It is a realistic adversary — a compromised storage layer, a restored backup, a writable share — and it is *not the one the project's question is about*. The consequence has to be stated plainly, because the comparison table cannot say it: **the authority-model improvements measured in cases 10 and 11 have not been shown to hold against a fully captured agent.** They were measured against something else, for the good reason case 08 gives, and the ladder should either name that adversary or record why it is not a level.
 
@@ -221,6 +223,16 @@ So the honest form of the project's claim is not a ranking:
 
 > Different orchestration models attach authority and state differently. This laboratory is experimentally identifying which properties actually improve under each model, and at which threat level.
 
+Cases 13–15 sharpened it once more, and this is the form to use now:
+
+> Unix, workflow automation and object-centric orchestration each provide different ways to **structure** authority. Their practical security depends not only on the model but on whether deployment choices preserve or collapse the independence those models are capable of expressing.
+
+Three measurements stand behind that sentence, and none of them is about a diagram:
+
+- **independence is a property of selectors, not of records** — two files, tables or checks buy nothing if one editable reference changes what both mean (case 13, mapped in case 14);
+- **architecture establishes possibilities; deployment decides whether they collapse** — arm B looked separated until one credential spanned both sides, arm A had layered policy until an already-powerful identity was substituted, arm C had narrow bindings until a broadly applicable skill existed (cases 14, 15);
+- **the object model's one structural advantage, kept narrow** — its selectors were the hardest to pivot together (case 14, no yielding pivot). That is not global safety: case 12 measured cheap, broad authority surfaces elsewhere in the same model. "Expressiveness creates more surfaces while allowing cleaner separation between their selectors" is the defensible form.
+
 ### What the set says to do next
 
 Ordered by what the measurements support, not by appetite.
@@ -228,8 +240,8 @@ Ordered by what the measurements support, not by appetite.
 1. **The metadata floor.** Every derived conclusion in the product bottoms out in metadata that agents wrote — case 05's derivation trusts `row_count`, case 07's compares column shape and not values, and the honest pipeline already turns the identifier `'1001'` into the number `1001` with no check noticing (case 07, measurement D). Two cases recorded this residual independently and no case has attacked it. It is the clearest unclosed finding in the set and it is a derivation control, which the table above says is the kind that degrades rather than collapses.
 2. **Finish the absence.** Case 06 is one of only two Level 2 preventions and it covers one stage of four. The design rule above says this is the only move that has ever worked at Level 2; case 01 stays wholly open until it is finished.
 3. **Decide what availability is** in §7 of the threat model, before a further control spends more of it. The last open direction question from this review's first pass — naming the adversary and enumerating the pivots are both done, in the ladder and in case 14.
-4. **Audit the deployment, not the architecture.** Case 14's two yielding pivots both depend on something the *deployment* contains rather than on how it is built — an identity that already holds the authority (arm A), and a credential scoped across two boundaries (arm B). Case 08 saw the same shape and called it "a dangerous-if-misapplied skill already existing". Three cases have now found it independently, which makes an inventory audit a better next control than another premise.
-5. **Settle the unit of measurement.** Case 14 found that counting *fields* and counting *records* give different tamper sets for the same attack, and case 12 counted fields. Every minimum-tamper-set number in this report needs one convention, stated once. This is cheap and it affects published tables.
+4. **Build the inventory audit case 15 argues for.** That case measured why a change diff cannot see these attacks; it did not build or evaluate the audit that could. It is the first control this series has pointed at that is not another premise, and the measurement says it is the one that matters.
+5. **Measure interactions between several pieces of pre-existing authority.** Case 15 measured one item per model in isolation, which is not where a real deployment lives.
 
 Then the two families case 12 could not measure, each blocked on an instrument rather than on appetite: **data movement and fidelity**, which needs observation of a running system rather than the whole-payload strawman `key_vs_paste.py` assumes; and **compromise and failure behaviour**, which is where real OS isolation, real workflow credentials and disposable workers actually differ, and where the identity arm would stop being a miniature.
 
@@ -757,6 +769,38 @@ Reproduce: `python cases/13-second-premise/attack.py` · Tests: `tests/adversari
 **Notes.** Produced an inversion worth keeping: on selector hygiene the ordering of the three models reverses. The simplest architecture has the most yielding pivots and the most expressive has none, while case 12 measured the reverse on record count and tamper set. Not a contradiction - how many records hold authority is not how many of them one edit can move. The unit-of-measurement finding is the one most likely to matter elsewhere: counting fields and counting records give different tamper sets for the same attack, and case 12 counted fields. That is now settled: the primary unit is committed state changes, defined once at the top of this module, and fields and records are reported alongside as descriptive data.
 
 Reproduce: `python cases/14-selector-map/attack.py` · Tests: `tests/adversarial/test_case_14_selector_map.py`
+
+### ⚠️ case-15 — The authority inventory
+
+**Compromise level:** Level 1.5: the configuration adversary, unchanged from cases 12-14  
+**Attack:** The same read of artifact.key_material, against deployments that differ only in what authority they already contain: an identity that already holds it (arm A), a credential scoped across both sides (arm B), an approved skill that legitimately reads it (arm C) - each measured present and absent  
+**Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
+
+**Control.** None. An audit rather than a control. What it adds is an instrument: the standing authority inventory - what an auditor would list if asked who or what may reach this today - and whether the attack changes it
+
+**Evidence**
+
+- arm A: same cost, same scope, and the permission set is untouched - remove the identity and the route disappears
+- arm B: 2 commits become 1, and the credential inventory never changes
+- arm C: same cost, and the edit drops from deployment-wide to one object
+- in all three arms the cheapest yielding edit leaves the standing inventory unchanged when the authority is already there, and changes it when it is not
+- tests/adversarial/test_case_15_authority_inventory.py
+
+**What this proves.** That the same architecture is more or less exposed depending on what its deployment already holds, and that the effect is measurable in three independent ways - cost, scope, and visibility to an audit. The three models agree on something for the first time: pre-existing authority converts the attack from creating authority to pointing at it, and that conversion is invisible to a change diff in all three. It also converts case 12's arm B result one step further - case 14 showed its two premises live in one record, and this shows its remaining advantage depends on the credential inventory.
+
+**What this does not prove.** It does not show any model is safer: every arm has a yielding route with and without the pre-existing authority, and what changes is cost, scope and visibility rather than possibility. It does not establish that an inventory audit would catch anything - it argues that a change diff cannot see these attacks and does not build or evaluate the audit that could. And it does not measure interactions between several pieces of pre-existing authority, which is where a real deployment lives.
+
+**Residual limitation.** One item per model, argued for in prose rather than drawn from a survey of real installations - 'normal deployment' is a judgement and it is the soft part of the case. The inventories are the ones this case defined, so a different auditor listing different things would get different visibility answers; a test asserts each inventory can at least see the target authority, so 'unchanged' is a real result rather than an artefact of listing the wrong thing.
+
+**Containment.** None, and the case is about why. The attacker's preferred route changes nothing an auditor lists, so the containment that would have to exist is a standing inventory audit rather than a diff of what changed.
+
+**Recovery.** Not applicable - no control was applied. The operational output is a question rather than a remedy: what authority exists in this deployment, what could point at it, and would anyone notice if something did?
+
+**Blast radius.** Measured as a property of the deployment rather than the attack: pre-existing authority does not widen what an edit reaches, it narrows what the attacker must edit. In arm C that is a reduction from deployment-wide to one object, which is better for the defender in every way except that nobody can see it.
+
+**Notes.** The hypothesis was that pre-existing authority reduces the visibility of the edit rather than its cost. It held in all three arms and reduced the cost as well in one, which is arm B's halving. The tie-break in `cheapest` is load-bearing and pinned by a test: given two equal-cost routes an attacker takes the one an audit cannot see, and ordering by scope first would have reported arm A's noisy route and hidden its quiet one.
+
+Reproduce: `python cases/15-authority-inventory/attack.py` · Tests: `tests/adversarial/test_case_15_authority_inventory.py`
 
 ## Where the boundary stands
 

@@ -147,6 +147,7 @@ not claimed.
 | [`12-three-models`](12-three-models/README.md) ⚠️ | 3 | Comparison: authority following the subject, the configured workflow step, and one object's transformation. What separates them is not how many authority records they hold but whether two must agree |
 | [`13-second-premise`](13-second-premise/README.md) ⚠️ | 3 | A second independent premise raises the tamper cost only if it is not keyed on something the attacker can pivot, and only on the surface it covers |
 | [`14-selector-map`](14-selector-map/README.md) ⚠️ | 3 | Independent records are not independent premises: two premises are independent only if no attacker-alterable selector reaches both |
+| [`15-authority-inventory`](15-authority-inventory/README.md) ⚠️ | 3 | Pre-existing authority converts the attack from creating authority to pointing at it — invisible to a change diff in all three models |
 
 Cases 08 and 12 are registered ⚠️ because they change nothing in the product.
 Both arms — all three, for case 12 — are measured as they are, and the named

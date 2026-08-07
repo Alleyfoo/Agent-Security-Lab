@@ -482,6 +482,32 @@ def _review() -> list:
       "properties actually improve under each model, and at which threat "
       "level.")
     w("")
+    w("Cases 13–15 sharpened it once more, and this is the form to use now:")
+    w("")
+    w("> Unix, workflow automation and object-centric orchestration each "
+      "provide different ways to **structure** authority. Their practical "
+      "security depends not only on the model but on whether deployment "
+      "choices preserve or collapse the independence those models are capable "
+      "of expressing.")
+    w("")
+    w("Three measurements stand behind that sentence, and none of them is "
+      "about a diagram:")
+    w("")
+    w("- **independence is a property of selectors, not of records** — two "
+      "files, tables or checks buy nothing if one editable reference changes "
+      "what both mean (case 13, mapped in case 14);")
+    w("- **architecture establishes possibilities; deployment decides whether "
+      "they collapse** — arm B looked separated until one credential spanned "
+      "both sides, arm A had layered policy until an already-powerful identity "
+      "was substituted, arm C had narrow bindings until a broadly applicable "
+      "skill existed (cases 14, 15);")
+    w("- **the object model's one structural advantage, kept narrow** — its "
+      "selectors were the hardest to pivot together (case 14, no yielding "
+      "pivot). That is not global safety: case 12 measured cheap, broad "
+      "authority surfaces elsewhere in the same model. \"Expressiveness "
+      "creates more surfaces while allowing cleaner separation between their "
+      "selectors\" is the defensible form.")
+    w("")
 
     # -- 7. where to go next ------------------------------------------------
     w("### What the set says to do next")
@@ -505,19 +531,14 @@ def _review() -> list:
       "further control spends more of it. The last open direction question "
       "from this review's first pass — naming the adversary and enumerating "
       "the pivots are both done, in the ladder and in case 14.")
-    w("4. **Audit the deployment, not the architecture.** Case 14's two "
-      "yielding pivots both depend on something the *deployment* contains "
-      "rather than on how it is built — an identity that already holds the "
-      "authority (arm A), and a credential scoped across two boundaries "
-      "(arm B). Case 08 saw the same shape and called it \"a "
-      "dangerous-if-misapplied skill already existing\". Three cases have now "
-      "found it independently, which makes an inventory audit a better next "
-      "control than another premise.")
-    w("5. **Settle the unit of measurement.** Case 14 found that counting "
-      "*fields* and counting *records* give different tamper sets for the same "
-      "attack, and case 12 counted fields. Every minimum-tamper-set number in "
-      "this report needs one convention, stated once. This is cheap and it "
-      "affects published tables.")
+    w("4. **Build the inventory audit case 15 argues for.** That case measured "
+      "why a change diff cannot see these attacks; it did not build or "
+      "evaluate the audit that could. It is the first control this series has "
+      "pointed at that is not another premise, and the measurement says it is "
+      "the one that matters.")
+    w("5. **Measure interactions between several pieces of pre-existing "
+      "authority.** Case 15 measured one item per model in isolation, which "
+      "is not where a real deployment lives.")
     w("")
     w("Then the two families case 12 could not measure, each blocked on an "
       "instrument rather than on appetite: **data movement and fidelity**, "

@@ -1370,6 +1370,105 @@ CASES: List[CaseResult] = [
                     "already contained.",
         },
     ),
+    CaseResult(
+        case_id="case-15",
+        title="The authority inventory",
+        compromise_level="Level 1.5: the configuration adversary, unchanged "
+                         "from cases 12-14",
+        attack="The same read of artifact.key_material, against deployments "
+               "that differ only in what authority they already contain: an "
+               "identity that already holds it (arm A), a credential scoped "
+               "across both sides (arm B), an approved skill that legitimately "
+               "reads it (arm C) - each measured present and absent",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None. An audit rather than a control. What it adds is an "
+                "instrument: the standing authority inventory - what an "
+                "auditor would list if asked who or what may reach this "
+                "today - and whether the attack changes it",
+        evidence=[
+            "arm A: same cost, same scope, and the permission set is "
+            "untouched - remove the identity and the route disappears",
+            "arm B: 2 commits become 1, and the credential inventory never "
+            "changes",
+            "arm C: same cost, and the edit drops from deployment-wide to one "
+            "object",
+            "in all three arms the cheapest yielding edit leaves the standing "
+            "inventory unchanged when the authority is already there, and "
+            "changes it when it is not",
+            "tests/adversarial/test_case_15_authority_inventory.py",
+        ],
+        what_this_proves=(
+            "That the same architecture is more or less exposed depending on "
+            "what its deployment already holds, and that the effect is "
+            "measurable in three independent ways - cost, scope, and "
+            "visibility to an audit. The three models agree on something for "
+            "the first time: pre-existing authority converts the attack from "
+            "creating authority to pointing at it, and that conversion is "
+            "invisible to a change diff in all three. It also converts case "
+            "12's arm B result one step further - case 14 showed its two "
+            "premises live in one record, and this shows its remaining "
+            "advantage depends on the credential inventory."),
+        what_this_does_not_prove=(
+            "It does not show any model is safer: every arm has a yielding "
+            "route with and without the pre-existing authority, and what "
+            "changes is cost, scope and visibility rather than possibility. It "
+            "does not establish that an inventory audit would catch anything - "
+            "it argues that a change diff cannot see these attacks and does "
+            "not build or evaluate the audit that could. And it does not "
+            "measure interactions between several pieces of pre-existing "
+            "authority, which is where a real deployment lives."),
+        residual_limitation=(
+            "One item per model, argued for in prose rather than drawn from a "
+            "survey of real installations - 'normal deployment' is a judgement "
+            "and it is the soft part of the case. The inventories are the ones "
+            "this case defined, so a different auditor listing different "
+            "things would get different visibility answers; a test asserts "
+            "each inventory can at least see the target authority, so "
+            "'unchanged' is a real result rather than an artefact of listing "
+            "the wrong thing."),
+        containment="None, and the case is about why. The attacker's preferred "
+                    "route changes nothing an auditor lists, so the "
+                    "containment that would have to exist is a standing "
+                    "inventory audit rather than a diff of what changed.",
+        recovery="Not applicable - no control was applied. The operational "
+                 "output is a question rather than a remedy: what authority "
+                 "exists in this deployment, what could point at it, and would "
+                 "anyone notice if something did?",
+        status="open",
+        directory="cases/15-authority-inventory",
+        test_module="tests/adversarial/test_case_15_authority_inventory.py",
+        blast_radius="Measured as a property of the deployment rather than the "
+                     "attack: pre-existing authority does not widen what an "
+                     "edit reaches, it narrows what the attacker must edit. In "
+                     "arm C that is a reduction from deployment-wide to one "
+                     "object, which is better for the defender in every way "
+                     "except that nobody can see it.",
+        notes="The hypothesis was that pre-existing authority reduces the "
+              "visibility of the edit rather than its cost. It held in all "
+              "three arms and reduced the cost as well in one, which is arm "
+              "B's halving. The tie-break in `cheapest` is load-bearing and "
+              "pinned by a test: given two equal-cost routes an attacker takes "
+              "the one an audit cannot see, and ordering by scope first would "
+              "have reported arm A's noisy route and hidden its quiet one.",
+        extra={
+            "tamper_unit": TAMPER_UNIT,
+            "minimum_commits": {
+                "A: authority absent": 1, "A: authority present": 1,
+                "B: authority absent": 2, "B: authority present": 1,
+                "C: authority absent": 1, "C: authority present": 1,
+            },
+            "commits": {
+                "A: authority absent": ["the permission table"],
+                "A: authority present": ["the stage-to-subject assignment"],
+                "B: authority absent": ["the step record",
+                                        "the connection scope"],
+                "B: authority present": ["the step record"],
+                "C: authority absent": ["the skill contract"],
+                "C: authority present": ["the object record"],
+            },
+        },
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}
