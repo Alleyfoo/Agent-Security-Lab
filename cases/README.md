@@ -146,10 +146,34 @@ not claimed.
 | [`11-conflict-containment`](11-conflict-containment/README.md) ✅ | 3 | A contradicted record contains the object before the next step — a control the stored map cannot have, because it keeps no contradiction to find |
 | [`12-three-models`](12-three-models/README.md) ⚠️ | 3 | Comparison: authority following the subject, the configured workflow step, and one object's transformation. What separates them is not how many authority records they hold but whether two must agree |
 
-Case 08 is registered ⚠️ because it changes nothing in the product. Both arms
-are measured as they are, and the named capability is obtainable in both — so
-its baseline and controlled results are identical by construction, which is
-what an honest comparison looks like in this registry.
+Cases 08 and 12 are registered ⚠️ because they change nothing in the product.
+Both arms — all three, for case 12 — are measured as they are, and the named
+capability is obtainable in each, so baseline and controlled results are
+identical by construction. That is what an honest comparison looks like in this
+registry.
+
+### The hypothesis case 12 killed
+
+Recorded here because a refuted belief is written down in this repository, not
+quietly dropped:
+
+> ~~The object model is safer than an identity model or a workflow model.~~
+
+For authority structure and tampering, the object model has the most
+authority-bearing records of the three, the same minimum tamper set as the
+identity model, and a one-edit route wider in scope than either other arm. The
+competent workflow arm resisted best, and got there through ordinary
+configuration rather than design intent.
+
+What replaces it is architecture-neutral and belongs to no arm — *authority is
+harder to forge when derived from independent premises than when read from one
+writable conclusion* — with the measured bound that the premise count sets the
+cost and not the possibility. The object model's possible advantages now have
+to be sought elsewhere: dynamic task composition, canonical artifacts, data
+movement, provenance and replay, narrower per-object bindings, disposable
+workers, and behaviour under a hostile worker. Each needs its own comparison
+and its own instrument. See **What the cases add up to** in
+[`REPORT.md`](REPORT.md).
 
 ## Deferred — out of current scope
 

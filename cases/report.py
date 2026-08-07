@@ -186,6 +186,58 @@ def _review() -> list:
       "what it catches.")
     w("")
 
+    # -- 3b. the principle, and its measured bound -------------------------
+    w("### The principle case 12 produced, stated with its bound")
+    w("")
+    w("Case 12 found the mechanism the *derivation* row above was groping at, "
+      "and it is not \"derive rather than store\":")
+    w("")
+    w("> **Authority is harder to forge when it must be derived from "
+      "independent premises than when it is read from one writable "
+      "conclusion.**")
+    w("")
+    w("This is **architecture-neutral**. It is not a property of objects. The "
+      "arm that had it in case 12 was the conventional workflow model, which "
+      "acquired it by ordinary competent configuration rather than by design "
+      "intent: what a step names and what its credential may reach are "
+      "separate records, and both must permit.")
+    w("")
+    w("Two things have to be said about it in the same breath, because the "
+      "measurement supports one and not the other.")
+    w("")
+    w("**What was measured: the count sets the cost.** Two independent "
+      "premises cost two edits. That is a real and reproducible doubling, and "
+      "it is the only arm in three where a single edit was not enough.")
+    w("")
+    w("**What was not measured: the count does not set the possibility.** "
+      "Both of arm B's records sit inside the same adversary's reach, so two "
+      "edits is a price, not a wall. An adversary who can edit one can edit "
+      "the other.")
+    w("")
+    w("Put beside the cross-cutting finding, the two compose into one "
+      "statement the series can actually stand behind:")
+    w("")
+    w("| Property | Sets | Evidence |")
+    w("|---|---|---|")
+    w("| how many independent premises must agree | the **cost** of forging "
+      "authority | case 12: 1 premise → 1 edit, 2 premises → 2 edits |")
+    w("| whether any premise is outside the adversary's reach | whether "
+      "forging is **possible at all** | the cross-cutting finding, six cases: "
+      "every reference value inside the reach has fallen |")
+    w("")
+    w("So multiplying premises inside one trust boundary buys a linear price "
+      "increase, and moving one premise outside it is the only thing that has "
+      "ever bought more than a price increase. The first is cheap to do and "
+      "worth doing; it should not be mistaken for the second.")
+    w("")
+    w("**Falsifiable prediction, pre-registered here.** If the principle is "
+      "architectural rather than incidental to arm B, then adding a second "
+      "independent premise to arm A or arm C should raise that arm's minimum "
+      "tamper set to 2 — without changing which model it is. If it does not, "
+      "the principle is really a fact about workflow configuration and this "
+      "section is wrong. No case has tested it yet.")
+    w("")
+
     # -- 4. the adversary with no ladder row -------------------------------
     w(f"### {len(persisted)} cases measure an adversary the ladder has no row "
       "for")
@@ -285,6 +337,10 @@ def _review() -> list:
       "permanently, and this one was not intended |")
     w("| case 11 | containment on conflict, which widens exactly that surface "
       "on purpose |")
+    w("| case 12, arm B | the cheapest edit against the workflow model obtains "
+      "nothing and stops the step — the first instance found *outside* the "
+      "object model, so it is a property of authority configuration rather "
+      "than of one candidate |")
     w("")
     w("Nothing here is wrong: stopping is usually the right answer, and every "
       "instance is recorded. What is wrong is that the threat model gives the "
@@ -294,6 +350,57 @@ def _review() -> list:
       "cheap for an attacker to trigger deliberately, and the project "
       "currently has no rule about how much unavailability a control may buy "
       "with. §7 should say which of the two meanings it excludes.")
+    w("")
+
+    # -- 6b. what the thesis cannot be --------------------------------------
+    w("### What the eventual thesis cannot be")
+    w("")
+    w("Recorded because a dead hypothesis is worth as much as a live one, and "
+      "because this repository's rule is that a refuted belief is written "
+      "down rather than quietly dropped.")
+    w("")
+    w("> ~~The object model is safer than an identity model or a workflow "
+      "model.~~ **Dead.** Case 12 measured the opposite for the one property "
+      "family it covers: the object model has the most authority-bearing "
+      "records of the three, the same minimum tamper set as the identity "
+      "model, and a one-edit route whose scope is wider than either other "
+      "arm's.")
+    w("")
+    w("The result worth keeping, stated as narrowly as it was measured:")
+    w("")
+    w("> **For fixed workflows, conventional workflow orchestration may be "
+      "structurally better than the candidate object model at resisting "
+      "single-record authority tampering.**")
+    w("")
+    w("The three models are not a ladder from old to modern to futuristic. "
+      "They are three trade-offs:")
+    w("")
+    w("| Model | Strength | Cost |")
+    w("|---|---|---|")
+    w("| identity | simple and powerful; its real strength is OS and process "
+      "enforcement, which case 12's miniature does **not** reproduce | "
+      "standing authority, broad scope, and every identity that already holds "
+      "a permission is a route to it |")
+    w("| configured workflow | strong for predictable processes, because "
+      "configuration can require independent pieces to line up | authority is "
+      "the least specific of the three — every run of the definition, with no "
+      "notion of which object is being worked on |")
+    w("| object | dynamic and expressive | flexibility creates more "
+      "authority-bearing surfaces; a shared skill definition has very broad "
+      "consequences |")
+    w("")
+    w("What the object model's advantage has to come from instead, none of "
+      "which case 12 measured: dynamic task composition, canonical artifacts, "
+      "less data movement, provenance and replay, narrower per-object "
+      "bindings, disposable workers, and behaviour under a hostile worker. "
+      "Each needs its own comparison and its own instrument.")
+    w("")
+    w("So the honest form of the project's claim is not a ranking:")
+    w("")
+    w("> Different orchestration models attach authority and state "
+      "differently. This laboratory is experimentally identifying which "
+      "properties actually improve under each model, and at which threat "
+      "level.")
     w("")
 
     # -- 7. where to go next ------------------------------------------------
@@ -314,16 +421,31 @@ def _review() -> list:
       "preventions and it covers one stage of four. The design rule above says "
       "this is the only move that has ever worked at Level 2; case 01 stays "
       "wholly open until it is finished.")
-    w("3. **Name the adversary** cases 08, 10 and 11 measured, in the ladder, "
-      "or record why it is not a level.")
-    w("4. **Decide what availability is** in §7 of the threat model, before a "
+    w("3. **Test the principle rather than the architectures.** Add a second "
+      "independent premise to arm A and to arm C and re-measure. The "
+      "prediction above says their minimum tamper set should rise to 2 "
+      "without either becoming a different model. It is the cheapest "
+      "experiment available — the three arms already exist — and it decides "
+      "whether the principle is architecture-neutral or a fact about workflow "
+      "configuration.")
+    w("4. **Name the adversary** cases 08, 10, 11 and 12 measured, in the "
+      "ladder, or record why it is not a level. Four cases now rest on a rung "
+      "that does not exist.")
+    w("5. **Decide what availability is** in §7 of the threat model, before a "
       "further control spends more of it.")
     w("")
-    w("Not next, and worth saying: another authority-model comparison. The two "
-      "already run agree on the only number they both produced — minimum "
-      "tamper set 1 — and a third arm measured against the same "
-      "persisted-record adversary would not move the answer to the project's "
-      "question.")
+    w("Then the two families case 12 could not measure, each blocked on an "
+      "instrument rather than on appetite: **data movement and fidelity**, "
+      "which needs observation of a running system rather than the "
+      "whole-payload strawman `key_vs_paste.py` assumes; and "
+      "**compromise and failure behaviour**, which is where real OS "
+      "isolation, real workflow credentials and disposable workers actually "
+      "differ, and where the identity arm would stop being a miniature.")
+    w("")
+    w("Not next, and worth saying: a fourth arm, or another authority-model "
+      "comparison against the same adversary. Case 12 answered that question "
+      "for this property family, and the answer does not improve by adding "
+      "models to it.")
     w("")
     return out
 

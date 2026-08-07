@@ -41,6 +41,37 @@ verified map of what a malicious agent can and cannot do inside the baseline
 process — which effects are prevented or detected, and which remaining failures
 require an actual process boundary.
 
+### What the project may not claim — one dead hypothesis
+
+Case 12 compared three architectures and refuted this outright:
+
+> ~~The object model is safer than an identity model or a workflow model.~~
+
+For the one property family measured — authority structure and tampering — the
+object model has the *most* authority-bearing records, the same minimum tamper
+set as the identity model, and a one-edit route wider in scope than either
+other arm. The competent workflow arm did best, and did it by accident of
+ordinary configuration.
+
+The honest form of the claim, and the one to use in any write-up:
+
+> Different orchestration models attach authority and state differently. This
+> laboratory is experimentally identifying which properties actually improve
+> under each model, and at which threat level.
+
+The principle that survived is **architecture-neutral** and belongs to no arm:
+
+> Authority is harder to forge when it must be derived from independent
+> premises than when it is read from one writable conclusion.
+
+Measured bound, which must travel with it: the number of independent premises
+sets the *cost* (2 premises → 2 edits), not the *possibility* — both of arm B's
+records sat inside the same adversary's reach. Only a premise outside that
+reach has ever bought more than a price increase.
+
+Full argument and evidence: the **What the cases add up to** section of
+[`cases/REPORT.md`](cases/REPORT.md).
+
 ## 3. Non-negotiable working rules
 
 ### Result vocabulary — closed set
