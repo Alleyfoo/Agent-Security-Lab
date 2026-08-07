@@ -610,6 +610,40 @@ def _review() -> list:
       "preventions measured here are absences |")
     w("| **Canonical state and provenance** | keep enough trusted history to "
       "tell legitimate progression from redirected work (cases 05, 07, 10) |")
+    w("| **Exported transformations** | a boundary is only as narrow as the "
+      "verbs it offers across it (cases 09, 22) |")
+    w("")
+    w("The last one is the newest and it connects the others rather than "
+      "sitting beside them. Cases 09 and 22 found the same thing two planes "
+      "apart:")
+    w("")
+    w("> **A protection boundary is only as narrow as the transformations it "
+      "exports.**")
+    w("")
+    w("Case 09: an allowlist of *names* is not an allowlist of "
+      "*transformations*. Case 22: a store behind a service is not protected "
+      "if the service offers `compact()`. Names, endpoints, services and "
+      "processes buy nothing by themselves — what matters is which state "
+      "transitions the other side can cause. So the independence layers are "
+      "not five parallel properties with a sixth called *protocol "
+      "independence*; the exported verbs are the rule that decides how much "
+      "of every other layer leaks back out.")
+    w("")
+    w("Which gives the boundary condition its full form. Not *the gate owns "
+      "the database*, but:")
+    w("")
+    w("```text")
+    w("the worker cannot reach storage")
+    w("AND")
+    w("the protocol exposes only transformations that preserve the security")
+    w("invariants")
+    w("```")
+    w("")
+    w("Integrity can fail by **subtraction** as easily as by addition, which "
+      "is case 22's resurrection result: any maintenance verb that can "
+      "delete, compact, rewrite, merge, prune, repair or rebase "
+      "security-relevant history is an authority operation however much it "
+      "sounds like housekeeping.")
     w("")
     w("And one property to keep separate, because arm C made them look "
       "identical: **a narrow blast radius is not detectability.** Case 15 "

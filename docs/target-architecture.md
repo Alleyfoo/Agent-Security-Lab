@@ -119,6 +119,26 @@ gate's persisted store sat on a filesystem the worker's own uid could write.
 Every time "independent" sounds like one property, a case splits another piece
 off it. That is the shape of the work rather than a failure of the taxonomy.
 
+**There is no sixth layer called *protocol independence*.** The exported verbs
+are the rule that decides how much of every other layer leaks back out:
+
+> **A protection boundary is only as narrow as the transformations it
+> exports.** (Cases 09 and 22, two planes apart.)
+
+So the boundary condition is not *the gate owns the database*. It is:
+
+```text
+the worker cannot reach storage
+AND
+the protocol exposes only transformations that preserve the security
+invariants
+```
+
+Integrity can fail by **subtraction** as easily as by addition. Any maintenance
+verb that can delete, compact, rewrite, merge, prune, repair or rebase
+security-relevant history is an authority operation, however much it sounds
+like housekeeping.
+
 Two model instances sharing one writable approval store and one service
 credential have **decision** independence and none of the other four. That is
 the shorthand this taxonomy exists to prevent.
