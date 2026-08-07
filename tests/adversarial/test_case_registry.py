@@ -158,6 +158,41 @@ def test_a_commit_decomposition_never_lists_the_same_record_twice():
             )
 
 
+@pytest.mark.parametrize("case", ALL, ids=IDS)
+def test_a_modeled_boundary_admits_that_it_is_modeled(case: CaseResult):
+    """The distinction case 23 forced, and the reason it was blocked rather
+    than faked.
+
+    A case whose boundary is drawn by its own Python must say so where a
+    reader will see it - in the residual limitation, not only in a source
+    comment. Otherwise "modelled, not enforced" decays into boilerplate and a
+    later reader promotes the result to an isolation claim.
+    """
+    from cases.registry import MODELED
+    if case.evidence_status != MODELED:
+        return
+    prose = (case.residual_limitation + " " +
+             case.what_this_does_not_prove).lower()
+    assert "model" in prose, (
+        f"{case.case_id} relies on a boundary it drew itself and does not "
+        "admit it in its residual or its non-claims"
+    )
+
+
+@pytest.mark.parametrize("case", ALL, ids=IDS)
+def test_a_measured_case_did_not_draw_its_own_boundary(case: CaseResult):
+    """The other direction. If a case says `measured` while its own prose
+    calls the boundary modelled, one of the two is wrong."""
+    from cases.registry import MEASURED, MODELED
+    if case.evidence_status != MEASURED:
+        return
+    prose = case.residual_limitation.lower()
+    assert "modelled rather than enforced" not in prose, (
+        f"{case.case_id} claims measured evidence and describes a modelled "
+        f"boundary - set evidence_status={MODELED!r} or rewrite the residual"
+    )
+
+
 def test_case_ids_are_unique():
     assert len(IDS) == len(set(IDS))
 

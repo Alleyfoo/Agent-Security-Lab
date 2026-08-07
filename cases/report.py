@@ -589,6 +589,32 @@ def _review() -> list:
       "the same in all three: **can an untrusted change redirect ordinary work "
       "through that existing authority?**")
     w("")
+    w("### What kind of thing said no")
+    w("")
+    w("A distinction case 23 forced by being **blocked** rather than faked, "
+      "and now a field on every case:")
+    w("")
+    w("| | |")
+    w("|---|---|")
+    w("| `untested` | nobody has got around to it |")
+    w("| `modeled` | the boundary is represented in code — the case's own "
+      "Python is what refuses |")
+    w("| `blocked` | the experiment needs a boundary this environment cannot "
+      "provide, and the blocker is recorded |")
+    w("| `measured` | a real external mechanism was exercised and it refused |")
+    w("")
+    modeled = [c.case_id for c in all_cases()
+               if c.evidence_status == "modeled"]
+    w(f"Currently `modeled`: {', '.join(modeled)}. Everything else exercised "
+      "real Python objects, real subprocesses or real threads.")
+    w("")
+    w("The line that matters is between the middle two and the last, and case "
+      "23 states it as a pass condition: **the attack must fail for a reason "
+      "the case did not implement.** If the repository's own code is what says "
+      "no, the case has rebuilt the application claim with another coat of "
+      "paint — which is why cases 21 and 22 are process and protocol results "
+      "and not isolation results, and why they say so.")
+    w("")
     w("### The reusable principles")
     w("")
     w("What the series has produced is not one proposed architecture. It is a "
@@ -786,6 +812,10 @@ def render() -> str:
         w(f"### {flag} {c.case_id} — {c.title}")
         w("")
         w(f"**Compromise level:** {c.compromise_level}  ")
+        if c.evidence_status != "measured":
+            w(f"**Evidence:** `{c.evidence_status}` — the boundary this case "
+              "relies on is drawn by its own code, not enforced by anything "
+              "underneath it  ")
         w(f"**Attack:** {c.attack}  ")
         w(f"**Baseline:** {_result(c.baseline_result)} → "
           f"**Controlled:** {_result(c.controlled_result)}")

@@ -284,6 +284,21 @@ This has relatives worth naming rather than reinventing. It is the shape of **am
 
 It also explains the convergence. A legitimate powerful service identity, a legitimate powerful connection and a legitimate powerful skill are none of them evidence of compromise. The dangerous fact is the same in all three: **can an untrusted change redirect ordinary work through that existing authority?**
 
+### What kind of thing said no
+
+A distinction case 23 forced by being **blocked** rather than faked, and now a field on every case:
+
+| | |
+|---|---|
+| `untested` | nobody has got around to it |
+| `modeled` | the boundary is represented in code — the case's own Python is what refuses |
+| `blocked` | the experiment needs a boundary this environment cannot provide, and the blocker is recorded |
+| `measured` | a real external mechanism was exercised and it refused |
+
+Currently `modeled`: case-12, case-13, case-22. Everything else exercised real Python objects, real subprocesses or real threads.
+
+The line that matters is between the middle two and the last, and case 23 states it as a pass condition: **the attack must fail for a reason the case did not implement.** If the repository's own code is what says no, the case has rebuilt the application claim with another coat of paint — which is why cases 21 and 22 are process and protocol results and not isolation results, and why they say so.
+
 ### The reusable principles
 
 What the series has produced is not one proposed architecture. It is a set of principles that survive being moved between layers, which is the test a principle has to pass to be worth anything.
@@ -772,6 +787,7 @@ Reproduce: `python cases/11-conflict-containment/attack.py` · Tests: `tests/adv
 ### ⚠️ case-12 — Three models, one workflow
 
 **Compromise level:** Level 1.5: the configuration adversary, generalized per arm - may alter persisted configuration or workflow records, may not modify executable code or the trust root  
+**Evidence:** `modeled` — the boundary this case relies on is drawn by its own code, not enforced by anything underneath it  
 **Attack:** Obtain a read of artifact.key_material at the schema step in three architectures running the same workload - authority following the subject, the configured workflow step, and the transformation of one object - attacking every stored authority-bearing record in each  
 **Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
 
@@ -805,6 +821,7 @@ Reproduce: `python cases/12-three-models/attack.py` · Tests: `tests/adversarial
 ### ⚠️ case-13 — Does a second independent premise raise the cost?
 
 **Compromise level:** Level 1.5: the configuration adversary, unchanged from case 12 - may alter persisted configuration or workflow records, may not modify executable code or the trust root  
+**Evidence:** `modeled` — the boundary this case relies on is drawn by its own code, not enforced by anything underneath it  
 **Attack:** The same read of artifact.key_material at the schema step, against case 12's arm A and arm C after one additional independent premise is layered onto each - a MAC-style label policy over the permission table, and artifacts that declare what they are  
 **Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
 
@@ -1105,6 +1122,7 @@ Reproduce: `python cases/21-gate-independence/attack.py` · Tests: `tests/advers
 ### ✅ case-22 — Durable-state independence
 
 **Compromise level:** Level 2 against the boundary and Level 1.5 against the store: the worker may write the filesystem the gate persists to  
+**Evidence:** `modeled` — the boundary this case relies on is drawn by its own code, not enforced by anything underneath it  
 **Attack:** Create, modify and DELETE durable gate authority - forge an approval, delete a consumption record to resurrect a spent approval, destroy the record entirely - against a store the worker can write, a store reachable only through the gate's protocol, and the same protocol with one maintenance operation  
 **Baseline:** 🔴 Undetected → **Controlled:** 🟢 Prevented
 

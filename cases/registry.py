@@ -72,6 +72,36 @@ RESULT_SEVERITY = {UNDETECTED: 0, DETECTED_AFTER_OCCURRENCE: 1,
 # They describe the shape of the edit; they are not the cost.
 # ---------------------------------------------------------------------------
 
+
+# ---------------------------------------------------------------------------
+# Evidence status: what kind of thing said "no".
+#
+# Distinct from the result vocabulary, which says what happened to the attack,
+# and from ``status``, which says whether a case is open or closed. This says
+# how much the evidence is worth, and the distinctions exist because case 23
+# was blocked rather than faked and the difference has to survive contact with
+# a later reader.
+#
+#     untested   nobody has got around to it
+#     modeled    the boundary is represented in code - the case's own Python
+#                is what refuses
+#     blocked    the experiment needs a boundary this environment cannot
+#                currently provide, and the blocker is recorded
+#     measured   a real external mechanism was exercised and it refused
+#
+# The line that matters is between `modeled` and `measured`, and case 23 states
+# it as a pass condition: **the attack must fail for a reason the case did not
+# implement.** If the repository's own code is what says no, the case has
+# rebuilt the application claim with another coat of paint.
+# ---------------------------------------------------------------------------
+
+UNTESTED = "untested"
+MODELED = "modeled"
+BLOCKED = "blocked"
+MEASURED = "measured"
+
+EVIDENCE_STATUSES = (UNTESTED, MODELED, BLOCKED, MEASURED)
+
 TAMPER_UNIT = "minimum independently committed state changes"
 
 # ---------------------------------------------------------------------------
@@ -140,6 +170,10 @@ class CaseResult:
     test_module: str
     notes: str = ""
     blast_radius: str = ""
+    # What kind of thing refused. Defaults to `measured` because most cases
+    # exercise real Python objects; the ones relying on a boundary they drew
+    # themselves must say `modeled` and a test checks they admit it.
+    evidence_status: str = MEASURED
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -152,6 +186,10 @@ class CaseResult:
                 )
         if self.status not in ("closed", "open"):
             raise ValueError(f"{self.case_id}: status must be closed|open")
+        if self.evidence_status not in EVIDENCE_STATUSES:
+            raise ValueError(
+                f"{self.case_id}: evidence_status={self.evidence_status!r} is "
+                f"not one of {EVIDENCE_STATUSES}")
         # An open case must not advertise an improvement it has not made.
         if self.status == "open" and self.controlled_result != self.baseline_result:
             raise ValueError(
@@ -1156,6 +1194,7 @@ CASES: List[CaseResult] = [
                  "record from a legitimate administrative change, which is the "
                  "same wall cases 09 and 11 hit from inside one model.",
         status="open",
+        evidence_status=MODELED,
         directory="cases/12-three-models",
         test_module="tests/adversarial/test_case_12_three_models.py",
         blast_radius="Recorded per arm on the shared scope scale rather than "
@@ -1282,6 +1321,7 @@ CASES: List[CaseResult] = [
                  "an attacker-controlled index gives the appearance of defence "
                  "in depth and none of the substance.",
         status="open",
+        evidence_status=MODELED,
         directory="cases/13-second-premise",
         test_module="tests/adversarial/test_case_13_second_premise.py",
         blast_radius="Unchanged from case 12 in every configuration. Adding "
@@ -2159,6 +2199,7 @@ CASES: List[CaseResult] = [
                  "than a mutable record, which is a further claim this case "
                  "does not make.",
         status="closed",
+        evidence_status=MODELED,
         directory="cases/22-durable-state",
         test_module="tests/adversarial/test_case_22_durable_state.py",
         blast_radius="One approval per forged or resurrected record, and in "
