@@ -237,7 +237,7 @@ def test_review_the_configuration_adversary_is_named_consistently():
     """
     persisted = _by_level("persisted-record")
     assert persisted == {"case-08", "case-10", "case-11", "case-12",
-                         "case-13", "case-14", "case-15", "case-16", "case-17"}, (
+                         "case-13", "case-14", "case-15", "case-16", "case-17", "case-18"}, (
         "the set of cases measuring the configuration adversary changed. "
         "update the review section in cases/report.py before changing this"
     )

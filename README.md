@@ -65,6 +65,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [15 — the authority inventory](cases/15-authority-inventory/README.md) | 🔴 Undetected | 🔴 Undetected — an audit, not a control |
 | [16 — authority reachability](cases/16-reachability/README.md) | 🔴 Undetected | 🟠 Detected after occurrence — and the exposure is visible at rest |
 | [17 — does the view survive a messy deployment?](cases/17-scale/README.md) | 🔴 Undetected | 🔴 Undetected — a usability measurement, not a control |
+| [18 — Gate 1: distribution validity](cases/18-distribution/README.md) | 🔴 Undetected | 🔴 Undetected — a validity measurement, not a control |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",

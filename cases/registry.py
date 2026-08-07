@@ -1631,6 +1631,92 @@ CASES: List[CaseResult] = [
               "compared two different deployments and reported a mismatch that "
               "was not there.",
     ),
+    CaseResult(
+        case_id="case-18",
+        title="Gate 1: distribution validity",
+        compromise_level="Level 1.5: the configuration adversary, inherited - "
+                         "this case measures a report rather than an attack",
+        attack="An attack on case 17's own result: remove the n_causes "
+               "parameter from its generator, sample deployments from four "
+               "distributions including the heavy-tailed shape real "
+               "entitlement data has, and find where the reduction stops "
+               "working",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None. A validity measurement, and the first of the two gates "
+                "the reachability hypothesis was given. What it adds is a "
+                "grouping that survives realistic distributions without "
+                "losing what case 17's grouping protected",
+        evidence=[
+            "cause count unmoved across a 1000x change in estate size - the "
+            "half of case 17 that is structural",
+            "case 17's generator took n_causes as a parameter, so its 16 was "
+            "partly a measurement of its own input; a test now asserts "
+            "sample() has no such parameter",
+            "its (authority, intermediary) key is linear in fan-out: the "
+            "heavy-tailed shape is unreadable at density 0.01, three holders "
+            "producing 73 causes",
+            "endpoints as an attribute of a per-intermediary finding: 73 "
+            "causes become 3 findings with every endpoint kept",
+            "report length then tracks holders and not fan-out, asserted "
+            "across three densities",
+            "tests/adversarial/test_case_18_distribution.py",
+        ],
+        what_this_proves=(
+            "That case 17's headline was half a result. Estate size genuinely "
+            "does not matter and that part is structural; the cause count "
+            "genuinely does depend on how sensitive authority is spread, case "
+            "17's number came from a parameter rather than a measurement, and "
+            "on the shape real entitlement data has its grouping key fails at "
+            "the lowest density worth testing. And that the failure was "
+            "fixable without giving up what case 17 protected - the endpoint "
+            "set belongs in the finding, not in its key. Case 17 had measured "
+            "hiding and readability as a trade-off; there was a third option, "
+            "and only failing at a realistic distribution made it necessary "
+            "to find."),
+        what_this_does_not_prove=(
+            "It does not show the reduction works on any real deployment: it "
+            "replaces one untested assumption with a narrower untested one - "
+            "from 'sensitive authority is rare' to 'few intermediaries hold "
+            "it' - and measures the consequences of that failing. It does not "
+            "establish a readability threshold, and it measures how many "
+            "findings there are rather than whether they are comprehensible."),
+        residual_limitation=(
+            "Still synthetic: four shapes argued from what entitlement data is "
+            "usually like, none sampled from a real estate. READABLE = 50 is "
+            "declared rather than measured, stated once so it can be argued "
+            "with. The pathological shape is honestly unreadable and no "
+            "grouping rescues it, which a test asserts so the case cannot be "
+            "read as claiming the approach always works."),
+        containment="Not applicable - the case measures a report. The "
+                    "operationally useful output is a precondition rather "
+                    "than a response: report length equals the number of "
+                    "intermediaries holding sensitive authority, and an "
+                    "estate can be measured against that before adopting any "
+                    "of this.",
+        recovery="Not applicable - nothing is compromised by measuring "
+                 "whether a report is readable. The operator-facing action is "
+                 "to count holders of sensitive authority in the real estate "
+                 "and compare that number against what a person will read.",
+        status="open",
+        directory="cases/18-distribution",
+        test_module="tests/adversarial/test_case_18_distribution.py",
+        blast_radius="Not applicable to a validity measurement. What the case "
+                     "contributes is that report length, unlike blast radius, "
+                     "is knowable before an incident and is fixed by the "
+                     "deployment rather than by the attack.",
+        notes="The case was written to attack the previous case's result and "
+              "it succeeded, which is the point of writing it that way. The "
+              "irreducible floor it lands on is the honest deliverable: no "
+              "amount of graph work reduces the number of intermediaries "
+              "holding sensitive authority, because each is a separate "
+              "decision somebody has to make. An earlier draft had 'sparse' "
+              "and 'dense' as separate shapes; they sampled identically and "
+              "differed only in the density parameter, which measured one "
+              "factor twice and the other never - the shapes now move the "
+              "number of holders and the fan-out independently, which is what "
+              "exposed the fan-out failure at all.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}

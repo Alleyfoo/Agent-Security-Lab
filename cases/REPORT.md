@@ -27,8 +27,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-15](15-authority-inventory/README.md)<br>The authority inventory | The same read of artifact.key_material, against deployments that differ only in what authority they already contain: an identity that already holds it (arm A), a credential scoped across both sides (arm B), an approved skill that legitimately reads it (arm C) - each measured present and absent | 🔴 Undetected | 🔴 Undetected | None. An audit rather than a control. What it adds is an instrument: the standing authority inventory - what an auditor would list if asked who or what may reach this today - and whether the attack changes it | One item per model, argued for in prose rather than drawn from a survey of real installations - 'normal deployment' is a judgement and it is the soft part of the case. The inventories are the ones this case defined, so a different auditor listing different things would get different visibility answers; a test asserts each inventory can at least see the target authority, so 'unchanged' is a real result rather than an artefact of listing the wrong thing. |
 | [case-16](16-reachability/README.md)<br>Authority reachability | Case 15's invisible attack in each arm - reassign a stage to an existing identity, point a step at an existing credential, retype an object at an existing skill - measured against a view of what work can reach the authority rather than a view of what authority exists | 🔴 Undetected | 🟠 Detected after occurrence | A reachability view, computed per arm from records that already exist: `actual` paths, work that reaches the authority as the deployment stands, and `potential` paths, work that could reach it through a binding change alone with no new authority created | Detection, not prevention: the binding changes, the path appears, and something has to be looking. The view is computed from the records the adversary can write, so rewriting the stored baseline defeats the diff - which is why the at-rest exposure report matters more than the diff and is useful even when nobody trusts the baseline. Reachability is computed one hop, for one target: a path needing two binding changes, or running through an artifact another object produced, is not modelled. |
 | [case-17](17-scale/README.md)<br>Does the reachability view survive a messy deployment? | Not an attack on the system: an attack on the *view*. Grow the deployment by three orders of magnitude, reduce the graph to causes, and plant rare dangerous relationships to see whether the reduction hides them | 🔴 Undetected | 🔴 Undetected | None. A usability measurement, and the gate case 16 set for itself. What it adds is a layer-neutral graph model whose per-arm numbers reproduce case 16's exactly, so the scale experiment measures the same thing | Severity is not derivable from the graph and must come from an operator - with no severity map the ranking collapses back to blast radius and needle recall returns to zero, which a test asserts so the requirement is recorded rather than apologised for. Synthetic deployments throughout. One hop and one target class, inherited from case 16 and not improved here. |
+| [case-18](18-distribution/README.md)<br>Gate 1: distribution validity | An attack on case 17's own result: remove the n_causes parameter from its generator, sample deployments from four distributions including the heavy-tailed shape real entitlement data has, and find where the reduction stops working | 🔴 Undetected | 🔴 Undetected | None. A validity measurement, and the first of the two gates the reachability hypothesis was given. What it adds is a grouping that survives realistic distributions without losing what case 17's grouping protected | Still synthetic: four shapes argued from what entitlement data is usually like, none sampled from a real estate. READABLE = 50 is declared rather than measured, stated once so it can be argued with. The pathological shape is honestly unreadable and no grouping rescues it, which a test asserts so the case cannot be read as claiming the approach always works. |
 
-**19 cases** — 12 with a control, 7 open by design. 11 moved to a better result class.
+**20 cases** — 12 with a control, 8 open by design. 11 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -136,9 +137,9 @@ So the principle is usable rather than merely true:
 
 > To raise the cost of forging authority, add a premise that is **(a)** consulted at use time, **(b)** not a function of an index the attacker can change, and **(c)** on the specific surface being defended. Missing any of the three buys nothing. The subject-keyed variant is the one to remember: it looks exactly like defence in depth and measures as no defence at all.
 
-### Level 1.5, the configuration adversary — named after 9 cases had measured it
+### Level 1.5, the configuration adversary — named after 10 cases had measured it
 
-Cases 08, 10, 11, 12, 13, 14, 15, 16, 17 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** For most of that time it had no rung on the compromise ladder. It has one now — `Level 1.5`, numbered so Levels 2–7 and every case README citing them keep their numbers.
+Cases 08, 10, 11, 12, 13, 14, 15, 16, 17, 18 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** For most of that time it had no rung on the compromise ladder. It has one now — `Level 1.5`, numbered so Levels 2–7 and every case README citing them keep their numbers.
 
 It is defined by **reach, not by which component is captured**, which is why it was awkward to place: it need not control any agent at all. A compromised storage layer, a restored backup, a writable config share or a deploy pipeline is Level 1.5 while every worker is honest. It is stronger than Level 1 — it reaches records no agent interface exposes — and weaker than Level 2, which would rewrite the derivation and make every arm of a comparison lose identically.
 
@@ -153,6 +154,7 @@ It is defined by **reach, not by which component is captured**, which is why it 
 | case-15 — The authority inventory | 🔴 Undetected |
 | case-16 — Authority reachability | 🟠 Detected after occurrence |
 | case-17 — Does the reachability view survive a messy deployment? | 🔴 Undetected |
+| case-18 — Gate 1: distribution validity | 🔴 Undetected |
 
 It is a realistic adversary — a compromised storage layer, a restored backup, a writable share — and it is *not the one the project's question is about*. The consequence has to be stated plainly, because the comparison table cannot say it: **the authority-model improvements measured in cases 10 and 11 have not been shown to hold against a fully captured agent.** They were measured against something else, for the good reason case 08 gives, and the ladder should either name that adversary or record why it is not a level.
 
@@ -924,6 +926,39 @@ Reproduce: `python cases/16-reachability/attack.py` · Tests: `tests/adversarial
 **Notes.** Written so it could fail, and the interesting half did. Reduction held comfortably; the presentation did not, and the obvious ranking - biggest blast radius first - is exactly wrong for the findings that matter most. The parity check caught a bug in itself before it caught anything else: reading case 16's count and the model's count either side of an arm reset compared two different deployments and reported a mismatch that was not there.
 
 Reproduce: `python cases/17-scale/attack.py` · Tests: `tests/adversarial/test_case_17_scale.py`
+
+### ⚠️ case-18 — Gate 1: distribution validity
+
+**Compromise level:** Level 1.5: the configuration adversary, inherited - this case measures a report rather than an attack  
+**Attack:** An attack on case 17's own result: remove the n_causes parameter from its generator, sample deployments from four distributions including the heavy-tailed shape real entitlement data has, and find where the reduction stops working  
+**Baseline:** 🔴 Undetected → **Controlled:** 🔴 Undetected
+
+**Control.** None. A validity measurement, and the first of the two gates the reachability hypothesis was given. What it adds is a grouping that survives realistic distributions without losing what case 17's grouping protected
+
+**Evidence**
+
+- cause count unmoved across a 1000x change in estate size - the half of case 17 that is structural
+- case 17's generator took n_causes as a parameter, so its 16 was partly a measurement of its own input; a test now asserts sample() has no such parameter
+- its (authority, intermediary) key is linear in fan-out: the heavy-tailed shape is unreadable at density 0.01, three holders producing 73 causes
+- endpoints as an attribute of a per-intermediary finding: 73 causes become 3 findings with every endpoint kept
+- report length then tracks holders and not fan-out, asserted across three densities
+- tests/adversarial/test_case_18_distribution.py
+
+**What this proves.** That case 17's headline was half a result. Estate size genuinely does not matter and that part is structural; the cause count genuinely does depend on how sensitive authority is spread, case 17's number came from a parameter rather than a measurement, and on the shape real entitlement data has its grouping key fails at the lowest density worth testing. And that the failure was fixable without giving up what case 17 protected - the endpoint set belongs in the finding, not in its key. Case 17 had measured hiding and readability as a trade-off; there was a third option, and only failing at a realistic distribution made it necessary to find.
+
+**What this does not prove.** It does not show the reduction works on any real deployment: it replaces one untested assumption with a narrower untested one - from 'sensitive authority is rare' to 'few intermediaries hold it' - and measures the consequences of that failing. It does not establish a readability threshold, and it measures how many findings there are rather than whether they are comprehensible.
+
+**Residual limitation.** Still synthetic: four shapes argued from what entitlement data is usually like, none sampled from a real estate. READABLE = 50 is declared rather than measured, stated once so it can be argued with. The pathological shape is honestly unreadable and no grouping rescues it, which a test asserts so the case cannot be read as claiming the approach always works.
+
+**Containment.** Not applicable - the case measures a report. The operationally useful output is a precondition rather than a response: report length equals the number of intermediaries holding sensitive authority, and an estate can be measured against that before adopting any of this.
+
+**Recovery.** Not applicable - nothing is compromised by measuring whether a report is readable. The operator-facing action is to count holders of sensitive authority in the real estate and compare that number against what a person will read.
+
+**Blast radius.** Not applicable to a validity measurement. What the case contributes is that report length, unlike blast radius, is knowable before an incident and is fixed by the deployment rather than by the attack.
+
+**Notes.** The case was written to attack the previous case's result and it succeeded, which is the point of writing it that way. The irreducible floor it lands on is the honest deliverable: no amount of graph work reduces the number of intermediaries holding sensitive authority, because each is a separate decision somebody has to make. An earlier draft had 'sparse' and 'dense' as separate shapes; they sampled identically and differed only in the density parameter, which measured one factor twice and the other never - the shapes now move the number of holders and the fan-out independently, which is what exposed the fan-out failure at all.
+
+Reproduce: `python cases/18-distribution/attack.py` · Tests: `tests/adversarial/test_case_18_distribution.py`
 
 ## Where the boundary stands
 
