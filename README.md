@@ -63,6 +63,7 @@ canonical registry so a claim cannot be true in one place and stale in another.
 | [13 — does a second independent premise raise the cost?](cases/13-second-premise/README.md) | 🔴 Undetected | 🔴 Undetected — an experiment on laboratory arms |
 | [14 — the selector map](cases/14-selector-map/README.md) | 🔴 Undetected | 🔴 Undetected — an enumeration, not a control |
 | [15 — the authority inventory](cases/15-authority-inventory/README.md) | 🔴 Undetected | 🔴 Undetected — an audit, not a control |
+| [16 — authority reachability](cases/16-reachability/README.md) | 🔴 Undetected | 🟠 Detected after occurrence — and the exposure is visible at rest |
 
 Every outcome is exactly one of **prevented**, **rejected before commitment**,
 **detected after occurrence**, or **undetected**. Vague terms — "handled",

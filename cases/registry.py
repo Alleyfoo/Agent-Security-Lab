@@ -1469,6 +1469,91 @@ CASES: List[CaseResult] = [
             },
         },
     ),
+    CaseResult(
+        case_id="case-16",
+        title="Authority reachability",
+        compromise_level="Level 1.5: the configuration adversary, unchanged "
+                         "from cases 12-15",
+        attack="Case 15's invisible attack in each arm - reassign a stage to "
+               "an existing identity, point a step at an existing credential, "
+               "retype an object at an existing skill - measured against a "
+               "view of what work can reach the authority rather than a view "
+               "of what authority exists",
+        baseline_result=UNDETECTED,
+        controlled_result=DETECTED_AFTER_OCCURRENCE,
+        control="A reachability view, computed per arm from records that "
+                "already exist: `actual` paths, work that reaches the "
+                "authority as the deployment stands, and `potential` paths, "
+                "work that could reach it through a binding change alone with "
+                "no new authority created",
+        evidence=[
+            "at rest and before any attack: 4, 4 and 1 potential paths in "
+            "arms A, B and C, with zero actual paths in each",
+            "under case 15's attack the inventory diff is blind in 3 of 3 "
+            "arms and the reachability diff detects in 3 of 3",
+            "each detection names the route rather than raising an alarm",
+            "arm B refuses to count a credential that cannot carry the step's "
+            "own inputs - a route that would break the step is not a path",
+            "an honest deployment reports zero potential paths in every arm",
+            "tests/adversarial/test_case_16_reachability.py",
+        ],
+        what_this_proves=(
+            "That the question case 15 identified as the whole attack - what "
+            "can currently reach this authority - is answerable in all three "
+            "idioms from records that already exist, and that answering it "
+            "detects the convergent attack the inventory diff could not see. "
+            "The more useful half is that the exposure is visible at rest: in "
+            "a deployment where an audit reports a legitimate identity, "
+            "credential and skill, the view names how much ordinary work is "
+            "one binding away from authority it was never meant to touch. It "
+            "also separates two properties the series had been conflating, "
+            "using the arm that made them look identical - a narrow blast "
+            "radius neither brings detectability with it nor prevents it."),
+        what_this_does_not_prove=(
+            "It prevents nothing, and it does not survive an adversary who "
+            "edits the baseline snapshot it compares against. It does not show "
+            "the view scales: four stages and two credentials is not a "
+            "deployment, and whether the report stays readable when most paths "
+            "are legitimate is the question that decides whether this is "
+            "useful outside a laboratory. And it makes no arm safer than any "
+            "other - all three were blind by inventory and all three are "
+            "detected by reachability, which is a statement about the "
+            "principle rather than about any model."),
+        residual_limitation=(
+            "Detection, not prevention: the binding changes, the path appears, "
+            "and something has to be looking. The view is computed from the "
+            "records the adversary can write, so rewriting the stored baseline "
+            "defeats the diff - which is why the at-rest exposure report "
+            "matters more than the diff and is useful even when nobody trusts "
+            "the baseline. Reachability is computed one hop, for one target: a "
+            "path needing two binding changes, or running through an artifact "
+            "another object produced, is not modelled."),
+        containment="None added. The view reports; nothing acts on it. Wiring "
+                    "a reachability change into the step lifecycle would be "
+                    "case 11's move applied to a different record, and is "
+                    "deliberately not built here.",
+        recovery="Not applicable - no state is corrupted by the detection. "
+                 "Operationally the output is a work item rather than a "
+                 "remedy: the named path is either legitimate and should be "
+                 "recorded as expected, or it is not and the binding should be "
+                 "reverted.",
+        status="closed",
+        directory="cases/16-reachability",
+        test_module="tests/adversarial/test_case_16_reachability.py",
+        blast_radius="Unchanged by this case - it observes rather than acts. "
+                     "What it adds is the ability to state a blast radius "
+                     "*before* an incident, as a count of paths rather than a "
+                     "description after the fact.",
+        notes="The first control in this series that is not another premise, "
+              "and it came from asking a question none of the earlier cases "
+              "asked. The at-rest view is the product; the diff is a "
+              "by-product. Two honesty constraints are load-bearing and "
+              "tested: a credential that cannot carry the step's own inputs is "
+              "not counted as a path, and an honest deployment reports zero - "
+              "without both, the view would inflate every report with routes "
+              "that do not work and would be an alarm generator rather than "
+              "an audit.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}

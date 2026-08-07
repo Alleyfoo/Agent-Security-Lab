@@ -25,8 +25,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-13](13-second-premise/README.md)<br>Does a second independent premise raise the cost? | The same read of artifact.key_material at the schema step, against case 12's arm A and arm C after one additional independent premise is layered onto each - a MAC-style label policy over the permission table, and artifacts that declare what they are | 🔴 Undetected | 🔴 Undetected | None in the product. An experiment on laboratory reference arms, testing a prediction pre-registered in the report before the code existed. object_model is untouched and case 12's arms are frozen; this case layers onto them | The premises are laboratory constructs layered onto laboratory arms, and none of them exists in the product. Arm A's label policy models the *structure* of MAC over DAC and not kernel enforcement, which is the dimension case 12 already recorded its identity arm cannot reproduce. Both of arm C's premises are in-process data the same attacker reaches. |
 | [case-14](14-selector-map/README.md)<br>The selector map | Enumerate what selects every authority premise in all three arms, mark which selectors this adversary can alter, and execute every pivot the map implies - one edit to a shared selector, measured for whether it moved a premise and separately for whether it obtained the capability | 🔴 Undetected | 🔴 Undetected | None. An enumeration, not a control: no arm is changed and no product code is touched. The map's completeness is enforced by a test requiring every shared alterable selector to carry an executed pivot | The map is hand-built and its completeness is asserted rather than derived: a test requires every shared alterable selector to carry an executed pivot, which caught one missing pivot while the case was being written, but a premise nobody wrote down has no selector on the map. Whether a selector is alterable is a judgement recorded as data so it can be argued with - the artifact key and the skill name are classified as not directly writable, and both are derived from records that are. |
 | [case-15](15-authority-inventory/README.md)<br>The authority inventory | The same read of artifact.key_material, against deployments that differ only in what authority they already contain: an identity that already holds it (arm A), a credential scoped across both sides (arm B), an approved skill that legitimately reads it (arm C) - each measured present and absent | 🔴 Undetected | 🔴 Undetected | None. An audit rather than a control. What it adds is an instrument: the standing authority inventory - what an auditor would list if asked who or what may reach this today - and whether the attack changes it | One item per model, argued for in prose rather than drawn from a survey of real installations - 'normal deployment' is a judgement and it is the soft part of the case. The inventories are the ones this case defined, so a different auditor listing different things would get different visibility answers; a test asserts each inventory can at least see the target authority, so 'unchanged' is a real result rather than an artefact of listing the wrong thing. |
+| [case-16](16-reachability/README.md)<br>Authority reachability | Case 15's invisible attack in each arm - reassign a stage to an existing identity, point a step at an existing credential, retype an object at an existing skill - measured against a view of what work can reach the authority rather than a view of what authority exists | 🔴 Undetected | 🟠 Detected after occurrence | A reachability view, computed per arm from records that already exist: `actual` paths, work that reaches the authority as the deployment stands, and `potential` paths, work that could reach it through a binding change alone with no new authority created | Detection, not prevention: the binding changes, the path appears, and something has to be looking. The view is computed from the records the adversary can write, so rewriting the stored baseline defeats the diff - which is why the at-rest exposure report matters more than the diff and is useful even when nobody trusts the baseline. Reachability is computed one hop, for one target: a path needing two binding changes, or running through an artifact another object produced, is not modelled. |
 
-**17 cases** — 11 with a control, 6 open by design. 10 moved to a better result class.
+**18 cases** — 12 with a control, 6 open by design. 11 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -134,9 +135,9 @@ So the principle is usable rather than merely true:
 
 > To raise the cost of forging authority, add a premise that is **(a)** consulted at use time, **(b)** not a function of an index the attacker can change, and **(c)** on the specific surface being defended. Missing any of the three buys nothing. The subject-keyed variant is the one to remember: it looks exactly like defence in depth and measures as no defence at all.
 
-### Level 1.5, the configuration adversary — named after 7 cases had measured it
+### Level 1.5, the configuration adversary — named after 8 cases had measured it
 
-Cases 08, 10, 11, 12, 13, 14, 15 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** For most of that time it had no rung on the compromise ladder. It has one now — `Level 1.5`, numbered so Levels 2–7 and every case README citing them keep their numbers.
+Cases 08, 10, 11, 12, 13, 14, 15, 16 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** For most of that time it had no rung on the compromise ladder. It has one now — `Level 1.5`, numbered so Levels 2–7 and every case README citing them keep their numbers.
 
 It is defined by **reach, not by which component is captured**, which is why it was awkward to place: it need not control any agent at all. A compromised storage layer, a restored backup, a writable config share or a deploy pipeline is Level 1.5 while every worker is honest. It is stronger than Level 1 — it reaches records no agent interface exposes — and weaker than Level 2, which would rewrite the derivation and make every arm of a comparison lose identically.
 
@@ -149,6 +150,7 @@ It is defined by **reach, not by which component is captured**, which is why it 
 | case-13 — Does a second independent premise raise the cost? | 🔴 Undetected |
 | case-14 — The selector map | 🔴 Undetected |
 | case-15 — The authority inventory | 🔴 Undetected |
+| case-16 — Authority reachability | 🟠 Detected after occurrence |
 
 It is a realistic adversary — a compromised storage layer, a restored backup, a writable share — and it is *not the one the project's question is about*. The consequence has to be stated plainly, because the comparison table cannot say it: **the authority-model improvements measured in cases 10 and 11 have not been shown to hold against a fully captured agent.** They were measured against something else, for the good reason case 08 gives, and the ladder should either name that adversary or record why it is not a level.
 
@@ -233,6 +235,43 @@ Three measurements stand behind that sentence, and none of them is about a diagr
 - **architecture establishes possibilities; deployment decides whether they collapse** — arm B looked separated until one credential spanned both sides, arm A had layered policy until an already-powerful identity was substituted, arm C had narrow bindings until a broadly applicable skill existed (cases 14, 15);
 - **the object model's one structural advantage, kept narrow** — its selectors were the hardest to pivot together (case 14, no yielding pivot). That is not global safety: case 12 measured cheap, broad authority surfaces elsewhere in the same model. "Expressiveness creates more surfaces while allowing cleaner separation between their selectors" is the defensible form.
 
+Cases 15 and 16 give it one more turn, and this is the form that travels furthest — it holds whether the layer underneath is Unix, a workflow engine, Kubernetes, an agent framework or the object model:
+
+> **Agent security depends not just on what authority exists, but on how dynamic work can become connected to that authority.**
+
+### The question none of the cases were asking
+
+Case 15's convergence has a sharper statement than the one that case made. It is not only that pre-existing authority is dangerous — it is that **existing authority is dangerous even when nobody changes it**. Once useful authority exists somewhere in a deployment, an attacker may not need to create or widen anything at all. They change what points at it.
+
+Which means the conventional audit question — *did anybody gain new permissions?* — can answer **no** while effective access has changed completely. There are three questions and this repository had been asking two of them:
+
+```text
+what authority exists?              the inventory      (case 15)
+what can currently point at it?    the binding        (case 16)
+what does that combination permit? the grant          (cases 08-13)
+```
+
+> **Audit authority reachability, not only authority inventory or changes to it.**
+
+This has relatives worth naming rather than reinventing. It is the shape of **ambient authority** — powerful credentials existing in an environment and usable from contexts that never requested that power — and of the **confused deputy**, where the attacker never acquires the authority and instead arranges for something that already holds it to act in the wrong context. Case 13's subject-keyed premise was the same pattern seen from the other side.
+
+It also explains the convergence. A legitimate powerful service identity, a legitimate powerful connection and a legitimate powerful skill are none of them evidence of compromise. The dangerous fact is the same in all three: **can an untrusted change redirect ordinary work through that existing authority?**
+
+### The reusable principles
+
+What the series has produced is not one proposed architecture. It is a set of principles that survive being moved between layers, which is the test a principle has to pass to be worth anything.
+
+| Principle | What the measurement says |
+|---|---|
+| **Least privilege** | minimise the authority that exists — case 15 measures what each surviving piece costs |
+| **Independent premises** | important authority should depend on facts that cannot all be moved by one pivot (cases 13, 14) |
+| **Complete mediation** | resolve authority at the actual point of use (cases 08, 10) |
+| **Reachability awareness** | inventory not only authority but the paths by which work can reach it (cases 15, 16) |
+| **Absence over guarding** | where deep compromise is in scope, unavailable authority beats another colocated check — the only Level 2 preventions measured here are absences |
+| **Canonical state and provenance** | keep enough trusted history to tell legitimate progression from redirected work (cases 05, 07, 10) |
+
+And one property to keep separate, because arm C made them look identical: **a narrow blast radius is not detectability.** Case 15 measured the object model's per-object binding as the narrowest exposure and the quietest attack in the same breath; case 16 detected it without changing either fact.
+
 ### What the set says to do next
 
 Ordered by what the measurements support, not by appetite.
@@ -240,8 +279,8 @@ Ordered by what the measurements support, not by appetite.
 1. **The metadata floor.** Every derived conclusion in the product bottoms out in metadata that agents wrote — case 05's derivation trusts `row_count`, case 07's compares column shape and not values, and the honest pipeline already turns the identifier `'1001'` into the number `1001` with no check noticing (case 07, measurement D). Two cases recorded this residual independently and no case has attacked it. It is the clearest unclosed finding in the set and it is a derivation control, which the table above says is the kind that degrades rather than collapses.
 2. **Finish the absence.** Case 06 is one of only two Level 2 preventions and it covers one stage of four. The design rule above says this is the only move that has ever worked at Level 2; case 01 stays wholly open until it is finished.
 3. **Decide what availability is** in §7 of the threat model, before a further control spends more of it. The last open direction question from this review's first pass — naming the adversary and enumerating the pivots are both done, in the ladder and in case 14.
-4. **Build the inventory audit case 15 argues for.** That case measured why a change diff cannot see these attacks; it did not build or evaluate the audit that could. It is the first control this series has pointed at that is not another premise, and the measurement says it is the one that matters.
-5. **Measure interactions between several pieces of pre-existing authority.** Case 15 measured one item per model in isolation, which is not where a real deployment lives.
+4. **Measure whether the reachability view survives scale.** Case 16 built it and reports 4, 4 and 1 paths in deployments with four stages and two credentials. A real one has thousands, most of them legitimate. Whether the report stays readable when noise dominates is the question that decides whether any of this is useful outside a laboratory, and nothing measures it.
+5. **Measure interactions between several pieces of pre-existing authority**, and reachability at more than one hop. Case 15 took one item per model in isolation and case 16 computes direct paths only; a real deployment is neither.
 
 Then the two families case 12 could not measure, each blocked on an instrument rather than on appetite: **data movement and fidelity**, which needs observation of a running system rather than the whole-payload strawman `key_vs_paste.py` assumes; and **compromise and failure behaviour**, which is where real OS isolation, real workflow credentials and disposable workers actually differ, and where the identity arm would stop being a miniature.
 
@@ -801,6 +840,39 @@ Reproduce: `python cases/14-selector-map/attack.py` · Tests: `tests/adversarial
 **Notes.** The hypothesis was that pre-existing authority reduces the visibility of the edit rather than its cost. It held in all three arms and reduced the cost as well in one, which is arm B's halving. The tie-break in `cheapest` is load-bearing and pinned by a test: given two equal-cost routes an attacker takes the one an audit cannot see, and ordering by scope first would have reported arm A's noisy route and hidden its quiet one.
 
 Reproduce: `python cases/15-authority-inventory/attack.py` · Tests: `tests/adversarial/test_case_15_authority_inventory.py`
+
+### ✅ case-16 — Authority reachability
+
+**Compromise level:** Level 1.5: the configuration adversary, unchanged from cases 12-15  
+**Attack:** Case 15's invisible attack in each arm - reassign a stage to an existing identity, point a step at an existing credential, retype an object at an existing skill - measured against a view of what work can reach the authority rather than a view of what authority exists  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟠 Detected after occurrence
+
+**Control.** A reachability view, computed per arm from records that already exist: `actual` paths, work that reaches the authority as the deployment stands, and `potential` paths, work that could reach it through a binding change alone with no new authority created
+
+**Evidence**
+
+- at rest and before any attack: 4, 4 and 1 potential paths in arms A, B and C, with zero actual paths in each
+- under case 15's attack the inventory diff is blind in 3 of 3 arms and the reachability diff detects in 3 of 3
+- each detection names the route rather than raising an alarm
+- arm B refuses to count a credential that cannot carry the step's own inputs - a route that would break the step is not a path
+- an honest deployment reports zero potential paths in every arm
+- tests/adversarial/test_case_16_reachability.py
+
+**What this proves.** That the question case 15 identified as the whole attack - what can currently reach this authority - is answerable in all three idioms from records that already exist, and that answering it detects the convergent attack the inventory diff could not see. The more useful half is that the exposure is visible at rest: in a deployment where an audit reports a legitimate identity, credential and skill, the view names how much ordinary work is one binding away from authority it was never meant to touch. It also separates two properties the series had been conflating, using the arm that made them look identical - a narrow blast radius neither brings detectability with it nor prevents it.
+
+**What this does not prove.** It prevents nothing, and it does not survive an adversary who edits the baseline snapshot it compares against. It does not show the view scales: four stages and two credentials is not a deployment, and whether the report stays readable when most paths are legitimate is the question that decides whether this is useful outside a laboratory. And it makes no arm safer than any other - all three were blind by inventory and all three are detected by reachability, which is a statement about the principle rather than about any model.
+
+**Residual limitation.** Detection, not prevention: the binding changes, the path appears, and something has to be looking. The view is computed from the records the adversary can write, so rewriting the stored baseline defeats the diff - which is why the at-rest exposure report matters more than the diff and is useful even when nobody trusts the baseline. Reachability is computed one hop, for one target: a path needing two binding changes, or running through an artifact another object produced, is not modelled.
+
+**Containment.** None added. The view reports; nothing acts on it. Wiring a reachability change into the step lifecycle would be case 11's move applied to a different record, and is deliberately not built here.
+
+**Recovery.** Not applicable - no state is corrupted by the detection. Operationally the output is a work item rather than a remedy: the named path is either legitimate and should be recorded as expected, or it is not and the binding should be reverted.
+
+**Blast radius.** Unchanged by this case - it observes rather than acts. What it adds is the ability to state a blast radius *before* an incident, as a count of paths rather than a description after the fact.
+
+**Notes.** The first control in this series that is not another premise, and it came from asking a question none of the earlier cases asked. The at-rest view is the product; the diff is a by-product. Two honesty constraints are load-bearing and tested: a credential that cannot carry the step's own inputs is not counted as a path, and an honest deployment reports zero - without both, the view would inflate every report with routes that do not work and would be an alarm generator rather than an audit.
+
+Reproduce: `python cases/16-reachability/attack.py` · Tests: `tests/adversarial/test_case_16_reachability.py`
 
 ## Where the boundary stands
 

@@ -508,6 +508,80 @@ def _review() -> list:
       "creates more surfaces while allowing cleaner separation between their "
       "selectors\" is the defensible form.")
     w("")
+    w("Cases 15 and 16 give it one more turn, and this is the form that "
+      "travels furthest — it holds whether the layer underneath is Unix, a "
+      "workflow engine, Kubernetes, an agent framework or the object model:")
+    w("")
+    w("> **Agent security depends not just on what authority exists, but on "
+      "how dynamic work can become connected to that authority.**")
+    w("")
+
+    # -- 6c. the reachability turn ------------------------------------------
+    w("### The question none of the cases were asking")
+    w("")
+    w("Case 15's convergence has a sharper statement than the one that case "
+      "made. It is not only that pre-existing authority is dangerous — it is "
+      "that **existing authority is dangerous even when nobody changes it**. "
+      "Once useful authority exists somewhere in a deployment, an attacker may "
+      "not need to create or widen anything at all. They change what points at "
+      "it.")
+    w("")
+    w("Which means the conventional audit question — *did anybody gain new "
+      "permissions?* — can answer **no** while effective access has changed "
+      "completely. There are three questions and this repository had been "
+      "asking two of them:")
+    w("")
+    w("```text")
+    w("what authority exists?              the inventory      (case 15)")
+    w("what can currently point at it?    the binding        (case 16)")
+    w("what does that combination permit? the grant          (cases 08-13)")
+    w("```")
+    w("")
+    w("> **Audit authority reachability, not only authority inventory or "
+      "changes to it.**")
+    w("")
+    w("This has relatives worth naming rather than reinventing. It is the "
+      "shape of **ambient authority** — powerful credentials existing in an "
+      "environment and usable from contexts that never requested that power — "
+      "and of the **confused deputy**, where the attacker never acquires the "
+      "authority and instead arranges for something that already holds it to "
+      "act in the wrong context. Case 13's subject-keyed premise was the same "
+      "pattern seen from the other side.")
+    w("")
+    w("It also explains the convergence. A legitimate powerful service "
+      "identity, a legitimate powerful connection and a legitimate powerful "
+      "skill are none of them evidence of compromise. The dangerous fact is "
+      "the same in all three: **can an untrusted change redirect ordinary work "
+      "through that existing authority?**")
+    w("")
+    w("### The reusable principles")
+    w("")
+    w("What the series has produced is not one proposed architecture. It is a "
+      "set of principles that survive being moved between layers, which is the "
+      "test a principle has to pass to be worth anything.")
+    w("")
+    w("| Principle | What the measurement says |")
+    w("|---|---|")
+    w("| **Least privilege** | minimise the authority that exists — case 15 "
+      "measures what each surviving piece costs |")
+    w("| **Independent premises** | important authority should depend on facts "
+      "that cannot all be moved by one pivot (cases 13, 14) |")
+    w("| **Complete mediation** | resolve authority at the actual point of use "
+      "(cases 08, 10) |")
+    w("| **Reachability awareness** | inventory not only authority but the "
+      "paths by which work can reach it (cases 15, 16) |")
+    w("| **Absence over guarding** | where deep compromise is in scope, "
+      "unavailable authority beats another colocated check — the only Level 2 "
+      "preventions measured here are absences |")
+    w("| **Canonical state and provenance** | keep enough trusted history to "
+      "tell legitimate progression from redirected work (cases 05, 07, 10) |")
+    w("")
+    w("And one property to keep separate, because arm C made them look "
+      "identical: **a narrow blast radius is not detectability.** Case 15 "
+      "measured the object model's per-object binding as the narrowest "
+      "exposure and the quietest attack in the same breath; case 16 detected "
+      "it without changing either fact.")
+    w("")
 
     # -- 7. where to go next ------------------------------------------------
     w("### What the set says to do next")
@@ -531,14 +605,16 @@ def _review() -> list:
       "further control spends more of it. The last open direction question "
       "from this review's first pass — naming the adversary and enumerating "
       "the pivots are both done, in the ladder and in case 14.")
-    w("4. **Build the inventory audit case 15 argues for.** That case measured "
-      "why a change diff cannot see these attacks; it did not build or "
-      "evaluate the audit that could. It is the first control this series has "
-      "pointed at that is not another premise, and the measurement says it is "
-      "the one that matters.")
+    w("4. **Measure whether the reachability view survives scale.** Case 16 "
+      "built it and reports 4, 4 and 1 paths in deployments with four stages "
+      "and two credentials. A real one has thousands, most of them legitimate. "
+      "Whether the report stays readable when noise dominates is the question "
+      "that decides whether any of this is useful outside a laboratory, and "
+      "nothing measures it.")
     w("5. **Measure interactions between several pieces of pre-existing "
-      "authority.** Case 15 measured one item per model in isolation, which "
-      "is not where a real deployment lives.")
+      "authority**, and reachability at more than one hop. Case 15 took one "
+      "item per model in isolation and case 16 computes direct paths only; a "
+      "real deployment is neither.")
     w("")
     w("Then the two families case 12 could not measure, each blocked on an "
       "instrument rather than on appetite: **data movement and fidelity**, "
