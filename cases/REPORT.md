@@ -26,6 +26,119 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
+## What the cases add up to
+
+A review of the entries above as a set rather than a further case. The per-case evidence follows in **Detail**; this section only relates results already recorded there.
+
+### The project's question has three answers, not one
+
+> Can an agent be restricted to its assigned function when it is manipulated, malicious, or fully captured?
+
+**Manipulated or malicious — yes, and it is measured.** All 6 cases whose adversary is a hostile agent implementation end in prevention or rejection before commitment, with one exception:
+
+| Case | Result |
+|---|---|
+| case-00 — Audited component edits its own evidence | 🟢 Prevented |
+| case-03 — Altering runner-owned routing data | 🟢 Prevented |
+| case-04a — Forged runner-labelled audit event - the record | 🟢 Prevented |
+| case-05 — A conclusion the agent authors is not evidence | 🟡 Rejected before commitment |
+| case-07 — Corrupting downstream artifacts through your own | 🟠 Detected after occurrence |
+| case-09 — Can the execution plane mint a transformation? | 🟢 Prevented |
+
+**Fully captured — no, and no check has ever changed that.** The 4 cases whose adversary holds arbitrary code in the runner's process:
+
+| Case | Result |
+|---|---|
+| case-01 — Reading artifacts the grant excludes | 🔴 Undetected |
+| case-02 — In-place mutation of a registered artifact | 🟠 Detected after occurrence |
+| case-04b — Forged runner-labelled audit event - the decision | 🟢 Prevented |
+| case-06 — What process separation actually buys | 🟢 Prevented |
+
+### Every Level 2 prevention here is an absence, not a check
+
+This is the sharpest thing the set says, and it is checkable against the table above rather than argued. Exactly 2 cases prevent anything against a fully compromised process, and neither does it by checking:
+
+| Case | What prevents the effect | Mechanism |
+|---|---|---|
+| case-04b | the decision plane never reads the corrupted record | an absence |
+| case-06 | the isolated interpreter contains no runner objects | an absence |
+
+Every other Level 2 result is detection or nothing. That is the empirical form of the cross-cutting finding below: a check compares two values, at Level 2 the adversary reaches both, so a check can only ever notice. Case 06's probes reporting *nothing found* rather than *access denied* is the same fact stated from the other side.
+
+> **Design rule the set has earned.** Against an adversary sharing the boundary, remove the thing rather than guard it. A guard is a second object in the same address space, and the measurements say every one of them has been reachable.
+
+### The one Level 1 case that ends in detection is the important one
+
+**case-07 — Corrupting downstream artifacts through your own.** A hostile schema stage writes one well-formed artifact to the key it was granted - a fabricated column set, a dropped column, a renamed column - and the honest transform stage builds the cleaned output from it.
+
+Nothing was bypassed. The stage read only its granted input, wrote only its granted key, produced a well-formed artifact, and every control in the repository held while every column of the dataset was destroyed. Confinement worked perfectly and bought nothing.
+
+> **Restricting an agent to its assigned function does not restrict what its assigned function can do.**
+
+Cases 05 and 07 are the two halves of that limit — authorship of a *conclusion* and authorship of *content*. Neither is answerable by deciding who may touch what, and sorting the controls by what they actually do turns out to sort them by how well they survive as well:
+
+| Kind | What it does | Cases | Best result it has reached |
+|---|---|---|---|
+| **Absence** | the object is not there to reach | 04b, 06 | prevented — **the only kind that has ever prevented anything at Level 2** |
+| **Boundary** | decides who may touch what | 00, 03, 04a, 09 | prevented at Level 1; nothing at Level 2 |
+| **Derivation** | recomputes the answer from narrower premises instead of storing it | 05, 07, 08, 10 | rejected before commitment — never prevented |
+| **Containment** | acts on evidence that state is already corrupt | 02, 11 | prevented, for the one step it stops; blind to an edit that leaves no evidence |
+
+The ordering is the review's practical output. A boundary control fails completely the moment the boundary is shared — that is cases 00, 03, 04a and 09, all of which are green at Level 1 and all of which record the same Level 2 residual. A derivation control degrades instead of failing: the adversary keeps the access and loses the cheap version of the attack. A containment response is a check by another name and inherits the check's limit, which is why case 11 cannot see the one edit that beat case 10. Only an absence has ever held.
+
+The repository has been keeping one undifferentiated list of controls. These four behave differently under the same adversary, and a control should be argued for by which kind it is before it is argued for by what it catches.
+
+### Three cases measure an adversary the ladder has no row for
+
+Cases 08, 10, 11 share an attacker defined narrowly by case 08: **may alter persisted policy or workflow records, may not modify evaluator code.** That is not a level. It is strictly stronger than Level 1 — it reaches records no agent interface exposes — and strictly weaker than Level 2, which would rewrite the derivation and make every arm lose identically.
+
+| Case | Result |
+|---|---|
+| case-08 — Stored grant versus grant derived at use time | 🔴 Undetected |
+| case-10 — The type-to-key binding | 🟠 Detected after occurrence |
+| case-11 — Contain a contradiction the moment it appears | 🟢 Prevented |
+
+It is a realistic adversary — a compromised storage layer, a restored backup, a writable share — and it is *not the one the project's question is about*. The consequence has to be stated plainly, because the comparison table cannot say it: **the authority-model improvements measured in cases 10 and 11 have not been shown to hold against a fully captured agent.** They were measured against something else, for the good reason case 08 gives, and the ladder should either name that adversary or record why it is not a level.
+
+### What deriving authority actually bought
+
+Both comparisons (08, 10) measured a **minimum tamper set of 1 in every arm**. Deriving the grant never made the attack cost more. Read together with case 11, what it did instead:
+
+| | stored authority | derived authority |
+|---|---|---|
+| the cheap edit — write or append | total and silent | inert, then loud (case 11) |
+| the working edit — destroy the record | same edit | same cost, no evidence left |
+| after a cheap edit, is the legitimate value still there? | no | **yes** — first production wins, so recovery is what already happens |
+| can a contradiction even exist to act on? | no | yes, and case 11 acts on it |
+
+So the honest summary of the series is neither "derived authority is better" nor "it is the same". It is: **derivation does not raise the cost of the attack; it removes the cheap versions of the attack and makes their failure mode recoverable, and an adversary who reads the code simply chooses the destructive edit.** Case 11's blind spot is that statement in miniature.
+
+One thing the stored model cannot do at all, which is the strongest single point in favour of the derived one: a stored map keeps no contradiction, so case 11's control cannot exist there. A write is total, the prior binding is gone, and the object is left holding a map that is internally consistent and wrong.
+
+### Availability became the currency, and it is out of scope
+
+`docs/threat-model.md` §7 excludes availability and denial of service. Meanwhile the controls in this report spend it, repeatedly and deliberately:
+
+| Where | What is traded |
+|---|---|
+| cases 02, 03, 04a | quarantine — the run stops rather than continue on corrupt state |
+| case 09 | fail closed — no grant is derived from an unverified contract |
+| case 10 | the produced-once invariant blocks a legitimate producer permanently, and this one was not intended |
+| case 11 | containment on conflict, which widens exactly that surface on purpose |
+
+Nothing here is wrong: stopping is usually the right answer, and every instance is recorded. What is wrong is that the threat model gives the project no place to record the *cost*, because it excludes availability as an attack target and the cases spend it as a **currency**. Those are different roles for the same word. Three of the four rows above are cheap for an attacker to trigger deliberately, and the project currently has no rule about how much unavailability a control may buy with. §7 should say which of the two meanings it excludes.
+
+### What the set says to do next
+
+Ordered by what the measurements support, not by appetite.
+
+1. **The metadata floor.** Every derived conclusion in the product bottoms out in metadata that agents wrote — case 05's derivation trusts `row_count`, case 07's compares column shape and not values, and the honest pipeline already turns the identifier `'1001'` into the number `1001` with no check noticing (case 07, measurement D). Two cases recorded this residual independently and no case has attacked it. It is the clearest unclosed finding in the set and it is a derivation control, which the table above says is the kind that degrades rather than collapses.
+2. **Finish the absence.** Case 06 is one of only two Level 2 preventions and it covers one stage of four. The design rule above says this is the only move that has ever worked at Level 2; case 01 stays wholly open until it is finished.
+3. **Name the adversary** cases 08, 10 and 11 measured, in the ladder, or record why it is not a level.
+4. **Decide what availability is** in §7 of the threat model, before a further control spends more of it.
+
+Not next, and worth saying: another authority-model comparison. The two already run agree on the only number they both produced — minimum tamper set 1 — and a third arm measured against the same persisted-record adversary would not move the answer to the project's question.
+
 ## Detail
 
 ### ✅ case-00 — Audited component edits its own evidence
@@ -467,7 +580,7 @@ The near-term milestone is a verified map of what a malicious agent can and cann
 
 ### The cross-cutting finding
 
-Four cases arrived at the same wall from four directions:
+Six cases arrived at the same wall from six directions:
 
 > An integrity check whose expected value is stored where the adversary can reach it detects careless tampering, not careful tampering.
 
@@ -477,10 +590,16 @@ Four cases arrived at the same wall from four directions:
 | 03 | route fingerprint | the same session object as the routes |
 | 04a | runner event tally | an ordinary attribute on the session |
 | 05 | derived verdict | a module the adversary can patch, and an attribute it can rewrite |
+| 09 | skill version pin | a dict the run holds, updatable alongside the registry it pins |
+| 10 | the production record | the list the derivation reads, overwritable in place |
 
 In each one an adversary who updates the reference alongside the data passes verification, and each residual is pinned by an executable test rather than left as prose.
 
-None is fixable by a better check. All four need the expected value held outside the adversary's reach, which means changing the trust boundary rather than adding another comparison inside it.
+None is fixable by a better check. All six need the expected value held outside the adversary's reach, which means changing the trust boundary rather than adding another comparison inside it.
+
+**The last two are a different shape, and the difference is the authority model's actual contribution.** In cases 02–05 the reference value is a *second* object beside the data, and the attack is to update both. In cases 09 and 10 there is no second object: the derivation is the check, and the record is its own evidence. There is nothing to update in step, so the cheapest successful edit changes from **addition to destruction** — and that is why case 10's appended tampering is inert while its overwrite still wins, and why case 11 can contain the first and is structurally blind to the second.
+
+It is a real improvement and it is smaller than it looks. Destruction costs the adversary no more than addition did — both comparisons measured a minimum tamper set of 1 — so what is bought is that the cheap, careless and automated edits stop working, and that after one the legitimate value is still in the record.
 
 ## The transition statement
 
@@ -510,4 +629,22 @@ Three things the same measurement found, and they are the reason the transition 
 | Ambient authority is unbounded for every stage | case 06 residual |
 | Values are never compared, only structure | case 07 residual |
 | The honest pipeline loses identifier fidelity | case 07, measurement D |
+
+## Where authority is stored
+
+The boundary map above asks what a compromised agent can reach. Phase 3 asks a question it has no row for — *what record has to be edited to obtain authority, and what does editing it cost* — so it gets its own map. Measured against the persisted-record adversary defined in case 08, not against Level 2.
+
+| Record | Binds | Owner | Scope of one successful edit | Where measured |
+|---|---|---|---|---|
+| `WORKFLOW_ROUTES` | stage → grant | control plane, static | process lifetime, including later independent runs | cases 03, 08 arm A |
+| skill registry | skill → which *types* it may read | admin plane, static | every object running that skill until redeployment — the widest measured anywhere | case 09 |
+| object artifact map | type → which *key* holds it | execution plane, dynamic | one object, including retries and resume | cases 08 arm B, 10 |
+| production ledger | what each completed step produced | runner-owned, append-only by API | one object; an append is inert and contains it (11), an overwrite is total (10) | cases 10, 11 |
+
+Two conclusions the individual cases could not state:
+
+- **The authority-bearing record is whatever binds a declared type to a concrete key, wherever it lives.** Case 08 found it in the route table and in the object map; moving the binding never removed it. Every entry above has a minimum tamper set of 1.
+- **The two halves of the trust root do not substitute for each other.** The skill contract says which types a skill may read; the artifact map says which key holds a type. Case 09 secured the first and left the second measurably open; case 10 addressed the second and left the first untouched. Both directions are asserted by scope-guard tests so neither case can quietly claim the other's ground.
+
+What no case has produced is an **independent** account of what any of these records should contain. Case 09's version pin records what was there at run start, not what was approved; case 10's ledger records what this process did, not what should have happened. Both said so, in the same words, without either case noticing the other had. That is the identity plane, and it does not exist yet.
 

@@ -118,6 +118,87 @@ def test_report_on_disk_is_current():
     )
 
 
+# ---------------------------------------------------------------------------
+# The review's structural claims.
+#
+# cases/REPORT.md now carries a synthesis over the whole set. Its three
+# structural claims are derived from this registry rather than typed, and these
+# tests pin them so a later case that contradicts one breaks the build instead
+# of leaving a confident paragraph that is quietly false. Each failure message
+# says what to rewrite. None of them may be relaxed to green a suite.
+# ---------------------------------------------------------------------------
+
+def _by_level(level: str):
+    from cases.report import primary_level
+    return {c.case_id for c in ALL if primary_level(c) == level}
+
+
+def test_review_every_level_2_prevention_is_an_absence():
+    """TRIPWIRE for the review's central claim.
+
+    Two cases prevent an effect against an adversary holding arbitrary code in
+    the runner's process, and neither does it with a check: case 04b because
+    the decision plane never reads the corrupted record, case 06 because the
+    isolated interpreter contains no runner objects.
+
+    A third entry here means a check has prevented something at Level 2 - or
+    that an absence has - and either way the review's design rule and the
+    cross-cutting finding both need rewriting before this test is changed.
+    """
+    from cases.registry import PREVENTED
+    prevented = {c.case_id for c in ALL
+                 if c.case_id in _by_level("Level 2")
+                 and c.controlled_result == PREVENTED}
+    assert prevented == {"case-04b", "case-06"}, (
+        "the set of Level 2 preventions changed. rewrite 'Every Level 2 "
+        "prevention here is an absence, not a check' in cases/report.py "
+        "against the new evidence - do not edit this assertion first"
+    )
+
+
+def test_review_exactly_one_level_1_case_ends_in_detection():
+    """TRIPWIRE for 'restricting an agent to its assigned function does not
+    restrict what its assigned function can do'.
+
+    Case 07 is the only case with a Level 1 adversary that ends below
+    rejection before commitment, and the reason is that it never crosses a
+    boundary: the stage used its grant exactly as issued. That is the limit of
+    confinement itself, and the review is built on it being the single
+    exception.
+
+    The threshold is rejection, not prevention, on purpose. Case 05's hostile
+    output is produced and then refused entry to trusted state, which is the
+    boundary holding rather than failing.
+    """
+    from cases.registry import REJECTED_BEFORE_COMMITMENT
+    weak = {c.case_id for c in ALL
+            if c.case_id in _by_level("Level 1")
+            and RESULT_SEVERITY[c.controlled_result]
+            < RESULT_SEVERITY[REJECTED_BEFORE_COMMITMENT]}
+    assert weak == {"case-07"}, (
+        "a Level 1 case other than 07 now ends in detection or worse, or 07 "
+        "no longer does. rewrite the review's 'the one Level 1 case that ends "
+        "in detection' section"
+    )
+
+
+def test_review_the_persisted_record_adversary_is_still_unnamed():
+    """TRIPWIRE for the review's recommendation.
+
+    Cases 08, 10 and 11 share case 08's narrow attacker - may alter persisted
+    policy or workflow records, may not modify evaluator code - which is not a
+    row on the compromise ladder. The review recommends naming it or recording
+    why it is not a level. When that happens these compromise_level strings
+    change, and this test is the reminder that the review's section has to
+    change with them.
+    """
+    persisted = _by_level("persisted-record")
+    assert persisted == {"case-08", "case-10", "case-11"}, (
+        "the set of cases using case 08's attacker changed. update the review "
+        "section 'Three cases measure an adversary the ladder has no row for'"
+    )
+
+
 @pytest.mark.parametrize("case", ALL, ids=IDS)
 def test_attack_script_runs_and_reports_the_registered_outcome(case: CaseResult):
     """The attack script must agree with the registry.

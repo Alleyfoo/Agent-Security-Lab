@@ -14,6 +14,22 @@ The governing idea the showcase must communicate:
 **Baseline status column:** `survives` = the tagged baseline already holds this
 line; `open` = the laboratory must build it.
 
+> **Gap, raised by the review in `cases/REPORT.md`.** Cases 08, 10 and 11 are
+> measured against an adversary this ladder has no row for: *may alter
+> persisted policy or workflow records, may not modify evaluator code.* It is
+> strictly stronger than Level 1 — it reaches records no agent interface
+> exposes — and strictly weaker than Level 2, which would rewrite the
+> derivation and make every arm of a comparison lose identically. Case 08
+> defines it and explains why the narrowing is necessary for the comparison to
+> measure anything.
+>
+> It is a realistic adversary: a compromised storage layer, a restored backup,
+> a writable share. The consequence to keep in view is that **the
+> authority-model results in cases 10 and 11 have not been shown to hold
+> against a fully captured agent** — they were measured against something else.
+> Naming it as a level, or recording why it is not one, is an open direction
+> decision.
+
 ---
 
 ## Level 1 — Manipulated agent — *survives*

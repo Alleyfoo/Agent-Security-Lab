@@ -119,6 +119,19 @@ These are excluded because the project cannot demonstrate them honestly at its
 current scale, not because they are unimportant. Say so rather than implying
 coverage.
 
+> **Open direction question, raised by the review in `cases/REPORT.md`.**
+> Availability is excluded here as an *attack target*, and the cases have
+> meanwhile been spending it as a *control currency*: quarantine stops a run
+> (cases 02, 03, 04a), fail-closed refuses a grant (case 09), a produced-once
+> invariant blocks a legitimate producer permanently and unintentionally
+> (case 10), and containment on a contradiction widens that surface on purpose
+> (case 11). Three of those are cheap for an attacker to trigger deliberately.
+>
+> The two meanings are different and this section currently covers only one, so
+> the project has nowhere to record what a control costs in availability, and
+> no rule about how much it may spend. Recorded rather than resolved: which
+> meaning §7 excludes is a direction decision, not a measurement.
+
 ## 8. Non-claims
 
 The project does not claim, and no case README may claim:

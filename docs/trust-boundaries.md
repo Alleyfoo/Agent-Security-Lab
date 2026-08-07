@@ -157,11 +157,18 @@ demonstrates the attack failing *for that specific reason*.
 | TB-3 scoped read | **Interface only** in-process; a real boundary for an isolated stage, resolved per read (case 06) | Isolate the remaining three stages; ambient authority still unbounded |
 | TB-4 scoped write | Enforced + state-diff + integrity verification (case 02) | Hash held outside the store's reach — needs a different trust boundary |
 | TB-5 no self-authorization | Enforced (in-process) | P3: bind capabilities to workflow + audience |
-| TB-6 agent audit claims | **None** | P7: identity-bound events |
+| TB-6 agent audit claims | Attribution runner-assigned; Level 1 forgery prevented and runner-labelled Level 2 forgery detected (case 04a). Content unbound — an agent may write receipt-shaped prose under its own identity | P7: identity-bound events |
 | TB-7 receipt integrity | Read-only vs. Level 1 (case 00) | P7 (hash chain) |
 | TB-8 the run's conclusion | Runner-derived, recommendation compared (case 05) | Derivation and its reference value both in-process — needs a different trust boundary |
 | Flow / sink policy | **Absent** | P6 |
 | Provenance / blast radius | **Absent** | P8 |
+
+This ledger covers the product. The Phase 3 authority model is a candidate
+under measurement and is not part of it; the records *it* makes
+authority-bearing, and what one edit to each buys, are mapped separately under
+**Where authority is stored** in [../cases/REPORT.md](../cases/REPORT.md). The
+two maps answer different questions — this one asks what a compromised agent
+can reach, that one asks what record has to be edited to obtain authority.
 
 ## 5. Rule for changing this document
 
