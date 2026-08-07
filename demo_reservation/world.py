@@ -13,7 +13,7 @@ code that produced it.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, FrozenSet, List, Optional, Tuple
+from typing import Dict, FrozenSet, List, Optional, Set, Tuple
 
 DAYS = 28                       # four clean weeks; day 0 is a Monday
 SLOT_MINUTES = 30               # the grid everything snaps to
@@ -60,16 +60,61 @@ class Facility:
 
 @dataclass
 class World:
-    """The set of facilities. Mutable only because later steps (B) will damage
-    it; nothing in step A changes it after construction."""
+    """The set of facilities, plus the overrides a disruption writes.
+
+    `Facility` stays frozen and describes the room as built. Everything a
+    disruption changes lives here as an override, so damaging the world is a
+    write to one place and the facility's original terms remain readable next
+    to the current ones.
+
+    With no overrides the accessors return exactly what the facility says, so
+    step A's behaviour is unchanged - which a test asserts by re-running A's
+    numbers.
+    """
 
     facilities: Dict[str, Facility] = field(default_factory=dict)
+    closed_days: Dict[str, Set[int]] = field(default_factory=dict)
+    hours_override: Dict[Tuple[str, int], Tuple[int, int]] = field(
+        default_factory=dict)
+    capacity_override: Dict[str, int] = field(default_factory=dict)
+    features_removed: Dict[str, Set[str]] = field(default_factory=dict)
 
     def get(self, facility_id: str) -> Optional[Facility]:
         return self.facilities.get(facility_id)
 
     def ids(self) -> List[str]:
         return sorted(self.facilities)
+
+    # -- the current terms, after any disruption -------------------------
+    def window(self, facility_id: str, day: int) -> Optional[Tuple[int, int]]:
+        facility = self.get(facility_id)
+        if facility is None:
+            return None
+        if day in self.closed_days.get(facility_id, set()):
+            return None
+        override = self.hours_override.get((facility_id, weekday(day)))
+        return override if override is not None else facility.hours.window(day)
+
+    def is_open(self, facility_id: str, day: int, start: int,
+                end: int) -> bool:
+        window = self.window(facility_id, day)
+        if window is None:
+            return False
+        opens, closes = window
+        return opens <= start and end <= closes
+
+    def capacity_of(self, facility_id: str) -> int:
+        facility = self.get(facility_id)
+        if facility is None:
+            return 0
+        return self.capacity_override.get(facility_id, facility.capacity)
+
+    def features_of(self, facility_id: str) -> Set[str]:
+        facility = self.get(facility_id)
+        if facility is None:
+            return set()
+        return set(facility.features) - self.features_removed.get(
+            facility_id, set())
 
 
 def _hours(spec: Dict[int, Tuple[int, int]]) -> OpeningHours:

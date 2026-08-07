@@ -42,6 +42,12 @@ class Report:
     def ok(self) -> bool:
         return not self.violations
 
+    def reservation_ids(self) -> set:
+        """Every reservation named in a violation. Step B compares its own
+        affected list against this, so the checker rather than the disruption
+        generator decides who was damaged."""
+        return {v.reservation_id for v in self.violations}
+
     def by_invariant(self) -> dict:
         out: dict = {}
         for v in self.violations:
@@ -80,20 +86,21 @@ def check(schedule: List[Reservation], world: World) -> Report:
             continue
 
         # -- opening hours -------------------------------------------------
-        if not facility.hours.is_open(r.day, r.start, r.end):
-            window = facility.hours.window(r.day)
+        if not world.is_open(r.facility_id, r.day, r.start, r.end):
+            window = world.window(r.facility_id, r.day)
             fail("inside_opening_hours", r,
                  f"{hhmm(r.start)}-{hhmm(r.end)} on day {r.day}, "
                  + (f"open {hhmm(window[0])}-{hhmm(window[1])}"
                     if window else "closed that day"))
 
         # -- capacity ------------------------------------------------------
-        if r.participants > facility.capacity:
+        capacity = world.capacity_of(r.facility_id)
+        if r.participants > capacity:
             fail("capacity_sufficient", r,
-                 f"{r.participants} people, capacity {facility.capacity}")
+                 f"{r.participants} people, capacity {capacity}")
 
         # -- features ------------------------------------------------------
-        missing = set(r.requires) - set(facility.features)
+        missing = set(r.requires) - world.features_of(r.facility_id)
         if missing:
             fail("features_satisfied", r,
                  f"{facility.facility_id} lacks {sorted(missing)}")
@@ -102,10 +109,16 @@ def check(schedule: List[Reservation], world: World) -> Report:
     ordered = sorted(schedule, key=lambda r: (r.facility_id, r.day, r.start))
     for a, b in zip(ordered, ordered[1:]):
         if a.overlaps(b):
-            fail("no_overlap", b,
-                 f"overlaps {a.reservation_id} in {a.facility_id} day {a.day} "
-                 f"({hhmm(a.start)}-{hhmm(a.end)} vs "
-                 f"{hhmm(b.start)}-{hhmm(b.end)})")
+            # Both sides are recorded. An overlap is not one reservation's
+            # fault, and step B cross-checks its own list of affected objects
+            # against these ids - blaming only the later one would make that
+            # comparison silently wrong.
+            detail = (f"{a.reservation_id} and {b.reservation_id} overlap in "
+                      f"{a.facility_id} day {a.day} "
+                      f"({hhmm(a.start)}-{hhmm(a.end)} vs "
+                      f"{hhmm(b.start)}-{hhmm(b.end)})")
+            fail("no_overlap", a, detail)
+            fail("no_overlap", b, detail)
 
     return report
 

@@ -61,12 +61,13 @@ def _blockers(request: ReservationRequest, store: Store,
         return (f"no facility {request.facility_id!r}",)
 
     reasons = []
-    if not facility.hours.is_open(request.day, request.start, request.end):
+    if not world.is_open(request.facility_id, request.day, request.start,
+                         request.end):
         reasons.append("outside opening hours")
-    if request.participants > facility.capacity:
-        reasons.append(
-            f"capacity {facility.capacity} < {request.participants}")
-    missing = set(request.requires) - set(facility.features)
+    capacity = world.capacity_of(request.facility_id)
+    if request.participants > capacity:
+        reasons.append(f"capacity {capacity} < {request.participants}")
+    missing = set(request.requires) - world.features_of(request.facility_id)
     if missing:
         reasons.append(f"missing {sorted(missing)}")
     for existing in store.schedule():
