@@ -582,6 +582,34 @@ def _review() -> list:
       "exposure and the quietest attack in the same breath; case 16 detected "
       "it without changing either fact.")
     w("")
+    w("### Where the reachability line actually stands")
+    w("")
+    w("Case 17 was the gate case 16 set for itself, and it split cleanly:")
+    w("")
+    w("| | Result |")
+    w("|---|---|")
+    w("| does the reduction survive scale? | **yes** — 320,000 paths become 16 "
+      "causes, and the reading load tracks how much sensitive authority "
+      "exists rather than estate size |")
+    w("| does it hide dangerous paths? | **no** — every planted needle "
+      "survives grouping |")
+    w("| does the obvious presentation hide them? | **yes** — ranked by blast "
+      "radius, 0% of the needles are in the top 10 |")
+    w("")
+    w("So the hard part was not the reduction. It was that a correct "
+      "reduction, presented the obvious way, is still wallpaper with the "
+      "dangerous findings underneath it. And the fix is not in the graph: "
+      "**severity is a property of the authority that an operator supplies**, "
+      "and with no severity map the ranking collapses back to blast radius and "
+      "needle recall returns to zero. That is the distance between what this "
+      "series has measured and something deployable.")
+    w("")
+    w("This line of work has a recognisable family — attack-path analysis, "
+      "entitlement analysis, graph-based exposure analysis — and the graph "
+      "concept is not the contribution. Applying it to *dynamic workflow and "
+      "agent authority*, where the bindings change as work runs, is the part "
+      "that would be new, and only if it survives a real distribution.")
+    w("")
 
     # -- 7. where to go next ------------------------------------------------
     w("### What the set says to do next")
@@ -605,16 +633,20 @@ def _review() -> list:
       "further control spends more of it. The last open direction question "
       "from this review's first pass — naming the adversary and enumerating "
       "the pivots are both done, in the ladder and in case 14.")
-    w("4. **Measure whether the reachability view survives scale.** Case 16 "
-      "built it and reports 4, 4 and 1 paths in deployments with four stages "
-      "and two credentials. A real one has thousands, most of them legitimate. "
-      "Whether the report stays readable when noise dominates is the question "
-      "that decides whether any of this is useful outside a laboratory, and "
-      "nothing measures it.")
+    w("4. **A severity source.** Case 17 measured the view as usable *given* a "
+      "severity map and unusable without one — with no severities the ranking "
+      "collapses to blast radius and every planted needle sits below the fold. "
+      "Producing that map is real work nothing here has done, and it is now "
+      "the gap between a measurement and a tool.")
     w("5. **Measure interactions between several pieces of pre-existing "
       "authority**, and reachability at more than one hop. Case 15 took one "
       "item per model in isolation and case 16 computes direct paths only; a "
       "real deployment is neither.")
+    w("6. **Sample a real distribution.** Case 17's deployments are argued "
+      "rather than sampled, and it names the shape that would break the "
+      "reduction: sensitive authority that is not rare. That is the one "
+      "assumption the whole reachability line rests on and nobody has checked "
+      "it against reality.")
     w("")
     w("Then the two families case 12 could not measure, each blocked on an "
       "instrument rather than on appetite: **data movement and fidelity**, "

@@ -149,6 +149,7 @@ not claimed.
 | [`14-selector-map`](14-selector-map/README.md) ⚠️ | 3 | Independent records are not independent premises: two premises are independent only if no attacker-alterable selector reaches both |
 | [`15-authority-inventory`](15-authority-inventory/README.md) ⚠️ | 3 | Pre-existing authority converts the attack from creating authority to pointing at it — invisible to a change diff in all three models |
 | [`16-reachability`](16-reachability/README.md) ✅ | 3 | Audit authority *reachability*, not only the inventory: what work can reach existing authority, and how much is one binding away |
+| [`17-scale`](17-scale/README.md) ⚠️ | 3 | 320,000 paths reduce to 16 causes without losing a planted needle — and the obvious ranking hides all three |
 
 Cases 08 and 12 are registered ⚠️ because they change nothing in the product.
 Both arms — all three, for case 12 — are measured as they are, and the named

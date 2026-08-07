@@ -1554,6 +1554,83 @@ CASES: List[CaseResult] = [
               "that do not work and would be an alarm generator rather than "
               "an audit.",
     ),
+    CaseResult(
+        case_id="case-17",
+        title="Does the reachability view survive a messy deployment?",
+        compromise_level="Level 1.5: the configuration adversary - though this "
+                         "case measures usability rather than an attack, and "
+                         "the adversary is inherited from case 16 unchanged",
+        attack="Not an attack on the system: an attack on the *view*. Grow the "
+               "deployment by three orders of magnitude, reduce the graph to "
+               "causes, and plant rare dangerous relationships to see whether "
+               "the reduction hides them",
+        baseline_result=UNDETECTED,
+        controlled_result=UNDETECTED,
+        control="None. A usability measurement, and the gate case 16 set for "
+                "itself. What it adds is a layer-neutral graph model whose "
+                "per-arm numbers reproduce case 16's exactly, so the scale "
+                "experiment measures the same thing",
+        evidence=[
+            "parity: the generic model reproduces case 16's 4, 4 and 1",
+            "320,000 paths reduce to 16 causes at 20,000 work items; causes "
+            "track sensitive authority, not estate size",
+            "every path is explained by exactly one cause - the totals "
+            "reconcile, so the reduction is a summary and not a filter",
+            "3 planted needles generating 4 paths between them all survive "
+            "grouping",
+            "ranked by blast radius they are 0% of the top 10; ranked by "
+            "severity, 100%",
+            "grouping by intermediary alone hides 3 distinct sensitive "
+            "authorities behind one row",
+            "tests/adversarial/test_case_17_scale.py",
+        ],
+        what_this_proves=(
+            "That the reduction survives scale on the axis that matters: the "
+            "operator's reading load tracks how much sensitive authority "
+            "exists rather than how large the deployment is, and 320,000 paths "
+            "become 16 findings without dropping one. And that the reduction "
+            "is not the hard part - the presentation is. Grouping kept every "
+            "planted needle and the obvious ranking hid all three, so a "
+            "correct reduction presented by blast radius is still wallpaper "
+            "with the dangerous findings underneath it."),
+        what_this_does_not_prove=(
+            "It does not show the view works on a real deployment: the "
+            "distributions are argued rather than sampled, and the case names "
+            "the shape that would break it - sensitive authority that is not "
+            "rare. It does not show sixteen findings are *actionable*, only "
+            "that there are sixteen of them; reading load is measured as a "
+            "count and not as comprehension. And it adds no control, "
+            "detection or containment."),
+        residual_limitation=(
+            "Severity is not derivable from the graph and must come from an "
+            "operator - with no severity map the ranking collapses back to "
+            "blast radius and needle recall returns to zero, which a test "
+            "asserts so the requirement is recorded rather than apologised "
+            "for. Synthetic deployments throughout. One hop and one target "
+            "class, inherited from case 16 and not improved here."),
+        containment="Not applicable: the case measures a report, not a "
+                    "mechanism. The operational equivalent of containment "
+                    "here is that an accepted cause stops being re-reported, "
+                    "which is implemented and tested so the report is usable "
+                    "on its second run.",
+        recovery="Not applicable - nothing is compromised by a measurement of "
+                 "readability.",
+        status="open",
+        directory="cases/17-scale",
+        test_module="tests/adversarial/test_case_17_scale.py",
+        blast_radius="Not applicable to a usability measurement. The case's "
+                     "contribution to blast radius is that the view can state "
+                     "one before an incident, as a count of causes and exposed "
+                     "endpoints rather than a description afterwards.",
+        notes="Written so it could fail, and the interesting half did. "
+              "Reduction held comfortably; the presentation did not, and the "
+              "obvious ranking - biggest blast radius first - is exactly wrong "
+              "for the findings that matter most. The parity check caught a "
+              "bug in itself before it caught anything else: reading case 16's "
+              "count and the model's count either side of an arm reset "
+              "compared two different deployments and reported a mismatch that "
+              "was not there.",
+    ),
 ]
 
 CASES_BY_ID = {case.case_id: case for case in CASES}
