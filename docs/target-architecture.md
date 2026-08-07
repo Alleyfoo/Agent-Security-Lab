@@ -412,6 +412,14 @@ Claims 4 and 5 (locality and escalation) need a definition of "risk condition"
 before they can be measured at all, and that definition is a policy question
 rather than a measurement.
 
+**Update.** The reservation-queue demo
+([`demo-reservation-queue.md`](demo-reservation-queue.md)) is where claims 4
+and 5 finally get measured, and it takes the opposite approach on purpose: the
+escalation taxonomy is an *output* of the simulation rather than an input, so
+the "risk condition" is discovered from what actually fails rather than
+declared in advance. A taxonomy invented up front would be a hypothesis wearing
+the costume of a result.
+
 ## 6. Standing rule, unchanged
 
 > Security must not depend primarily on prompts telling an agent what to do or

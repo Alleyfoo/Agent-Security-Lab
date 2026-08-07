@@ -27,6 +27,7 @@ rules, canonical sources, gotchas.
 | [docs/compromise-ladder.md](docs/compromise-ladder.md) | Levels 1–7, blast radius, detection, containment, recovery |
 | [docs/security-concepts.md](docs/security-concepts.md) | Mapping to standard terminology, and where the mapping is partial |
 | [docs/target-architecture.md](docs/target-architecture.md) | The bottom-up object-driven target, its seven claims, and what is measured for each |
+| [docs/demo-reservation-queue.md](docs/demo-reservation-queue.md) | The reservation-queue demo: the two hypotheses, the oracle problem, and the build order |
 | [docs/baseline.md](docs/baseline.md) | The preserved baseline's controls (B1–B19) and verified limitations (L1–L8) |
 | [cases/README.md](cases/README.md) | Case contract, adversarial-test-first rule, acceptance criteria |
 
