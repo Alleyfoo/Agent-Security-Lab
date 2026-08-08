@@ -1,15 +1,27 @@
-"""Streamlit UI for the agent-network demo — a single one-screen dashboard.
+"""Streamlit UI for the Agent Security Lab, at checkpoint ``pre-study-v1``.
 
 Run from the repo root::
 
     streamlit run agent_network_demo/streamlit_app.py
+
+Six tabs. The first is the original one-screen baseline demo, unchanged and
+still the only surface that shows the mechanism *moving*. The other five are
+`prestudy_view`, which renders the cases, the applied programme, the sealed box
+and the real-model arm **from the canonical sources** — `cases/registry.py`,
+`cases/programme.py`, a live `run_all()`, and the recorded model-arm JSON.
+
+No result is retyped into this file. `cases/registry.py` states why: a claim
+restated in UI code drifts, and a drifted claim is worse than no claim. Tests
+in `tests/test_prestudy_view.py` enforce it against AST-stripped source.
+
+--- the baseline demo, below ---
 
 The thesis is **agents pass keys (references), not blobs**. The envelope
 between agents is a runner-enforced scoped handoff: an agent may read only the keys it
 was handed (``input_keys``) and write only the one key its ``output_contract``
 licenses — enforced by the scoped ``StoreView`` the runner hands each agent.
 
-Everything fits on one screen under one header:
+Its tab fits on one screen under one header:
   - Top bar: run id + Start / Step / Reset + key file + verdict chip.
   - Spine: the four-agent pipeline with per-step badges.
   - Main row: the interactive **relation map** (streamlit_agraph) on the left,
@@ -41,7 +53,7 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-from agent_network_demo import ui
+from agent_network_demo import prestudy_view, ui
 from agent_network_demo.contracts import write_key_for
 from agent_network_demo.demo_runner import RunSession
 
@@ -497,16 +509,44 @@ def render_top_bar(sess: Optional[RunSession]) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    st.set_page_config(page_title="Agents pass keys, not blobs", layout="wide")
+    st.set_page_config(page_title="Agent Security Lab — pre-study-v1",
+                       layout="wide")
     ui.inject_css()
     ui.hero(
-        "Agents pass keys, not blobs",
-        "A deterministic multi-agent demo. Agents hand each other *references* "
-        "into a shared artifact store — never the content. The envelope is a "
-        "runner-enforced scoped handoff: an agent can read only the keys it was handed.",
+        "Agent Security Lab",
+        "Can an agent be restricted to its assigned function when it is "
+        "manipulated, malicious, or fully captured? Checkpoint "
+        "**pre-study-v1** — the architecture arrived at before systematically "
+        "studying security literature, with the experiments that produced it "
+        "and the assumptions they killed.",
         compact=True,
     )
 
+    demo_tab, cases_tab, programme_tab, box_tab, model_tab, note_tab = st.tabs(
+        ["Baseline demo", "Cases", "Applied programme", "The sealed box",
+         "Real-model arm", "The checkpoint"])
+
+    with cases_tab:
+        prestudy_view.render_cases()
+    with programme_tab:
+        prestudy_view.render_programme()
+    with box_tab:
+        prestudy_view.render_sealed_box()
+    with model_tab:
+        prestudy_view.render_model_arm()
+    with note_tab:
+        prestudy_view.render_checkpoint()
+
+    with demo_tab:
+        _render_baseline_demo()
+
+
+def _render_baseline_demo() -> None:
+    """The original one-screen dashboard, unchanged.
+
+    Kept as the first tab rather than replaced: it is the only surface that
+    shows the mechanism moving, and the smoke tests drive it.
+    """
     sess = ensure_session_or_autostart()
 
     # --- top bar (controls) ----------------------------------------------

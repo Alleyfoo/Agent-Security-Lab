@@ -148,7 +148,15 @@ def test_no_write_up_may_claim_a_model_is_safe():
     """
     checked = 0
     for path in ("sealed_box/model_protocol.py", "sealed_box/run_model_arm.py",
-                 "docs/box-experiment.md", "docs/model-arm-findings.md"):
+                 "docs/box-experiment.md", "docs/model-arm-findings.md",
+                 "docs/pre-study-v1.md",
+                 # The rule covers every surface that DISPLAYS these numbers,
+                 # not only the ones that produced them. A dashboard is where
+                 # "0 persuaded" is most likely to be read as a clean bill of
+                 # health.
+                 "agent_network_demo/prestudy_view.py",
+                 "agent_network_demo/streamlit_app.py",
+                 "README.md"):
         full = os.path.join(REPO_ROOT, path)
         if not os.path.isfile(full):
             continue
