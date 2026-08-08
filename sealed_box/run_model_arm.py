@@ -188,33 +188,41 @@ def persuaded_by(trials: List[Trial]) -> Dict[str, List[str]]:
     return out
 
 
-if __name__ == "__main__":
-    have = available_models()
-    if not have:
-        print("No local model server responding at localhost:11434.")
-        print("This arm is OPTIONAL - B0-B3 already answered the security")
-        print("question against a strictly worse adversary.")
-        raise SystemExit(0)
+def merge_into_results(new_trials: List[Trial], models_run: List[str]) -> Dict:
+    """Merge one model's trials into the results file, keeping the others.
 
-    wanted = [m for m in proto.MODELS if m in have]
-    missing = [m for m in proto.MODELS if m not in have]
-    if missing:
-        print(f"not installed, skipped: {missing}")
+    Harness plumbing, not protocol: running the models one at a time was
+    forced by 30-minute reload cycles, and a run that dies at model four
+    should not discard models one to three. The prompt, sampling, parser and
+    predictions are untouched.
+    """
+    existing: Dict = {"protocol": {}, "trials": []}
+    if os.path.isfile(RESULTS_PATH):
+        with open(RESULTS_PATH, "r", encoding="utf-8") as fh:
+            existing = json.load(fh)
 
-    print("REAL-MODEL ARM - observed susceptibility, NOT containment")
-    print(f"corpus digest {proto.corpus_digest()[:16]}...  "
-          f"{proto.REPETITIONS} repetitions  temperature "
-          f"{proto.OPTIONS['temperature']}\n")
+    kept = [t for t in existing.get("trials", [])
+            if t["model"] not in models_run]
+    merged = kept + [asdict(t) for t in new_trials]
+    models = sorted({t["model"] for t in merged})
 
-    trials = run(wanted)
-    summary = summarise(trials)
-    persuaded = persuaded_by(trials)
+    rebuilt = [Trial(**t) for t in merged]
+    return {"protocol": {"models": models, "options": proto.OPTIONS,
+                         "repetitions": proto.REPETITIONS,
+                         "corpus_digest": proto.corpus_digest()},
+            "summary": summarise(rebuilt),
+            "persuaded_by": persuaded_by(rebuilt),
+            "trials": merged}
 
+
+def report(data: Dict) -> None:
+    models = data["protocol"]["models"]
+    summary = data["summary"]
     header = (f"{'model':<20}{'trials':>7}{'correct':>9}{'persuaded':>11}"
               f"{'malformed':>11}{'refused':>9}{'ESCAPE':>8}")
     print(header)
     print("-" * len(header))
-    for model in wanted:
+    for model in models:
         row = summary[model]
         print(f"{model:<20}{row['trials']:>7}{row[proto.CORRECT]:>9}"
               f"{row[proto.SEMANTIC_FAILURE]:>11}"
@@ -223,33 +231,55 @@ if __name__ == "__main__":
               f"{row['authority_escape']:>8}")
 
     print("\npersuaded by:")
-    for model in wanted:
-        names = persuaded.get(model, [])
+    for model in models:
+        names = data["persuaded_by"].get(model, [])
         print(f"    {model:<20} {names if names else '(none)'}")
 
-    print("\nbenign task competence (must be able to do the ordinary job):")
-    for model in wanted:
+    print("\nbenign task competence:")
+    for model in models:
         row = summary[model]
         print(f"    {model:<20} {row['benign_approved']}/"
               f"{row['benign_trials']} on-list names approved")
 
-    total_escape = sum(summary[m]["authority_escape"] for m in wanted)
-    total_persuaded = sum(summary[m][proto.SEMANTIC_FAILURE] for m in wanted)
-    print(f"\n=== {total_persuaded} successful manipulations, "
-          f"{total_escape} authority escapes ===")
+    escape = sum(summary[m]["authority_escape"] for m in models)
+    persuaded = sum(summary[m][proto.SEMANTIC_FAILURE] for m in models)
+    print(f"\n=== {persuaded} successful manipulations, "
+          f"{escape} authority escapes ===")
+
+
+if __name__ == "__main__":
+    have = available_models()
+    if not have:
+        print("No local model server responding at localhost:11434.")
+        print("This arm is OPTIONAL - B0-B3 already answered the security")
+        print("question against a strictly worse adversary.")
+        raise SystemExit(0)
+
+    argv = [a for a in sys.argv[1:] if not a.startswith("-")]
+    requested = argv or list(proto.MODELS)
+    wanted = [m for m in requested if m in have]
+    missing = [m for m in requested if m not in have]
+    if missing:
+        print(f"not installed, skipped: {missing}")
+
+    print("REAL-MODEL ARM - observed susceptibility, NOT containment")
+    print(f"corpus digest {proto.corpus_digest()[:16]}...  "
+          f"{proto.REPETITIONS} repetitions  temperature "
+          f"{proto.OPTIONS['temperature']}")
+    print(f"running: {wanted}")
+    print()
+
+    trials = run(wanted)
+    data = merge_into_results(trials, wanted)
+    with open(RESULTS_PATH, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=2)
+    report(data)
+
+    print()
     print("Susceptibility varies by model. Containment does not.")
     print("This arm reports what persuasion looks like. A low rate today is a")
     print("model that has not met the right sentence yet, and no number here")
     print("supports a claim about any model's disposition. The containment")
     print("result comes from B0-B3, against a strictly worse adversary.")
-
-    with open(RESULTS_PATH, "w", encoding="utf-8") as fh:
-        json.dump({"protocol": {"models": wanted,
-                                "options": proto.OPTIONS,
-                                "repetitions": proto.REPETITIONS,
-                                "corpus_digest": proto.corpus_digest()},
-                   "summary": summary,
-                   "persuaded_by": persuaded,
-                   "trials": [asdict(t) for t in trials]}, fh, indent=2)
-    print(f"\nwrote {RESULTS_PATH}")
+    print(f"wrote {RESULTS_PATH}")
     raise SystemExit(0)

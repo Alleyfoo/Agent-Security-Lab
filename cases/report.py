@@ -867,8 +867,7 @@ def _programme() -> list:
     results would live only in commit messages.
     """
     from cases.programme import (
-        CORRECTNESS_ORACLE, FAMILY_LABELS, OPERATIONAL_RESILIENCE, PROGRAMME,
-        by_family,
+        FAMILY_LABELS, PROGRAMME, PROGRAMME_FAMILIES, by_family,
     )
 
     out: list = []
@@ -907,9 +906,12 @@ def _programme() -> list:
       "escalated* is not a prevention whose tamper cost is some number. They "
       "are operational outcomes under a preregistered fault distribution.")
     w("")
-    w("So the repository holds three families of evidence, and a scalar model "
-      "that swallowed all three would be exactly the kind of security score "
-      "this project exists to distrust:")
+    w("So the repository holds four families of evidence, and a scalar model "
+      "that swallowed them all would be exactly the kind of security score "
+      "this project exists to distrust. The fourth arrived late and is the "
+      "reason this list is worth maintaining: the sealed box's real-model "
+      "arm fitted nowhere, because nothing failed and the system did exactly "
+      "what it was built to do:")
     w("")
     w("| Family | Where | What it measures |")
     w("|---|---|---|")
@@ -919,6 +921,9 @@ def _programme() -> list:
       "completes and whether an independent evaluator agrees it had to fail |")
     w("| Operational resilience | steps E-F, `ProgrammeResult` | what is "
       "detected, repaired, escalated, and damaged in passing |")
+    w("| Semantic susceptibility | the box's model arm, `ProgrammeResult` "
+      "| how often a real interpreter can be talked into the wrong answer - "
+      "a property of the model, never of the architecture |")
     w("")
     w("`ProgrammeResult.__post_init__` raises if a measurement dictionary "
       "contains attack-evidence vocabulary, so the distinction is enforced "
@@ -926,7 +931,7 @@ def _programme() -> list:
     w("")
 
     # -- the steps ---------------------------------------------------------
-    for family in (CORRECTNESS_ORACLE, OPERATIONAL_RESILIENCE):
+    for family in PROGRAMME_FAMILIES:
         w(f"### {FAMILY_LABELS[family]}")
         w("")
         for r in by_family(family):

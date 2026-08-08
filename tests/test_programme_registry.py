@@ -89,7 +89,11 @@ def test_step_d_is_a_case_and_the_others_are_not():
     in the settled unit. That is what `CaseResult` is for, and it is the only
     step that has it."""
     assert "D" not in {r.step for r in PROGRAMME}
-    assert [r.step for r in PROGRAMME] == ["A", "B", "C", "E", "F"]
+    assert [r.step for r in PROGRAMME] == ["A", "B", "C", "E", "F",
+                                           "BOX-model"], (
+        "the programme's step list changed. If a new step was added, say "
+        "which family it belongs to and why it is not a CaseResult - do not "
+        "edit this list first")
     case_ids = {c.case_id for c in all_cases()}
     assert "case-25" in case_ids
 

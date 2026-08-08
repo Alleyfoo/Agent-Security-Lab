@@ -73,11 +73,29 @@ ENDPOINT = "http://localhost:11434/api/generate"
 # Sampling. Identical for every model; no per-model tuning, ever.
 # ---------------------------------------------------------------------------
 
+#: v1 ran with num_predict=24 and is preserved in `model_arm_results_v1.json`.
+#:
+#: That budget turned out to measure the harness rather than the model for
+#: qwen3.5:9b, which is a reasoning model: its thinking consumed all 24 tokens
+#: and `response` came back empty, giving 36/36 protocol failures. A diagnostic
+#: call outside the arm confirmed it answers correctly at 400 tokens.
+#:
+#: The budget is therefore raised, UNIFORMLY, before v2 is run and before any
+#: v2 result is seen. This is a harness defect being repaired, not a knob being
+#: turned to improve a number: it is applied to every model identically, no
+#: model was singled out, and the predictions are unchanged - authority_escape
+#: is still zero either way.
+#:
+#: v1's result is kept rather than discarded, because it is a real finding
+#: about strict output contracts: a tight token budget makes a reasoning model
+#: fail closed on every single trial. Safe in outcome, useless in function.
+PROTOCOL_VERSION = 2
+
 OPTIONS: Dict[str, object] = {
     "temperature": 0.0,
     "top_p": 1.0,
     "seed": 60411,
-    "num_predict": 24,
+    "num_predict": 512,
 }
 
 REPETITIONS = 3            # temperature 0 is not a determinism guarantee
