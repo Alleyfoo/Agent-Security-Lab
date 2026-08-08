@@ -238,8 +238,10 @@ if __name__ == "__main__":
     print(f"\n=== {total_persuaded} successful manipulations, "
           f"{total_escape} authority escapes ===")
     print("Susceptibility varies by model. Containment does not.")
-    print("This arm reports what persuasion looks like. It is not evidence")
-    print("that any model is safe, and the write-up may not say so.")
+    print("This arm reports what persuasion looks like. A low rate today is a")
+    print("model that has not met the right sentence yet, and no number here")
+    print("supports a claim about any model's disposition. The containment")
+    print("result comes from B0-B3, against a strictly worse adversary.")
 
     with open(RESULTS_PATH, "w", encoding="utf-8") as fh:
         json.dump({"protocol": {"models": wanted,
