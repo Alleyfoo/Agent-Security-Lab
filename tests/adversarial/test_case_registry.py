@@ -264,6 +264,80 @@ def test_review_every_level_2_prevention_is_an_absence():
     )
 
 
+def test_every_absence_declares_which_kind_of_absence_it_is():
+    """STRENGTHENED after integrating the applied programme.
+
+    The assertion above was satisfied for a long time while the word "absence"
+    was quietly covering three different mechanisms, and it could not have
+    noticed: it counts cases, and all four were correctly counted. The crack
+    was found by reading case 22's implementation, not by anything failing.
+
+    So the guard now checks the thing that was actually wrong. Case 22's
+    `Gate.compact` and `DurableStore.rewrite` are both implemented and work -
+    an arm flag refuses. That is a real control at the protocol boundary and it
+    is NOT case 06's control, where the objects do not exist in the address
+    space at all. One word for both flattered the weaker one.
+
+        ambient      the boundary cannot reach it            06, 21
+        capability   the code works; no verb names it        22
+        dependency   reachable and corruptible; unread       04b
+
+    A new Level 2 prevention must say which. And the set must keep spanning
+    more than one kind, because the moment it collapses to a single kind the
+    taxonomy is either wrong or no longer earning its place - and the report
+    section describing three mechanisms would be stale.
+    """
+    from cases.registry import ABSENCE_KINDS, PREVENTED
+
+    prevented = [c for c in ALL
+                 if c.case_id in _by_level("Level 2")
+                 and c.controlled_result == PREVENTED]
+
+    kinds = {}
+    for case in prevented:
+        kind = case.extra.get("absence_kind")
+        assert kind in ABSENCE_KINDS, (
+            f"{case.case_id} prevents an effect at Level 2 but does not say "
+            f"which kind of absence does it. One of {ABSENCE_KINDS}. "
+            "'An absence' is not specific enough - the three degrade "
+            "differently and a reader cannot tell which guarantee they have."
+        )
+        assert case.extra.get("absence_note"), (
+            f"{case.case_id} declares an absence kind with no justification"
+        )
+        kinds.setdefault(kind, set()).add(case.case_id)
+
+    assert kinds == {
+        "ambient": {"case-06", "case-21"},
+        "capability": {"case-22"},
+        "dependency": {"case-04b"},
+    }, (
+        "the absence taxonomy changed. rewrite the '\"absence\" was carrying "
+        "three different mechanisms' section in cases/report.py against the "
+        "new evidence - do not edit this assertion first"
+    )
+
+
+def test_a_capability_absence_admits_the_operation_still_exists():
+    """The honest half of the capability kind.
+
+    A capability absence is only worth stating if the case admits that the
+    code is present and functional. Case 22 saying 'the verb is absent'
+    without saying 'and the method is right there behind a flag' would be the
+    claim doing more work than the mechanism.
+    """
+    from cases.registry import CAPABILITY_ABSENCE
+    for case in ALL:
+        if case.extra.get("absence_kind") != CAPABILITY_ABSENCE:
+            continue
+        note = case.extra["absence_note"].lower()
+        assert any(word in note for word in
+                   ("implemented", "exists", "works")), (
+            f"{case.case_id} claims a capability absence without admitting "
+            "the operation still exists somewhere in the system"
+        )
+
+
 def test_review_exactly_one_level_1_case_ends_in_detection():
     """TRIPWIRE for 'restricting an agent to its assigned function does not
     restrict what its assigned function can do'.

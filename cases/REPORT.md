@@ -33,8 +33,9 @@ Every attack outcome is exactly one of **prevented**, **rejected before commitme
 | [case-21](21-gate-independence/README.md)<br>Process independence for the approval gate | Six probes against the approval gate from the worker's process - replace its code, write its approval state, forge reviewer membership, bypass the protocol, read its credential, manipulate its datastore - run against a gate sharing the worker's boundary and a gate in its own process | 🔴 Undetected | 🟢 Prevented | The gate runs in a separate interpreter under its own authority, reached only by line-delimited JSON. It holds its own approvals, its own reviewer list and its own credential, and the protocol is the entire surface. WORDING CORRECTED after first publication: this establishes process and code independence, not gate independence - see the residual | **Arm B does not achieve gate independence** and the case's title was corrected to say so. If the persisted approval store is part of the gate - and after cases 19 and 20 it holds security state rather than mere persistence - then complete gate state still crosses back into the worker's authority through the filesystem. The measured result is: process separation removes direct authority over gate code, credentials, protocol internals and volatile state, and does not establish gate independence while durable gate state remains writable from the worker boundary. Same uid, same filesystem, same host throughout. |
 | [case-22](22-durable-state/README.md)<br>Durable-state independence | Create, modify and DELETE durable gate authority - forge an approval, delete a consumption record to resurrect a spent approval, destroy the record entirely - against a store the worker can write, a store reachable only through the gate's protocol, and the same protocol with one maintenance operation | 🔴 Undetected | 🟢 Prevented | A durable store reachable only through a protocol whose vocabulary cannot forget: approve, execute and state, with no operation that removes a record | Unreachability is modelled rather than enforced, so the honest claim is conditional - given a store reachable only through the protocol, these four attacks behave as measured. Nothing notices a deletion: an append-only chain would make the gap visible and is not built, though case 10's ledger is the obvious model and case 11's containment the obvious response. Availability is outside the claim; D0's truncation is recorded because it happened. |
 | [case-24](24-severity-source/README.md)<br>Gate 2: where does severity come from? | Supply the reachability ranking with three severity sources - none, one computed from the graph, and one declared independently about the authority - and measure needle recall, the correlation between graph topology and declared severity, and whether the engine reads severity at all | 🔴 Undetected | 🔴 Undetected | None. A measurement, and the second of the two gates the reachability hypothesis was given | The declared source is a stand-in that models asset inventory or data classification, exactly as case 12's arms modelled architectures; whether a real organisation can produce such a map, keep it current and agree on it is the actual difficulty and is untouched. Severity is a scalar per authority, with no aggregation across the authorities one intermediary reaches together. |
+| [case-25](25-protected-displacement/README.md)<br>Protected displacement in a running system | Displace somebody else's confirmed reservation with no approval in existence, by invoking the exported move_reservation verb the worker already holds | 🔴 Undetected | 🟢 Prevented | The rule binds to the KIND of transformation rather than to a risk score: creating a reservation is local, modifying a confirmed one requires a proposal plus an independent approval bound to the exact action digest and spent by one execution. The unprotected verb is removed from the worker's skill set at the same time, which is the half that matters | The legacy route remains available to any deployment that keeps move_reservation in the worker's registry, and nothing detects it: the resulting schedule is valid and no approval record is created, so there is no artifact to notice. Prevention here is an absence in the worker's invocation vocabulary, which means it survives exactly as long as the skill set does - a configuration adversary who can widen worker_skills restores the legacy route for 1 commit, which is case 15's finding applied to this gate. |
 
-**25 cases** — 16 with a control, 9 open by design. 15 moved to a better result class.
+**26 cases** — 17 with a control, 9 open by design. 16 moved to a better result class.
 
 Open cases are not failures of the project; they are findings whose control belongs to a later phase. Their controlled result is deliberately identical to their baseline result — an open case must never be shown as green.
 
@@ -46,7 +47,7 @@ A review of the entries above as a set rather than a further case. The per-case 
 
 > Can an agent be restricted to its assigned function when it is manipulated, malicious, or fully captured?
 
-**Manipulated or malicious — yes, and it is measured.** All 8 cases whose adversary is a hostile agent implementation end in prevention or rejection before commitment, with one exception:
+**Manipulated or malicious — yes, and it is measured.** All 9 cases whose adversary is a hostile agent implementation end in prevention or rejection before commitment, with one exception:
 
 | Case | Result |
 |---|---|
@@ -58,6 +59,7 @@ A review of the entries above as a set rather than a further case. The per-case 
 | case-09 — Can the execution plane mint a transformation? | 🟢 Prevented |
 | case-19 — Two-sided sign-off | 🟢 Prevented |
 | case-20 — Two executors racing one one-use approval | 🟢 Prevented |
+| case-25 — Protected displacement in a running system | 🟢 Prevented |
 
 **Fully captured — no, and no check has ever changed that.** The 6 cases whose adversary holds arbitrary code in the runner's process:
 
@@ -76,12 +78,28 @@ This is the sharpest thing the set says, and it is checkable against the table a
 
 | Case | What prevents the effect | Mechanism |
 |---|---|---|
-| case-04b | the decision plane never reads the corrupted record | an absence |
-| case-06 | the isolated interpreter contains no runner objects | an absence |
-| case-21 | the approval gate's code, state and credential are not in the worker's process | an absence |
-| case-22 | the gate's protocol has no operation that removes a record | an absence |
+| case-04b | the decision plane never reads the corrupted record | **dependency** absence |
+| case-06 | the isolated interpreter contains no runner objects | **ambient** absence |
+| case-21 | the approval gate's code, state and credential are not in the worker's process | **ambient** absence |
+| case-22 | the gate's protocol has no operation that removes a record | **capability** absence |
 
 Case 22's refusal is the cleanest statement of the pattern in the whole set. Asked to compact its store, the gate answers **no such operation** - not *you may not*. The verb is absent, and that is the entire control.
+
+#### But "absence" was carrying three different mechanisms
+
+This came out of integrating the applied programme, and it is a correction to how the finding above had been stated rather than a new case. The word was doing three jobs, and the three degrade differently, so a reader given one word cannot tell which guarantee they are being offered.
+
+| Kind | What it means | Fails when | Cases |
+|---|---|---|---|
+| **ambient** | the adversary's boundary cannot reach the thing at all - it is not in the interpreter, the process or the address space | only if the boundary itself fails | 06, 21 |
+| **capability** | the system *can* perform the operation and the code works; the adversary's invocation vocabulary has no word that addresses it | anything widens the vocabulary - a configuration-adversary problem (case 15), not a boundary problem | 22, and demo step F |
+| **dependency** | the operation is reachable and its output corruptible, but no security decision consumes it | some later feature decides the corruptible record would be convenient to read | 04b |
+
+The uncomfortable one is case 22. `Gate.compact` and `DurableStore.rewrite` are both implemented and both work; an arm flag is what refuses. That is a real control at the protocol boundary and the Level 2 adversary is not inside the gate's process - but it is **not** case 06's control, where the objects genuinely do not exist in the address space the adversary occupies. Filing both under one word flattered the weaker of the two.
+
+Demo step F is the same shape, which is how the distinction surfaced: `Transport.restart_all()` exists, works, clears every fault and would score 100% recovered. The recovery worker simply holds no verb that names it. That is a genuine control and it is worth exactly as much as the vocabulary is stable - which is the point of stating the kind instead of the word.
+
+The design rule survives unchanged. What changes is that a case claiming an absence must now say **which kind**, and a test enforces it.
 
 **Case 21 is the first one the rule predicted rather than explained.** The design rule below was written after cases 04b and 06; case 21 was then built by applying it to the approval plane, and it produced the third absence and the third Level 2 prevention. Five of its six probes land on nothing for the same reason case 06 gave - the room is empty, not the door locked. Its sixth is the instructive one: the gate's *persisted store* stayed in the worker's reach, so that probe still succeeds. Moving the code is half an absence.
 
@@ -393,6 +411,235 @@ Ordered by what the measurements support, not by appetite.
 Then the two families case 12 could not measure, each blocked on an instrument rather than on appetite: **data movement and fidelity**, which needs observation of a running system rather than the whole-payload strawman `key_vs_paste.py` assumes; and **compromise and failure behaviour**, which is where real OS isolation, real workflow credentials and disposable workers actually differ, and where the identity arm would stop being a miniature.
 
 Not next, and worth saying: a fourth arm, or another authority-model comparison against the same adversary. Case 12 answered that question for this property family, and the answer does not improve by adding models to it.
+
+## Applied architecture programme
+
+A reservation queue, built in six steps, each asking a different architectural question. It is not a calendar simulation with security bolted on - the steps were sequenced so that each one measures something the previous one could not.
+
+```text
+A-C  can agents perform and recover business work?
+D    can consequential transformations require independent authority?
+E    can failure be observed without inventing causes?
+F    can failure be repaired without granting general authority?
+```
+
+### Not every piece of evidence here is attack evidence
+
+Only **step D** is a case. It is registered as case-25 because it has the shape the registry is for: an adversary, a protected outcome, a bypass route, and a cost in the settled tamper unit. The rest are recorded in `cases/programme.py` as `ProgrammeResult`, which deliberately has **no tamper-cost field at all**.
+
+That is a structural decision, not a filing convenience. Inventing a `minimum_tamper_cost` for step E's detection rate because `CaseResult` happens to have the field would repeat the measurement mistake the first twenty-four cases exist to eliminate:
+
+> F0's *17 unresolved* is not a successful attack route. F2's *8 escalated* is not a prevention whose tamper cost is some number. They are operational outcomes under a preregistered fault distribution.
+
+So the repository holds three families of evidence, and a scalar model that swallowed all three would be exactly the kind of security score this project exists to distrust:
+
+| Family | Where | What it measures |
+|---|---|---|
+| Adversarial security | cases 00-25, `CaseResult` | what an adversary achieves, and what it costs in independently committed state changes |
+| Correctness / oracle | steps A-C, `ProgrammeResult` | whether work completes and whether an independent evaluator agrees it had to fail |
+| Operational resilience | steps E-F, `ProgrammeResult` | what is detected, repaired, escalated, and damaged in passing |
+
+`ProgrammeResult.__post_init__` raises if a measurement dictionary contains attack-evidence vocabulary, so the distinction is enforced rather than documented.
+
+### Correctness / oracle evidence
+
+#### Step A — Bounded queue mechanics
+
+> Does routine work complete, and is the resulting schedule valid according to a checker that knows nothing about the agents?
+
+**Claim.** A worker restricted to a fixed skill set, validated against each object's current state rather than the queue's opinion of it, completes ordinary work and produces a schedule an independent checker accepts.
+
+**Measured**
+
+- requests: `1000`
+- work_completed: `348`
+- refused: `652`
+- refusal_causes:
+    - contention: `652`
+- schedule_valid: `True`
+- unauthorised_transitions: `0`
+
+**Method.** Frozen world model, bounded skill registry, runtime validating each skill against object state, and a schedule-invariant checker that imports neither the skills nor the runtime.
+
+**What it does not claim**
+
+- nothing about natural language - there is none in the demo
+- nothing about adversarial behaviour; the worker is not hostile at this step
+- nothing about scale - one venue for 28 days is not a deployment
+
+**Residual.** A valid schedule under a benign workload says nothing about what the same skill set permits a hostile worker. That is case 25's question, and it needed a different experiment.
+
+**Exercises**
+
+- *restriction by function* — the runtime refuses a skill the object's state does not permit, and counts the refusal rather than silently dropping it
+- *independent verification* — the invariant checker shares no code with the thing it checks
+
+**Notes.** All 652 refusals are contention. An earlier generator produced 342 feature-mismatch and 296 hours refusals; that was physically implausible demand, and removing it was removing noise rather than removing difficulty.
+
+Reproduce: `python demo_reservation/run_a.py` · Tests: `tests/test_demo_reservation_a.py` · Measured at `demo step A`
+
+#### Step B — Independent disruptions
+
+> What actually breaks, when the generator is written before any resolution logic exists?
+
+**Claim.** A disruption generator committed before the recovery code can damage a running schedule in ways the recovery code did not get to choose.
+
+**Measured**
+
+- disruption_kinds: `5`
+- work_completed: `348`
+- refused: `652`
+- schedule_valid: `True`
+- unauthorised_transitions: `0`
+- damage_independently_verified: `True`
+
+**Method.** Generator conditioned only on affecting at least one existing reservation. Explicitly NOT conditioned on the number of alternatives, conflict complexity, or future solvability.
+
+**What it does not claim**
+
+- nothing about how hard the damage is to repair - conditioning on solvability is exactly what was forbidden
+- nothing about realistic disruption frequency in a real venue
+
+**Residual.** The distribution is preregistered, not representative. Case 18 is the standing reminder of what a distribution assumption costs, and step C's finding turned out to be a property of THIS distribution rather than of scheduling.
+
+**Exercises**
+
+- *preregistration* — a fault set chosen because the system handles it measures the author, not the system
+
+**Notes.** B1 is frozen. A scarce-resource workload would be a separate preregistered B2; modifying B to make C more interesting was explicitly refused.
+
+Reproduce: `python demo_reservation/run_b.py` · Tests: `tests/test_demo_reservation_b.py` · Measured at `demo step B`
+
+#### Step C — Local resolution and the joint oracle
+
+> How much damage absorbs locally, and how many of the escalations were false?
+
+**Claim.** An evaluator solving the affected reservations JOINTLY - not one at a time - can distinguish genuine impossibility from a false escalation and from a dead end the agent's own valid choices created.
+
+**Measured**
+
+- work_completed: `348`
+- refused: `652`
+- schedule_valid: `True`
+- unauthorised_transitions: `0`
+- false_escalations: `0`
+- self_created_dead_ends: `0`
+- undecided: `0`
+- oracle_values: `yes / no / unknown, three-valued`
+- witness_verified_independently: `True`
+
+**Method.** Joint backtracking feasibility oracle with a search budget. A `yes` always carries a witness assignment revalidated by the same independent invariant checker; a `no` is only sound if the search completed, otherwise `unknown`. The witness is never visible to the agents, enforced by a structural test.
+
+**What it does not claim**
+
+- nothing about coordination mechanisms, because this workload never generated coordination pressure
+- nothing that a per-reservation oracle could have told you - the self-created dead end is invisible to one
+- no claim that zero dead ends is a property of the architecture; it is a property of this distribution
+
+**Residual.** Recoverability under B1 is bimodal: damage is either locally trivial or structurally impossible. That is a finding about the workload, and it means C did not get to test the interesting middle. B1 stays untouched anyway.
+
+**Exercises**
+
+- *the oracle is not trusted either* — a three-valued answer with a verified witness, rather than a boolean to believe
+- *independent verification* — the oracle's positive claims go through the same checker the schedule does
+
+**Notes.** Frozen exactly as first run. Nothing was optimised afterwards, which is why the bimodality is reported as a result rather than tuned away.
+
+Reproduce: `python demo_reservation/run_c.py` · Tests: `tests/test_demo_reservation_c.py` · Measured at `demo step C`
+
+### Operational resilience evidence
+
+#### Step E — Communication detection
+
+> Can an independent observer detect that an expected communication did not complete correctly, WITHOUT possessing authority to repair it?
+
+**Claim.** Detection and repair are separable. An observer holding no verb that could change anything detects every injected communication fault, classifies each as preregistered, and raises no false alarm on clean traffic.
+
+**Measured**
+
+- exchanges: `1000`
+- clean: `954`
+- faults_injected: `46`
+- detected: `46`
+- missed: `0`
+- false_alarms: `0`
+- classified_as_preregistered: `46`
+- detection_latency_median_ticks: `4`
+- by_kind:
+    - drop_response: `5/5`
+    - delay_past_deadline: `9/9`
+    - wrong_correlation_id: `13/13`
+    - wrong_sender_or_recipient: `14/14`
+    - duplicate_response: `5/5`
+- recovery_verbs_held_by_observer: `0`
+
+**Method.** Fault vocabulary and expected classification fixed in `comms_faults.py` before the detector existed. The injector holds ground truth and the monitor cannot read it, enforced structurally. Logical ticks throughout.
+
+**What it does not claim**
+
+- nothing about diagnosis - `missing_expected_response` is provable from the stream, `worker_crashed` is not
+- nothing about self-healing; the monitor cannot repair and that is the point of the step
+- nothing about wall-clock behaviour - the deadlines are logical ticks, because a deadline in seconds would measure Windows scheduling
+
+**Residual.** The monitor sees a bus that hands it copies. A monitor reading a stream it could edit would be able to hide its own misses, which is case 00's audit-plane mistake; that is prevented here by construction rather than measured against an adversary who tries.
+
+**Exercises**
+
+- *observation is not diagnosis* — the stream can prove an absence; it cannot prove a cause, and a monitor inferring one is grading its own homework
+- *lowest necessary authority* — the observer imports no store, no runtime and no skills, and holds no verb that could repair anything
+- *case 00 - the audit plane* — observers receive copies, so an observer cannot edit the record of what it failed to notice
+
+**Notes.** The diagnosis guard passed for a while while matching nothing at all - a literal backspace byte had turned \b into a regex that checked nothing. That is why every absence guard in this repository now carries a positive control.
+
+Reproduce: `python demo_reservation/run_e.py` · Tests: `tests/test_demo_reservation_e.py` · Measured at `0791d36`
+
+#### Step F — Bounded recovery
+
+> Can a detected communication fault be recovered using only explicitly granted recovery functions, without giving the monitor general administrative authority?
+
+**Claim.** Observation creates an object; an authorised function acts on it. Three explicitly granted verbs recover or honestly escalate every detected fault, and the monitor gains none of them.
+
+**Measured**
+
+- work_items: `200`
+- faults: `47`
+- detected: `47`
+- missed: `0`
+- false_alarms: `0`
+- rungs:
+    - F0 retry only: `{'recovered': 30, 'escalated': 0, 'unresolved': 17, 'attempts': 131}`
+    - F1 retry + reroute: `{'recovered': 39, 'escalated': 0, 'unresolved': 8, 'attempts': 122}`
+    - F2 retry + reroute + escalate: `{'recovered': 39, 'escalated': 8, 'unresolved': 0, 'attempts': 122}`
+- attempts_max_per_fault: `5`
+- false_recoveries: `0`
+- collateral_effects: `0`
+- recovery_verbs_added: `3`
+
+**Method.** Fault model committed in its own commit AHEAD of the recovery layer, so the ordering is a fact about the history. `recovered` is verified against the transport's delivery record, never the worker's claim. Both zero-valued safety metrics carry positive controls that drive them above zero.
+
+**What it does not claim**
+
+- nothing about the monitor's authority - it gained none, which is checkable as an empty git diff rather than asserted
+- escalation is NOT recovery; the recovered count does not move between F1 and F2
+- nothing about repairing business state - communication recovery is not authority over the calendar
+- nothing about an adversary attacking the recovery layer; the captured-worker probe tests vocabulary, not resistance
+
+**Residual.** The absence protecting this is a CAPABILITY absence, not an ambient one: `Transport.restart_all()` exists and works, and the recovery worker simply has no verb that addresses it. That survives exactly as long as the vocabulary does, which makes it a configuration-adversary problem (case 15) rather than a boundary problem.
+
+**Exercises**
+
+- *restriction by function* — `reroute_exchange(fault_4812)` cannot express 'reroute everything to attacker_worker'; the verb has nowhere to put the words
+- *the absence rule* — `restart_all` is refused because there is no verb for it, not because a policy said no
+- *lowest necessary authority* — three verbs, pinned by a test, so the authority diff stays visible instead of growing by being useful
+- *case 22 - exported transformations* — the capability absence here is the same mechanism case 22 relies on, and it degrades the same way
+
+**Notes.** The F1 -> F2 step is the honest one: eight faults stop being quietly unresolved and start being reported. A recovery rate that improved there would have meant the escalation verb was doing something it should not.
+
+Reproduce: `python demo_reservation/run_f.py` · Tests: `tests/test_demo_reservation_f.py` · Measured at `7347bf8 (fault model) + 8ecb229 (recovery)`
+
+### Step D is case-25
+
+Displacing a confirmed reservation is a protected transformation; creating a new one is not. The rule binds to the **kind of transformation**, not to a risk score. The legacy row — the worker still holding `move_reservation`, which is exactly what step C shipped — displaces five confirmed reservations with zero approvals in existence, at a minimum tamper cost of 1. See the case table above.
 
 ## Detail
 
@@ -1220,6 +1467,38 @@ Reproduce: `python cases/22-durable-state/attack.py` · Tests: `tests/adversaria
 **Notes.** Built while case 23 was blocked, because Gate 2 is independent of that blocker. The self-grading arm was built deliberately rather than argued against, and it was worth it: the prediction was that it would rank badly, and the measurement was that it ranks identically to having nothing, which is a different and more useful statement. A first draft of the summary called the correlations weak; they are -0.995 and the prose was corrected to match.
 
 Reproduce: `python cases/24-severity-source/attack.py` · Tests: `tests/adversarial/test_case_24_severity_source.py`
+
+### ✅ case-25 — Protected displacement in a running system
+
+**Compromise level:** Level 1: a worker using the skills it was issued  
+**Attack:** Displace somebody else's confirmed reservation with no approval in existence, by invoking the exported move_reservation verb the worker already holds  
+**Baseline:** 🔴 Undetected → **Controlled:** 🟢 Prevented
+
+**Control.** The rule binds to the KIND of transformation rather than to a risk score: creating a reservation is local, modifying a confirmed one requires a proposal plus an independent approval bound to the exact action digest and spent by one execution. The unprotected verb is removed from the worker's skill set at the same time, which is the half that matters
+
+**Evidence**
+
+- protected + approval: 5 disrupted, 5 displaced, 5 approvals, schedule PASS (348 reservations)
+- protected + no approval: 5 disrupted, 0 displaced, schedule FAIL with 5 x inside_opening_hours - refusing is a defined outcome, not a failure
+- legacy (step C as shipped): 5 displaced, 0 approvals recorded
+- approval for reservation A cannot execute a move of B - a different action is a different digest
+- tests/test_demo_reservation_d.py
+
+**What this proves.** Attaching a protected path to a transformation genuinely removes it from a worker's authority in a running system rather than a harness - but only when the unprotected verb is removed from the skill set at the same time. This is applied cross-case evidence for case 22's principle: a protection boundary is only as narrow as the transformations it exports. Case 22 predicted the legacy row before the demo existed, and case 09 found the same shape in the skill registry.
+
+**What this does not prove.** Nothing about a Level 1.5 adversary - cases 19 to 22 already established what the approval store costs to attack and this case inherits those results rather than re-deriving them, and inherited results are not new evidence. Nothing about isolation: the gate and the worker are objects in one process, so the independence here is decision and credential independence only, not process or durable-state independence. Nothing about scale - five disrupted reservations under one disruption kind, with case 18 as the standing reminder of what distribution assumptions cost.
+
+**Residual limitation.** The legacy route remains available to any deployment that keeps move_reservation in the worker's registry, and nothing detects it: the resulting schedule is valid and no approval record is created, so there is no artifact to notice. Prevention here is an absence in the worker's invocation vocabulary, which means it survives exactly as long as the skill set does - a configuration adversary who can widen worker_skills restores the legacy route for 1 commit, which is case 15's finding applied to this gate.
+
+**Containment.** Refuse the queue item and count it. The schedule then reports the unrepaired violations honestly rather than being quietly fixed by an unapproved move.
+
+**Recovery.** Re-run the displacement through propose -> approve -> execute. An approval is consumable and bound to the action digest, so a replayed or swapped approval is refused rather than reused.
+
+**Blast radius.** One confirmed reservation per invocation. No effect on the approval store, the skill registry, the world model or any other reservation.
+
+**Notes.** Demo step D lifted into the registry because it has the shape the registry is for. Steps A-C, E and F deliberately are NOT cases - see cases/programme.py. Inventing a tamper cost for step E's detection rate because CaseResult has the field would repeat the measurement mistake the first 24 cases exist to eliminate.
+
+Reproduce: `python cases/25-protected-displacement/attack.py` · Tests: `tests/test_demo_reservation_d.py`
 
 ## Where the boundary stands
 

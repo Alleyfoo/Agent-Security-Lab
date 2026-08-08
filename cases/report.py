@@ -134,19 +134,62 @@ def _review() -> list:
     w("")
     w("| Case | What prevents the effect | Mechanism |")
     w("|---|---|---|")
-    w("| case-04b | the decision plane never reads the corrupted record | an "
-      "absence |")
-    w("| case-06 | the isolated interpreter contains no runner objects | an "
-      "absence |")
+    w("| case-04b | the decision plane never reads the corrupted record | "
+      "**dependency** absence |")
+    w("| case-06 | the isolated interpreter contains no runner objects | "
+      "**ambient** absence |")
     w("| case-21 | the approval gate's code, state and credential are not in "
-      "the worker's process | an absence |")
+      "the worker's process | **ambient** absence |")
     w("| case-22 | the gate's protocol has no operation that removes a record "
-      "| an absence |")
+      "| **capability** absence |")
     w("")
     w("Case 22's refusal is the cleanest statement of the pattern in the "
       "whole set. Asked to compact its store, the gate answers **no such "
       "operation** - not *you may not*. The verb is absent, and that is the "
       "entire control.")
+    w("")
+
+    # -- 2b. absence had been one word for three mechanisms ----------------
+    w("#### But \"absence\" was carrying three different mechanisms")
+    w("")
+    w("This came out of integrating the applied programme, and it is a "
+      "correction to how the finding above had been stated rather than a new "
+      "case. The word was doing three jobs, and the three degrade "
+      "differently, so a reader given one word cannot tell which guarantee "
+      "they are being offered.")
+    w("")
+    w("| Kind | What it means | Fails when | Cases |")
+    w("|---|---|---|---|")
+    w("| **ambient** | the adversary's boundary cannot reach the thing at "
+      "all - it is not in the interpreter, the process or the address space "
+      "| only if the boundary itself fails | 06, 21 |")
+    w("| **capability** | the system *can* perform the operation and the code "
+      "works; the adversary's invocation vocabulary has no word that "
+      "addresses it | anything widens the vocabulary - a "
+      "configuration-adversary problem (case 15), not a boundary problem "
+      "| 22, and demo step F |")
+    w("| **dependency** | the operation is reachable and its output "
+      "corruptible, but no security decision consumes it | some later feature "
+      "decides the corruptible record would be convenient to read | 04b |")
+    w("")
+    w("The uncomfortable one is case 22. `Gate.compact` and "
+      "`DurableStore.rewrite` are both implemented and both work; an arm flag "
+      "is what refuses. That is a real control at the protocol boundary and "
+      "the Level 2 adversary is not inside the gate's process - but it is "
+      "**not** case 06's control, where the objects genuinely do not exist in "
+      "the address space the adversary occupies. Filing both under one word "
+      "flattered the weaker of the two.")
+    w("")
+    w("Demo step F is the same shape, which is how the distinction surfaced: "
+      "`Transport.restart_all()` exists, works, clears every fault and would "
+      "score 100% recovered. The recovery worker simply holds no verb that "
+      "names it. That is a genuine control and it is worth exactly as much as "
+      "the vocabulary is stable - which is the point of stating the kind "
+      "instead of the word.")
+    w("")
+    w("The design rule survives unchanged. What changes is that a case "
+      "claiming an absence must now say **which kind**, and a test enforces "
+      "it.")
     w("")
     w("**Case 21 is the first one the rule predicted rather than explained.** "
       "The design rule below was written after cases 04b and 06; case 21 was "
@@ -816,6 +859,127 @@ def _review() -> list:
     return out
 
 
+def _programme() -> list:
+    """The applied programme, and why most of it is not in the case table.
+
+    Without this section a reader six months from now would conclude the
+    reservation programme never got past step C, because the strongest applied
+    results would live only in commit messages.
+    """
+    from cases.programme import (
+        CORRECTNESS_ORACLE, FAMILY_LABELS, OPERATIONAL_RESILIENCE, PROGRAMME,
+        by_family,
+    )
+
+    out: list = []
+    w = out.append
+
+    w("## Applied architecture programme")
+    w("")
+    w("A reservation queue, built in six steps, each asking a different "
+      "architectural question. It is not a calendar simulation with security "
+      "bolted on - the steps were sequenced so that each one measures "
+      "something the previous one could not.")
+    w("")
+    w("```text")
+    w("A-C  can agents perform and recover business work?")
+    w("D    can consequential transformations require independent authority?")
+    w("E    can failure be observed without inventing causes?")
+    w("F    can failure be repaired without granting general authority?")
+    w("```")
+    w("")
+
+    # -- the schema finding ------------------------------------------------
+    w("### Not every piece of evidence here is attack evidence")
+    w("")
+    w("Only **step D** is a case. It is registered as case-25 because it has "
+      "the shape the registry is for: an adversary, a protected outcome, a "
+      "bypass route, and a cost in the settled tamper unit. The rest are "
+      "recorded in `cases/programme.py` as `ProgrammeResult`, which "
+      "deliberately has **no tamper-cost field at all**.")
+    w("")
+    w("That is a structural decision, not a filing convenience. Inventing a "
+      "`minimum_tamper_cost` for step E's detection rate because `CaseResult` "
+      "happens to have the field would repeat the measurement mistake the "
+      "first twenty-four cases exist to eliminate:")
+    w("")
+    w("> F0's *17 unresolved* is not a successful attack route. F2's *8 "
+      "escalated* is not a prevention whose tamper cost is some number. They "
+      "are operational outcomes under a preregistered fault distribution.")
+    w("")
+    w("So the repository holds three families of evidence, and a scalar model "
+      "that swallowed all three would be exactly the kind of security score "
+      "this project exists to distrust:")
+    w("")
+    w("| Family | Where | What it measures |")
+    w("|---|---|---|")
+    w("| Adversarial security | cases 00-25, `CaseResult` | what an adversary "
+      "achieves, and what it costs in independently committed state changes |")
+    w("| Correctness / oracle | steps A-C, `ProgrammeResult` | whether work "
+      "completes and whether an independent evaluator agrees it had to fail |")
+    w("| Operational resilience | steps E-F, `ProgrammeResult` | what is "
+      "detected, repaired, escalated, and damaged in passing |")
+    w("")
+    w("`ProgrammeResult.__post_init__` raises if a measurement dictionary "
+      "contains attack-evidence vocabulary, so the distinction is enforced "
+      "rather than documented.")
+    w("")
+
+    # -- the steps ---------------------------------------------------------
+    for family in (CORRECTNESS_ORACLE, OPERATIONAL_RESILIENCE):
+        w(f"### {FAMILY_LABELS[family]}")
+        w("")
+        for r in by_family(family):
+            w(f"#### Step {r.step} — {r.title}")
+            w("")
+            w(f"> {r.question}")
+            w("")
+            w(f"**Claim.** {r.claim}")
+            w("")
+            w("**Measured**")
+            w("")
+            for key, value in r.measurements.items():
+                if isinstance(value, dict):
+                    w(f"- {key}:")
+                    for sub, subvalue in value.items():
+                        w(f"    - {sub}: `{subvalue}`")
+                else:
+                    w(f"- {key}: `{value}`")
+            w("")
+            w(f"**Method.** {r.method}")
+            w("")
+            w("**What it does not claim**")
+            w("")
+            for item in r.non_claims:
+                w(f"- {item}")
+            w("")
+            w(f"**Residual.** {r.residual}")
+            w("")
+            w("**Exercises**")
+            w("")
+            for concept, why in r.exercises.items():
+                w(f"- *{concept}* — {why}")
+            w("")
+            if r.notes:
+                w(f"**Notes.** {r.notes}")
+                w("")
+            w(f"Reproduce: `{r.run}` · Tests: `{r.test_module}` · Measured at "
+              f"`{r.source_commit}`")
+            w("")
+
+    # -- step D's pointer --------------------------------------------------
+    w("### Step D is case-25")
+    w("")
+    w("Displacing a confirmed reservation is a protected transformation; "
+      "creating a new one is not. The rule binds to the **kind of "
+      "transformation**, not to a risk score. The legacy row — the worker "
+      "still holding `move_reservation`, which is exactly what step C shipped "
+      "— displaces five confirmed reservations with zero approvals in "
+      "existence, at a minimum tamper cost of 1. See the case table above.")
+    w("")
+    return out
+
+
 def render() -> str:
     cases = all_cases()
     out: list[str] = []
@@ -860,6 +1024,7 @@ def render() -> str:
         w("")
 
     out.extend(_review())
+    out.extend(_programme())
 
     # -- detail ------------------------------------------------------------
     w("## Detail")
