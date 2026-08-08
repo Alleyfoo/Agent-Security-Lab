@@ -550,7 +550,7 @@ Reproduce: `python demo_reservation/run_b.py` · Tests: `tests/test_demo_reserva
 
 Reproduce: `python demo_reservation/run_c.py` · Tests: `tests/test_demo_reservation_c.py` · Measured at `demo step C`
 
-### Operational resilience evidence
+### Observability evidence
 
 #### Step E — Communication detection
 
@@ -595,6 +595,8 @@ Reproduce: `python demo_reservation/run_c.py` · Tests: `tests/test_demo_reserva
 **Notes.** The diagnosis guard passed for a while while matching nothing at all - a literal backspace byte had turned \b into a regex that checked nothing. That is why every absence guard in this repository now carries a positive control.
 
 Reproduce: `python demo_reservation/run_e.py` · Tests: `tests/test_demo_reservation_e.py` · Measured at `0791d36`
+
+### Operational resilience evidence
 
 #### Step F — Bounded recovery
 

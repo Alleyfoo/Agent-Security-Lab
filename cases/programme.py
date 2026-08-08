@@ -20,20 +20,30 @@ this repository already knows what happens to numbers with no referent - case
 19 measured two mechanically different systems at 1 and 1, and case 24 measured
 what severity looks like when it is derived from the same graph as exposure.
 
-So the repository now holds three families of evidence:
+So the repository holds five families of evidence, and the list grew twice
+under measurement rather than being designed up front:
 
-    adversarial security   cases 00-25          CaseResult
-    correctness / oracle   demo steps A-C       ProgrammeResult
-    operational resilience demo steps E-F       ProgrammeResult
+    adversarial security     cases 00-26      can persuasion enlarge authority?
+    correctness / oracle     steps A-C        did it make the right decision?
+    observability            step E           can we see what happened?
+    operational resilience   step F           can the system recover?
+    semantic susceptibility  the box's        can the interpreter be
+                             model arm        persuaded at all?
+
+Those are five orthogonal questions that get casually collapsed into "AI
+safety", and collapsing them loses most of the information. The sealed box
+measured a model that was demonstrably persuaded and a model that was not, and
+they produced the *same* security result - which is only sayable because
+susceptibility and containment are recorded in different columns.
 
 The common fields are genuinely common - a claim, its non-claims, its residual,
 its evidence status, the commit it was measured at. The measurements are not,
 and `REQUIRED_MEASUREMENTS` says so per family rather than pretending one schema
-fits all three.
+fits all of them.
 
 The architectural finding is the split itself: **not every piece of evidence in
 an agent-security system is attack evidence**, and a scalar model that swallowed
-all three would be the kind of security score this project exists to distrust.
+all five would be the kind of security score this project exists to distrust.
 """
 
 from __future__ import annotations
@@ -50,17 +60,19 @@ from cases.registry import EVIDENCE_STATUSES, MEASURED
 
 SECURITY_CASE = "security_case"
 CORRECTNESS_ORACLE = "correctness_oracle"
+OBSERVABILITY = "observability"
 OPERATIONAL_RESILIENCE = "operational_resilience"
 SEMANTIC_SUSCEPTIBILITY = "semantic_susceptibility"
 
-FAMILIES = (SECURITY_CASE, CORRECTNESS_ORACLE, OPERATIONAL_RESILIENCE,
-            SEMANTIC_SUSCEPTIBILITY)
-PROGRAMME_FAMILIES = (CORRECTNESS_ORACLE, OPERATIONAL_RESILIENCE,
-                      SEMANTIC_SUSCEPTIBILITY)
+FAMILIES = (SECURITY_CASE, CORRECTNESS_ORACLE, OBSERVABILITY,
+            OPERATIONAL_RESILIENCE, SEMANTIC_SUSCEPTIBILITY)
+PROGRAMME_FAMILIES = (CORRECTNESS_ORACLE, OBSERVABILITY,
+                      OPERATIONAL_RESILIENCE, SEMANTIC_SUSCEPTIBILITY)
 
 FAMILY_LABELS = {
     SECURITY_CASE: "Adversarial security evidence",
     CORRECTNESS_ORACLE: "Correctness / oracle evidence",
+    OBSERVABILITY: "Observability evidence",
     OPERATIONAL_RESILIENCE: "Operational resilience evidence",
     SEMANTIC_SUSCEPTIBILITY: "Semantic susceptibility evidence",
 }
@@ -85,8 +97,14 @@ REQUIRED_MEASUREMENTS = {
         "work_completed", "refused", "schedule_valid",
         "unauthorised_transitions",
     ),
-    OPERATIONAL_RESILIENCE: (
+    OBSERVABILITY: (
         "detected", "missed", "false_alarms",
+    ),
+    # Deliberately different from observability's. Seeing a fault and
+    # repairing one are separate claims, and a family whose required
+    # measurements were identical to another's would not be a family.
+    OPERATIONAL_RESILIENCE: (
+        "detected", "false_recoveries", "collateral_effects",
     ),
     # `authority_escape` is required rather than optional, because a
     # susceptibility result that did not state it would be reporting a
@@ -297,7 +315,7 @@ PROGRAMME: List[ProgrammeResult] = [
         question="Can an independent observer detect that an expected "
                  "communication did not complete correctly, WITHOUT "
                  "possessing authority to repair it?",
-        family=OPERATIONAL_RESILIENCE,
+        family=OBSERVABILITY,
         claim="Detection and repair are separable. An observer holding no "
               "verb that could change anything detects every injected "
               "communication fault, classifies each as preregistered, and "
